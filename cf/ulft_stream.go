@@ -1,0 +1,221 @@
+// ulft_stream.go v2
+package cf
+
+import "fmt"
+
+// ULFTStream transforms a source continued fraction x into the continued fraction
+// of T(x), streaming digits safely using Range bounds + SafeDigit.
+//
+// Error handling:
+//   - Next() returns (0,false) once the stream is exhausted OR on first error.
+//   - Call Err() to see whether termination was clean or error-induced.
+type ULFTStream struct {
+	t   ULFT
+	src ContinuedFraction
+	b   *Bounder
+
+	srcDone bool
+	done    bool
+	err     error
+
+	// Optional cycle detection (useful while bringing ULFT golden online).
+	detectCycles bool
+	seen         map[ulftStateKey]int
+	maxRepeats   int
+}
+
+type ULFTStreamOptions struct {
+	DetectCycles bool
+	MaxRepeats   int // if <=0 and DetectCycles, defaults to 2
+}
+
+func NewULFTStream(t ULFT, src ContinuedFraction, opts ULFTStreamOptions) *ULFTStream {
+	max := opts.MaxRepeats
+	if opts.DetectCycles && max <= 0 {
+		max = 2
+	}
+	return &ULFTStream{
+		t:            t,
+		src:          src,
+		b:            NewBounder(),
+		detectCycles: opts.DetectCycles,
+		seen:         map[ulftStateKey]int{},
+		maxRepeats:   max,
+	}
+}
+
+func (s *ULFTStream) Err() error { return s.err }
+
+func (s *ULFTStream) Next() (int64, bool) {
+	if s.done {
+		return 0, false
+	}
+	if s.err != nil {
+		s.done = true
+		return 0, false
+	}
+
+	// The core “emit vs refine” loop.
+	for {
+		// Ensure we have at least one ingested term to define a range.
+		if !s.b.HasValue() && !s.srcDone {
+			a, ok := s.src.Next()
+			if !ok {
+				s.setErr(fmt.Errorf("ULFTStream: empty source CF"))
+				return 0, false
+			}
+			if err := s.b.Ingest(a); err != nil {
+				s.setErr(err)
+				return 0, false
+			}
+		}
+
+		// If the source is done (rational termination), collapse bounds.
+		if s.srcDone {
+			s.b.Finish()
+		}
+
+		xRange, ok, err := s.b.Range()
+		if err != nil {
+			s.setErr(err)
+			return 0, false
+		}
+		if !ok {
+			s.setErr(fmt.Errorf("ULFTStream: internal: no range despite HasValue"))
+			return 0, false
+		}
+
+		if s.detectCycles {
+			key, kerr := ulftFingerprint(s.t, xRange)
+			if kerr != nil {
+				s.setErr(kerr)
+				return 0, false
+			}
+			s.seen[key]++
+			if s.seen[key] > s.maxRepeats {
+				s.setErr(fmt.Errorf("ULFTStream: cycle detected (repeats>%d): %v", s.maxRepeats, key))
+				return 0, false
+			}
+		}
+
+		d, okDigit, err := SafeDigit(s.t, xRange)
+		if err != nil {
+			s.setErr(err)
+			return 0, false
+		}
+
+		if okDigit {
+			// IMPORTANT termination case for rationals:
+			// If x is exact and T(x) is exact integer d, then emitting d ends the CF.
+			// Do NOT apply EmitDigit, because it would compute 1/(d-d) and blow up.
+			if s.srcDone && xRange.Lo.Cmp(xRange.Hi) == 0 {
+				y, err := s.t.ApplyRat(xRange.Lo)
+				if err != nil {
+					s.setErr(err)
+					return 0, false
+				}
+				if y.Q == 1 && y.P == d {
+					s.done = true
+					return d, true
+				}
+			}
+
+			tp, err := EmitDigit(s.t, d)
+			if err != nil {
+				s.setErr(err)
+				return 0, false
+			}
+			s.t = tp
+			return d, true
+		}
+
+		// Not safe: refine the input by ingesting another term (or finish if exhausted).
+		if s.srcDone {
+			// If we’re here and already finished, we cannot refine further.
+			s.setErr(fmt.Errorf("ULFTStream: cannot refine further (source finished) and digit not safe"))
+			return 0, false
+		}
+
+		a, okSrc := s.src.Next()
+		if okSrc {
+			if err := s.b.Ingest(a); err != nil {
+				s.setErr(err)
+				return 0, false
+			}
+			continue
+		}
+
+		// Source exhausted => rational.
+		s.srcDone = true
+		// Loop again; bounder will Finish() and we’ll retry with exact xRange.
+	}
+}
+
+func (s *ULFTStream) setErr(err error) {
+	if s.err == nil {
+		s.err = err
+	}
+	s.done = true
+}
+
+// ---- fingerprinting (cycle detection) ----
+
+type ulftStateKey struct {
+	// Canonical ULFT
+	A, B, C, D int64
+	// Exact x-range endpoints
+	LoP, LoQ int64
+	HiP, HiQ int64
+}
+
+func ulftFingerprint(t ULFT, r Range) (ulftStateKey, error) {
+	if err := t.Validate(); err != nil {
+		return ulftStateKey{}, err
+	}
+	tc := canonULFT(t)
+
+	return ulftStateKey{
+		A: tc.A, B: tc.B, C: tc.C, D: tc.D,
+		LoP: r.Lo.P, LoQ: r.Lo.Q,
+		HiP: r.Hi.P, HiQ: r.Hi.Q,
+	}, nil
+}
+
+func canonULFT(t ULFT) ULFT {
+	// Divide out gcd of all coefficients (if >1) and normalize sign:
+	// make the first non-zero coefficient positive.
+	g := gcd4(abs(t.A), abs(t.B), abs(t.C), abs(t.D))
+	if g > 1 {
+		t.A /= g
+		t.B /= g
+		t.C /= g
+		t.D /= g
+	}
+
+	sign := int64(0)
+	for _, v := range []int64{t.A, t.B, t.C, t.D} {
+		if v != 0 {
+			sign = v
+			break
+		}
+	}
+	if sign < 0 {
+		t.A = -t.A
+		t.B = -t.B
+		t.C = -t.C
+		t.D = -t.D
+	}
+	return t
+}
+
+func gcd4(a, b, c, d int64) int64 {
+	g := gcd(a, b)
+	g = gcd(g, c)
+	g = gcd(g, d)
+	if g < 0 {
+		return -g
+	}
+	return g
+}
+
+// ulft_stream.go v2
