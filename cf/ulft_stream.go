@@ -1,4 +1,4 @@
-// ulft_stream.go v2
+// ulft_stream.go v6
 package cf
 
 import "fmt"
@@ -22,25 +22,54 @@ type ULFTStream struct {
 	detectCycles bool
 	seen         map[ulftStateKey]int
 	maxRepeats   int
+
+	// Progress guards (anti-stall).
+	//
+	// Strict semantics:
+	//   -1 => unlimited
+	//    0 => no refines allowed
+	//   >0 => max refines allowed
+	maxRefinesPerDigit int
+	maxTotalRefines    int
+	refinesThisDigit   int
+	refinesTotal       int
 }
 
 type ULFTStreamOptions struct {
 	DetectCycles bool
 	MaxRepeats   int // if <=0 and DetectCycles, defaults to 2
+
+	// Strict semantics:
+	//   -1 => unlimited
+	//    0 => no refines allowed
+	//   >0 => max refines allowed
+	MaxRefinesPerDigit int
+	MaxTotalRefines    int
 }
 
 func NewULFTStream(t ULFT, src ContinuedFraction, opts ULFTStreamOptions) *ULFTStream {
+	// Defaulting rule for guards:
+	// If BOTH guard fields are left at zero, treat that as "unset" => unlimited (-1).
+	// This keeps ULFTStreamOptions{DetectCycles:true} from accidentally forbidding refines.
+	if opts.MaxRefinesPerDigit == 0 && opts.MaxTotalRefines == 0 {
+		opts.MaxRefinesPerDigit = -1
+		opts.MaxTotalRefines = -1
+	}
+
 	max := opts.MaxRepeats
 	if opts.DetectCycles && max <= 0 {
 		max = 2
 	}
+
 	return &ULFTStream{
-		t:            t,
-		src:          src,
-		b:            NewBounder(),
-		detectCycles: opts.DetectCycles,
-		seen:         map[ulftStateKey]int{},
-		maxRepeats:   max,
+		t:                  t,
+		src:                src,
+		b:                  NewBounder(),
+		detectCycles:       opts.DetectCycles,
+		seen:               map[ulftStateKey]int{},
+		maxRepeats:         max,
+		maxRefinesPerDigit: opts.MaxRefinesPerDigit,
+		maxTotalRefines:    opts.MaxTotalRefines,
 	}
 }
 
@@ -54,6 +83,8 @@ func (s *ULFTStream) Next() (int64, bool) {
 		s.done = true
 		return 0, false
 	}
+
+	s.refinesThisDigit = 0
 
 	// The core “emit vs refine” loop.
 	for {
@@ -131,8 +162,19 @@ func (s *ULFTStream) Next() (int64, bool) {
 
 		// Not safe: refine the input by ingesting another term (or finish if exhausted).
 		if s.srcDone {
-			// If we’re here and already finished, we cannot refine further.
 			s.setErr(fmt.Errorf("ULFTStream: cannot refine further (source finished) and digit not safe"))
+			return 0, false
+		}
+
+		// Progress guards (strict semantics)
+		s.refinesThisDigit++
+		s.refinesTotal++
+		if s.maxRefinesPerDigit >= 0 && s.refinesThisDigit > s.maxRefinesPerDigit {
+			s.setErr(fmt.Errorf("ULFTStream: exceeded MaxRefinesPerDigit=%d", s.maxRefinesPerDigit))
+			return 0, false
+		}
+		if s.maxTotalRefines >= 0 && s.refinesTotal > s.maxTotalRefines {
+			s.setErr(fmt.Errorf("ULFTStream: exceeded MaxTotalRefines=%d", s.maxTotalRefines))
 			return 0, false
 		}
 
@@ -218,4 +260,4 @@ func gcd4(a, b, c, d int64) int64 {
 	return g
 }
 
-// ulft_stream.go v2
+// ulft_stream.go v6
