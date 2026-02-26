@@ -22,8 +22,8 @@ fi
 print -P "%F{cyan}==> go vet%f"
 go vet ./cf
 
-#print -P "%F{cyan}==> staticcheck%f"
-#staticcheck ./cf
+print -P "%F{cyan}==> staticcheck%f"
+staticcheck ./cf
 
 print -P "%F{cyan}==> tests (no cache)%f"
 go test -count=1 ./cf
