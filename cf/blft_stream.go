@@ -1,44 +1,46 @@
-// blft_stream.go v2
+// blft_stream.go v5
 package cf
 
 import "fmt"
 
-// BLFTStream streams the continued fraction digits of Z = T(X,Y), where
-// T is a BLFT and X,Y are continued fractions.
-//
-// This v2 implementation targets rational sources (finite CFs) first.
-// It uses two Bounders to maintain conservative ranges for X and Y and
-// emits digits when floor(img.Lo) == floor(img.Hi).
-//
-// Refinement policy: refine the wider of xRange/yRange; tie-break alternates.
-//
-// Termination (rational-safe):
-// If both sources are finished AND the current exact Z is integer d,
-// emit d and stop WITHOUT updating the transform (to avoid division by zero).
 type BLFTStream struct {
-	t     BLFT
-	xs    ContinuedFraction
-	ys    ContinuedFraction
-	xb    *Bounder
-	yb    *Bounder
+	t  BLFT
+	xs ContinuedFraction
+	ys ContinuedFraction
+	xb *Bounder
+	yb *Bounder
+
 	xDone bool
 	yDone bool
 
 	done bool
 	err  error
 
-	alt bool // tie-break toggle
+	alt  bool
+	opts BLFTStreamOptions
+
+	tail ContinuedFraction
+
+	finalizeTried bool
 }
 
-type BLFTStreamOptions struct{}
+type BLFTStreamOptions struct {
+	// If >0, BLFTStream may drain X and Y (up to this many digits each) to exact rationals,
+	// compute exact z=ApplyRat(x,y), and then stream z via NewRationalCF(z).
+	//
+	// This is intended for rational inputs and prevents range-based denom-guard failures
+	// that can occur before the bounders shrink to the exact point.
+	MaxFinalizeDigits int
+}
 
-func NewBLFTStream(t BLFT, xs, ys ContinuedFraction, _ BLFTStreamOptions) *BLFTStream {
+func NewBLFTStream(t BLFT, xs, ys ContinuedFraction, opts BLFTStreamOptions) *BLFTStream {
 	return &BLFTStream{
-		t:  t,
-		xs: xs,
-		ys: ys,
-		xb: NewBounder(),
-		yb: NewBounder(),
+		t:    t,
+		xs:   xs,
+		ys:   ys,
+		xb:   NewBounder(),
+		yb:   NewBounder(),
+		opts: opts,
 	}
 }
 
@@ -53,8 +55,33 @@ func (s *BLFTStream) Next() (int64, bool) {
 		return 0, false
 	}
 
+	// If we have an exact tail CF, delegate.
+	if s.tail != nil {
+		a, ok := s.tail.Next()
+		if !ok {
+			s.done = true
+			return 0, false
+		}
+		return a, true
+	}
+
+	// v5: early rational finalization attempt (bounded, opt-in).
+	if s.opts.MaxFinalizeDigits > 0 && !s.finalizeTried {
+		s.finalizeTried = true
+		if switched, err := s.tryFinalizeToTail(); err != nil {
+			s.setErr(err)
+			return 0, false
+		} else if switched {
+			a, ok := s.tail.Next()
+			if !ok {
+				s.done = true
+				return 0, false
+			}
+			return a, true
+		}
+	}
+
 	for {
-		// Ensure both bounders have at least one term ingested (unless already done).
 		if !s.xb.HasValue() && !s.xDone {
 			a, ok := s.xs.Next()
 			if !ok {
@@ -107,6 +134,20 @@ func (s *BLFTStream) Next() (int64, bool) {
 
 		img, err := s.t.ApplyBLFTRange(xr, yr)
 		if err != nil {
+			// If denom guard trips and finalization is enabled, try finalizing now.
+			if s.opts.MaxFinalizeDigits > 0 {
+				if switched, ferr := s.tryFinalizeToTail(); ferr != nil {
+					s.setErr(ferr)
+					return 0, false
+				} else if switched {
+					a, ok := s.tail.Next()
+					if !ok {
+						s.done = true
+						return 0, false
+					}
+					return a, true
+				}
+			}
 			s.setErr(err)
 			return 0, false
 		}
@@ -116,22 +157,9 @@ func (s *BLFTStream) Next() (int64, bool) {
 			s.setErr(err)
 			return 0, false
 		}
+
 		if lo == hi {
 			d := lo
-
-			// Rational termination: if X and Y are exact and Z is exactly integer d, emit and stop.
-			if s.xDone && s.yDone && xr.Lo.Cmp(xr.Hi) == 0 && yr.Lo.Cmp(yr.Hi) == 0 {
-				z, err := s.t.ApplyRat(xr.Lo, yr.Lo)
-				if err != nil {
-					s.setErr(err)
-					return 0, false
-				}
-				if z.Q == 1 && z.P == d {
-					s.done = true
-					return d, true
-				}
-			}
-
 			tp, err := s.emitDigitBLFT(d)
 			if err != nil {
 				s.setErr(err)
@@ -141,13 +169,11 @@ func (s *BLFTStream) Next() (int64, bool) {
 			return d, true
 		}
 
-		// Need refinement; if both done, we cannot refine further.
 		if s.xDone && s.yDone {
 			s.setErr(fmt.Errorf("BLFTStream: cannot refine further (both sources finished) and digit not safe"))
 			return 0, false
 		}
 
-		// Choose which to refine.
 		refineX := false
 		refineY := false
 
@@ -215,6 +241,73 @@ func (s *BLFTStream) setErr(err error) {
 	s.done = true
 }
 
+func (s *BLFTStream) tryFinalizeToTail() (bool, error) {
+	limit := s.opts.MaxFinalizeDigits
+
+	if !s.xDone {
+		for i := 0; i < limit; i++ {
+			a, ok := s.xs.Next()
+			if !ok {
+				s.xDone = true
+				break
+			}
+			if err := s.xb.Ingest(a); err != nil {
+				return false, err
+			}
+		}
+	}
+	if !s.yDone {
+		for i := 0; i < limit; i++ {
+			a, ok := s.ys.Next()
+			if !ok {
+				s.yDone = true
+				break
+			}
+			if err := s.yb.Ingest(a); err != nil {
+				return false, err
+			}
+		}
+	}
+
+	if s.xDone {
+		s.xb.Finish()
+	}
+	if s.yDone {
+		s.yb.Finish()
+	}
+
+	if !(s.xDone && s.yDone) {
+		return false, nil
+	}
+
+	xr, ok, err := s.xb.Range()
+	if err != nil {
+		return false, err
+	}
+	if !ok {
+		return false, fmt.Errorf("BLFTStream: internal: no xRange after finalize")
+	}
+	yr, ok, err := s.yb.Range()
+	if err != nil {
+		return false, err
+	}
+	if !ok {
+		return false, fmt.Errorf("BLFTStream: internal: no yRange after finalize")
+	}
+
+	if xr.Lo.Cmp(xr.Hi) != 0 || yr.Lo.Cmp(yr.Hi) != 0 {
+		return false, nil
+	}
+
+	z, err := s.t.ApplyRat(xr.Lo, yr.Lo)
+	if err != nil {
+		return false, err
+	}
+
+	s.tail = NewRationalCF(z)
+	return true, nil
+}
+
 // emitDigitBLFT updates BLFT coefficients to represent z' = 1/(z - d).
 //
 // Given z = N/D, z - d = (N - dD)/D, and 1/(z-d) = D/(N - dD).
@@ -264,4 +357,4 @@ func (s *BLFTStream) emitDigitBLFT(d int64) (BLFT, error) {
 	return NewBLFT(A2, B2, C2, D2, E2, F2, G2, H2), nil
 }
 
-// blft_stream.go v2
+// blft_stream.go v5

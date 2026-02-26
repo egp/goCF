@@ -1,0 +1,49 @@
+# 2026/02/26 13:33:19.241917 [TestPBT_BLFTStream_MatchesApplyRatPrefix_OnRationals] [rapid] draw x: cf.Rational{P:1, Q:1}
+# 2026/02/26 13:33:19.242007 [TestPBT_BLFTStream_MatchesApplyRatPrefix_OnRationals] [rapid] draw y: cf.Rational{P:1, Q:2}
+# 2026/02/26 13:33:19.242008 [TestPBT_BLFTStream_MatchesApplyRatPrefix_OnRationals] [rapid] draw A: 0
+# 2026/02/26 13:33:19.242009 [TestPBT_BLFTStream_MatchesApplyRatPrefix_OnRationals] [rapid] draw B: 0
+# 2026/02/26 13:33:19.242010 [TestPBT_BLFTStream_MatchesApplyRatPrefix_OnRationals] [rapid] draw C: 0
+# 2026/02/26 13:33:19.242010 [TestPBT_BLFTStream_MatchesApplyRatPrefix_OnRationals] [rapid] draw D: 0
+# 2026/02/26 13:33:19.242011 [TestPBT_BLFTStream_MatchesApplyRatPrefix_OnRationals] [rapid] draw E: 0
+# 2026/02/26 13:33:19.242011 [TestPBT_BLFTStream_MatchesApplyRatPrefix_OnRationals] [rapid] draw F: 0
+# 2026/02/26 13:33:19.242012 [TestPBT_BLFTStream_MatchesApplyRatPrefix_OnRationals] [rapid] draw G: 1
+# 2026/02/26 13:33:19.242012 [TestPBT_BLFTStream_MatchesApplyRatPrefix_OnRationals] [rapid] draw H: 0
+# 2026/02/26 13:33:19.242015 [TestPBT_BLFTStream_MatchesApplyRatPrefix_OnRationals] BLFTStream error: BLFT denominator may cross 0 for rx=[1/1,2/1] ry=[0/1,1/1] (den in [0/1,1/1])
+# 
+v0.4.8#17346525009006652705
+0x0
+0x0
+0x1
+0x0
+0x0
+0x0
+0x0
+0x0
+0x1
+0x0
+0x0
+0x1
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x1
+0x0
+0x0
+0x0
