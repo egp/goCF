@@ -1,60 +1,88 @@
-// range.go v1
+// range.go v3
 package cf
 
 import "fmt"
 
 // Range represents a closed interval [Lo, Hi] over exact rationals.
 //
-// Invariant: Lo <= Hi (by Rational.Cmp).
+// Semantics:
+//   - Inside (non-empty) range: Lo <= Hi (includes Lo==Hi for exact).
+//   - Outside (complement) range: Lo > Hi, representing (-∞, Hi] ∪ [Lo, ∞).
+//
+// Note: Some operations (Width, FloorBounds, ApplyULFT) are only defined for
+// inside ranges because their results are not representable as a single Range
+// for outside ranges.
 type Range struct {
 	Lo Rational
 	Hi Rational
 }
 
-// NewRange constructs a Range and enforces Lo <= Hi.
-// If lo > hi, returns an error.
-func NewRange(lo, hi Rational) (Range, error) {
-	if lo.Cmp(hi) > 0 {
-		return Range{}, fmt.Errorf("invalid range: lo=%v > hi=%v", lo, hi)
-	}
-	return Range{Lo: lo, Hi: hi}, nil
+// NewRange constructs a Range without enforcing ordering.
+// Use r.IsInside() to test non-emptiness.
+func NewRange(lo, hi Rational) Range {
+	return Range{Lo: lo, Hi: hi}
 }
 
-// MustRange is a convenience for tests; it panics on invalid input.
+// MustRange is a convenience for tests and callers that expect a non-empty range.
+// It panics if lo > hi.
 func MustRange(lo, hi Rational) Range {
-	r, err := NewRange(lo, hi)
-	if err != nil {
-		panic(err)
+	r := Range{Lo: lo, Hi: hi}
+	if !r.IsInside() {
+		panic(fmt.Errorf("invalid (outside) range: lo=%v > hi=%v", lo, hi))
 	}
 	return r
 }
 
-// Width returns Hi - Lo.
-func (r Range) Width() (Rational, error) {
-	return r.Hi.Sub(r.Lo)
+// IsInside reports whether the range is non-empty: Lo <= Hi.
+func (r Range) IsInside() bool {
+	return r.Lo.Cmp(r.Hi) <= 0
 }
 
-// Contains reports whether x is inside the closed interval [Lo, Hi].
+// IsOutside reports whether the range is a complement range: Lo > Hi.
+func (r Range) IsOutside() bool {
+	return r.Lo.Cmp(r.Hi) > 0
+}
+
+// Contains reports membership under the Range semantics.
+//
+// Inside:  Lo <= x <= Hi
+// Outside: x <= Hi  OR  x >= Lo    (i.e., outside the open interval (Hi,Lo))
 func (r Range) Contains(x Rational) bool {
-	return r.Lo.Cmp(x) <= 0 && x.Cmp(r.Hi) <= 0
+	if r.IsInside() {
+		return r.Lo.Cmp(x) <= 0 && x.Cmp(r.Hi) <= 0
+	}
+	// Outside (Lo > Hi): (-∞,Hi] ∪ [Lo,∞)
+	return x.Cmp(r.Hi) <= 0 || x.Cmp(r.Lo) >= 0
+}
+
+// ContainsZero reports whether the Range contains 0 under the same semantics.
+func (r Range) ContainsZero() bool {
+	return r.Contains(mustRat(0, 1))
+}
+
+// Width returns Hi - Lo. Outside ranges return an error (unbounded / not representable).
+func (r Range) Width() (Rational, error) {
+	if !r.IsInside() {
+		return Rational{}, fmt.Errorf("width undefined for outside range [%v,%v]", r.Lo, r.Hi)
+	}
+	return r.Hi.Sub(r.Lo)
 }
 
 // ApplyULFT returns the image of the interval under a ULFT:
 //
 //	f(x) = (A x + B) / (C x + D)
 //
-// Correct handling requires detecting whether the function is monotone
-// over the interval (i.e., denominator does not cross 0). If the denominator
-// crosses 0 within [Lo, Hi], the image is not a single interval (it is
-// unbounded / split), and we return an error.
-//
-// When monotone, the image is simply [min(f(Lo), f(Hi)), max(f(Lo), f(Hi))].
+// Defined only for inside ranges in this version.
+// If denominator crosses 0 within [Lo, Hi], the image is not a single interval.
 func (r Range) ApplyULFT(t ULFT) (Range, error) {
+	if !r.IsInside() {
+		return Range{}, fmt.Errorf("ApplyULFT undefined for outside range [%v,%v]", r.Lo, r.Hi)
+	}
+
 	// Denominator at endpoints: Cx + D
 	denLo := t.C*r.Lo.P + t.D*r.Lo.Q
 	denHi := t.C*r.Hi.P + t.D*r.Hi.Q
 
-	// If either endpoint maps to undefined, or denominator crosses 0, reject.
 	if denLo == 0 || denHi == 0 || (denLo < 0) != (denHi < 0) {
 		return Range{}, fmt.Errorf("ULFT denominator crosses 0 on range [%v,%v]", r.Lo, r.Hi)
 	}
@@ -75,12 +103,12 @@ func (r Range) ApplyULFT(t ULFT) (Range, error) {
 }
 
 // FloorBounds returns floor(Lo), floor(Hi) under the library's floor convention.
-// If both are equal, callers can safely emit that digit in Gosper-style digit
-// extraction logic.
-//
-// Note: Uses floor division for negatives (consistent with RationalCF).
-func (r Range) FloorBounds() (int64, int64) {
-	return floorRat(r.Lo), floorRat(r.Hi)
+// Defined only for inside ranges in this version.
+func (r Range) FloorBounds() (int64, int64, error) {
+	if !r.IsInside() {
+		return 0, 0, fmt.Errorf("FloorBounds undefined for outside range [%v,%v]", r.Lo, r.Hi)
+	}
+	return floorRat(r.Lo), floorRat(r.Hi), nil
 }
 
 func floorRat(x Rational) int64 {
@@ -89,4 +117,4 @@ func floorRat(x Rational) int64 {
 	return a
 }
 
-// range.go v1
+// range.go v3

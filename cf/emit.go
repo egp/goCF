@@ -1,4 +1,4 @@
-// emit.go v2
+// emit.go v3
 package cf
 
 import "fmt"
@@ -19,7 +19,10 @@ func SafeDigit(t ULFT, r Range) (int64, bool, error) {
 	if err != nil {
 		return 0, false, err
 	}
-	lo, hi := img.FloorBounds()
+	lo, hi, err := img.FloorBounds()
+	if err != nil {
+		return 0, false, err
+	}
 	if lo == hi {
 		return lo, true, nil
 	}
@@ -63,8 +66,7 @@ func EmitDigit(t ULFT, a int64) (ULFT, error) {
 	return out, nil
 }
 
-// VerifyULFTDeterminant is a small helper for debugging invariants.
-// det = A*D - B*C (checked).
+// Determinant returns det = A*D - B*C (checked).
 func (t ULFT) Determinant() (int64, error) {
 	ad, ok := mul64(t.A, t.D)
 	if !ok {
@@ -89,4 +91,4 @@ func (t ULFT) Validate() error {
 	return nil
 }
 
-// emit.go v2
+// emit.go v3
