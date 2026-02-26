@@ -1,5 +1,5 @@
-# go.yml v2
-# CI for goCF: format/vet/staticcheck/tests via tools/check.sh
+# go.yml v3
+# CI for goCF (macOS runner)
 
 name: Go CI
 
@@ -19,8 +19,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
-        # v5 release exists; GitHub Marketplace page may still show v4 in places.
-        # See releases for v5. :contentReference[oaicite:2]{index=2}
 
       - name: Set up Go
         uses: actions/setup-go@v6
@@ -29,12 +27,20 @@ jobs:
           cache: true
           check-latest: true
 
+      - name: Add GOPATH/bin to PATH
+        run: echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+
+      - name: Install static analysis tools
+        run: |
+          go install golang.org/x/tools/cmd/goimports@latest
+          go install honnef.co/go/tools/cmd/staticcheck@latest
+
       - name: Show Go version
         run: go version
 
-      - name: CI checks (gofmt/vet/staticcheck/tests)
+      - name: Run local check pipeline
         run: ./tools/check.sh
 
       - name: Tests (no cache)
         run: go test -count=1 ./...
-# eof go.yml v2
+# eof go.yml v3
