@@ -15,8 +15,8 @@ func TestBLFTRange_PointRangesMatchApplyRat(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rx := MustRange(x, x)
-	ry := MustRange(y, y)
+	rx := NewRange(x, x, true, true)
+	ry := NewRange(y, y, true, true)
 
 	gotR, err := tform.ApplyBLFTRange(rx, ry)
 	if err != nil {
@@ -34,15 +34,15 @@ func TestBLFTRange_AdditionLikeTransform(t *testing.T) {
 	// z = x + y  => (0*xy + 1*x + 1*y + 0) / (0*xy + 0*x + 0*y + 1)
 	add := NewBLFT(0, 1, 1, 0, 0, 0, 0, 1)
 
-	rx := MustRange(mustRat(1, 1), mustRat(2, 1))   // [1,2]
-	ry := MustRange(mustRat(10, 1), mustRat(20, 1)) // [10,20]
+	rx := NewRange(mustRat(1, 1), mustRat(2, 1), true, true)   // [1,2]
+	ry := NewRange(mustRat(10, 1), mustRat(20, 1), true, true) // [10,20]
 
 	got, err := add.ApplyBLFTRange(rx, ry)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	want := MustRange(mustRat(11, 1), mustRat(22, 1))
+	want := NewRange(mustRat(11, 1), mustRat(22, 1), true, true)
 	if got.Lo.Cmp(want.Lo) != 0 || got.Hi.Cmp(want.Hi) != 0 {
 		t.Fatalf("got [%v,%v], want [%v,%v]", got.Lo, got.Hi, want.Lo, want.Hi)
 	}
@@ -54,8 +54,8 @@ func TestBLFTRange_DenominatorCrossesZeroRejected(t *testing.T) {
 	// denom: x-1    => F=1, H=-1
 	tform := NewBLFT(0, 0, 0, 1, 0, 1, 0, -1)
 
-	rx := MustRange(mustRat(0, 1), mustRat(2, 1)) // spans x=1
-	ry := MustRange(mustRat(0, 1), mustRat(1, 1)) // any
+	rx := NewRange(mustRat(0, 1), mustRat(2, 1), true, true) // spans x=1
+	ry := NewRange(mustRat(0, 1), mustRat(1, 1), true, true) // any
 
 	_, err := tform.ApplyBLFTRange(rx, ry)
 	if err == nil {
@@ -66,8 +66,8 @@ func TestBLFTRange_DenominatorCrossesZeroRejected(t *testing.T) {
 func TestBLFTRange_OutsideInputRejected(t *testing.T) {
 	add := NewBLFT(0, 1, 1, 0, 0, 0, 0, 1)
 
-	rx := NewRange(mustRat(2, 1), mustRat(1, 1)) // outside
-	ry := MustRange(mustRat(0, 1), mustRat(1, 1))
+	rx := NewRange(mustRat(2, 1), mustRat(1, 1), true, true) // outside
+	ry := NewRange(mustRat(0, 1), mustRat(1, 1), true, true)
 
 	_, err := add.ApplyBLFTRange(rx, ry)
 	if err == nil {

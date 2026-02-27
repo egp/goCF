@@ -7,8 +7,8 @@ func TestBLFTDenomRange_CornerBoundsExact(t *testing.T) {
 	// Denom: D(x,y)= 2xy + 3x + 5y + 7
 	tform := NewBLFT(0, 0, 0, 1, 2, 3, 5, 7)
 
-	rx := MustRange(mustRat(1, 2), mustRat(5, 2)) // [0.5,2.5]
-	ry := MustRange(mustRat(1, 3), mustRat(7, 3)) // [0.333..,2.333..]
+	rx := NewRange(mustRat(1, 2), mustRat(5, 2), true, true) // [0.5,2.5]
+	ry := NewRange(mustRat(1, 3), mustRat(7, 3), true, true) // [0.333..,2.333..]
 
 	dr, err := tform.DenomRange(rx, ry)
 	if err != nil {
@@ -55,8 +55,8 @@ func TestBLFTDenomMayHitZero_SpansRootXMinus1(t *testing.T) {
 	// z = 1/(x-1), denom = x-1
 	tform := NewBLFT(0, 0, 0, 1, 0, 1, 0, -1)
 
-	rx := MustRange(mustRat(0, 1), mustRat(2, 1))  // spans x=1
-	ry := MustRange(mustRat(-3, 1), mustRat(4, 1)) // any
+	rx := NewRange(mustRat(0, 1), mustRat(2, 1), true, true)  // spans x=1
+	ry := NewRange(mustRat(-3, 1), mustRat(4, 1), true, true) // any
 
 	may, err := tform.DenomMayHitZero(rx, ry)
 	if err != nil {
@@ -71,8 +71,8 @@ func TestBLFTDenomMayHitZero_DefinitelyNonZero(t *testing.T) {
 	// denom is constant 5
 	tform := NewBLFT(1, 0, 0, 0, 0, 0, 0, 5)
 
-	rx := MustRange(mustRat(-5, 1), mustRat(5, 1))
-	ry := MustRange(mustRat(-7, 1), mustRat(9, 1))
+	rx := NewRange(mustRat(-5, 1), mustRat(5, 1), true, true)
+	ry := NewRange(mustRat(-7, 1), mustRat(9, 1), true, true)
 
 	may, err := tform.DenomMayHitZero(rx, ry)
 	if err != nil {

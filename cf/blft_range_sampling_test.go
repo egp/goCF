@@ -10,8 +10,8 @@ func TestBLFTRange_EnclosesSampledInteriorPoints(t *testing.T) {
 		1, 2, 1, 5, // E F G H  (denom kept away from 0 on chosen ranges)
 	)
 
-	rx := MustRange(mustRat(1, 2), mustRat(5, 2)) // [0.5, 2.5]
-	ry := MustRange(mustRat(1, 3), mustRat(7, 3)) // [0.333..., 2.333...]
+	rx := NewRange(mustRat(1, 2), mustRat(5, 2), true, true) // [0.5, 2.5]
+	ry := NewRange(mustRat(1, 3), mustRat(7, 3), true, true) // [0.333..., 2.333...]
 
 	out, err := tform.ApplyBLFTRange(rx, ry)
 	if err != nil {

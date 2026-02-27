@@ -1,0 +1,23 @@
+# 2026/02/26 16:46:26.065296 [TestPBT_RangeOutsideContainsSemantics] [rapid] draw r: cf.Range{Lo:cf.Rational{P:0, Q:1}, Hi:cf.Rational{P:-1, Q:1}, IncLo:false, IncHi:false}
+# 2026/02/26 16:46:26.065352 [TestPBT_RangeOutsideContainsSemantics] [rapid] draw x: cf.Rational{P:1, Q:1}
+# 2026/02/26 16:46:26.065354 [TestPBT_RangeOutsideContainsSemantics] outside ContainsZero mismatch: r=[0/1,-1/1] got=false want=true
+# 
+v0.4.8#9943513347649890239
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x10000000000000
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x1
+0x0
+0x0
+0x0

@@ -62,7 +62,7 @@ func TestPBT_BLFTStream_MatchesApplyRatPrefix_OnRationals_TinyDomain(t *testing.
 		tform := NewBLFT(A, B, C, D, E, F, G, H)
 
 		// Skip undefined points (denom hits 0 at the exact point).
-		may, err := tform.DenomMayHitZero(MustRange(x, x), MustRange(y, y))
+		may, err := tform.DenomMayHitZero(NewRange(x, x, true, true), NewRange(y, y, true, true))
 		if err != nil || may {
 			return
 		}

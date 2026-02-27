@@ -30,4 +30,8 @@ go.work
 # Go test coverage
 coverage.out
 
+# temporary files
+tmp/
+/tmp/
+
 #eof

@@ -170,7 +170,7 @@ func TestBLFTStream_RationalPointAgreesWithRationalCF_Table(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Skip undefined point if denom hits 0 exactly.
-			may, err := tc.t.DenomMayHitZero(MustRange(tc.x, tc.x), MustRange(tc.y, tc.y))
+			may, err := tc.t.DenomMayHitZero(NewRange(tc.x, tc.x, true, true), NewRange(tc.y, tc.y, true, true))
 			if err != nil || may {
 				return
 			}

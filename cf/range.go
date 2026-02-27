@@ -1,120 +1,171 @@
-// range.go v3
+// range.go v12
 package cf
 
 import "fmt"
 
-// Range represents a closed interval [Lo, Hi] over exact rationals.
-//
-// Semantics:
-//   - Inside (non-empty) range: Lo <= Hi (includes Lo==Hi for exact).
-//   - Outside (complement) range: Lo > Hi, representing (-∞, Hi] ∪ [Lo, ∞).
-//
-// Note: Some operations (Width, FloorBounds, ApplyULFT) are only defined for
-// inside ranges because their results are not representable as a single Range
-// for outside ranges.
 type Range struct {
-	Lo Rational
-	Hi Rational
+	Lo    Rational
+	Hi    Rational
+	IncLo bool
+	IncHi bool
 }
 
-// NewRange constructs a Range without enforcing ordering.
-// Use r.IsInside() to test non-emptiness.
-func NewRange(lo, hi Rational) Range {
-	return Range{Lo: lo, Hi: hi}
+func NewRange(lo, hi Rational, incLo, incHi bool) Range {
+	return Range{Lo: lo, Hi: hi, IncLo: incLo, IncHi: incHi}
 }
 
-// MustRange is a convenience for tests and callers that expect a non-empty range.
-// It panics if lo > hi.
-func MustRange(lo, hi Rational) Range {
-	r := Range{Lo: lo, Hi: hi}
-	if !r.IsInside() {
-		panic(fmt.Errorf("invalid (outside) range: lo=%v > hi=%v", lo, hi))
+func (r Range) IsInside() bool  { return r.Lo.Cmp(r.Hi) <= 0 }
+func (r Range) IsOutside() bool { return r.Lo.Cmp(r.Hi) > 0 }
+
+func (r Range) String() string {
+	kind := "inside"
+	if r.IsOutside() {
+		kind = "outside"
 	}
-	return r
+	return fmt.Sprintf("Range[%v,%v]{incLo=%t,incHi=%t,%s}", r.Lo, r.Hi, r.IncLo, r.IncHi, kind)
 }
 
-// IsInside reports whether the range is non-empty: Lo <= Hi.
-func (r Range) IsInside() bool {
-	return r.Lo.Cmp(r.Hi) <= 0
-}
-
-// IsOutside reports whether the range is a complement range: Lo > Hi.
-func (r Range) IsOutside() bool {
-	return r.Lo.Cmp(r.Hi) > 0
-}
-
-// Contains reports membership under the Range semantics.
-//
-// Inside:  Lo <= x <= Hi
-// Outside: x <= Hi  OR  x >= Lo    (i.e., outside the open interval (Hi,Lo))
 func (r Range) Contains(x Rational) bool {
+	cLo := x.Cmp(r.Lo) // x ? Lo
+	cHi := x.Cmp(r.Hi) // x ? Hi
+
 	if r.IsInside() {
-		return r.Lo.Cmp(x) <= 0 && x.Cmp(r.Hi) <= 0
+		// Inside: Lo <= x <= Hi with endpoint inclusions.
+		if cLo < 0 {
+			return false
+		}
+		if cLo == 0 && !r.IncLo {
+			return false
+		}
+		if cHi > 0 {
+			return false
+		}
+		if cHi == 0 && !r.IncHi {
+			return false
+		}
+		return true
 	}
-	// Outside (Lo > Hi): (-∞,Hi] ∪ [Lo,∞)
-	return x.Cmp(r.Hi) <= 0 || x.Cmp(r.Lo) >= 0
+
+	// Outside: (-∞,Hi] ∪ [Lo,+∞)
+	// i.e. x is contained if x <= Hi OR x >= Lo (with endpoint inclusions).
+	if cHi < 0 {
+		// x < Hi => in (-∞,Hi)
+		return true
+	}
+	if cHi == 0 && r.IncHi {
+		// x == Hi and included
+		return true
+	}
+	if cLo > 0 {
+		// x > Lo => in (Lo,∞)
+		return true
+	}
+	if cLo == 0 && r.IncLo {
+		// x == Lo and included
+		return true
+	}
+	return false
 }
 
-// ContainsZero reports whether the Range contains 0 under the same semantics.
+// ContainsZero() ≡ Contains(0)
 func (r Range) ContainsZero() bool {
 	return r.Contains(mustRat(0, 1))
 }
 
-// Width returns Hi - Lo. Outside ranges return an error (unbounded / not representable).
+// Width returns Hi - Lo for inside ranges.
+// Outside ranges do not have a finite width.
 func (r Range) Width() (Rational, error) {
-	if !r.IsInside() {
-		return Rational{}, fmt.Errorf("width undefined for outside range [%v,%v]", r.Lo, r.Hi)
+	if r.IsOutside() {
+		return Rational{}, fmt.Errorf("Width undefined for outside range: %v", r)
 	}
 	return r.Hi.Sub(r.Lo)
 }
 
-// ApplyULFT returns the image of the interval under a ULFT:
-//
-//	f(x) = (A x + B) / (C x + D)
-//
-// Defined only for inside ranges in this version.
-// If denominator crosses 0 within [Lo, Hi], the image is not a single interval.
-func (r Range) ApplyULFT(t ULFT) (Range, error) {
-	if !r.IsInside() {
-		return Range{}, fmt.Errorf("ApplyULFT undefined for outside range [%v,%v]", r.Lo, r.Hi)
-	}
-
-	// Denominator at endpoints: Cx + D
-	denLo := t.C*r.Lo.P + t.D*r.Lo.Q
-	denHi := t.C*r.Hi.P + t.D*r.Hi.Q
-
-	if denLo == 0 || denHi == 0 || (denLo < 0) != (denHi < 0) {
-		return Range{}, fmt.Errorf("ULFT denominator crosses 0 on range [%v,%v]", r.Lo, r.Hi)
-	}
-
-	fLo, err := t.ApplyRat(r.Lo)
-	if err != nil {
-		return Range{}, err
-	}
-	fHi, err := t.ApplyRat(r.Hi)
-	if err != nil {
-		return Range{}, err
-	}
-
-	if fLo.Cmp(fHi) <= 0 {
-		return Range{Lo: fLo, Hi: fHi}, nil
-	}
-	return Range{Lo: fHi, Hi: fLo}, nil
-}
-
-// FloorBounds returns floor(Lo), floor(Hi) under the library's floor convention.
-// Defined only for inside ranges in this version.
+// FloorBounds returns floor(Lo), floor(Hi) for inside ranges.
+// Outside ranges are not a single contiguous interval and are rejected here.
 func (r Range) FloorBounds() (int64, int64, error) {
-	if !r.IsInside() {
-		return 0, 0, fmt.Errorf("FloorBounds undefined for outside range [%v,%v]", r.Lo, r.Hi)
+	if r.IsOutside() {
+		return 0, 0, fmt.Errorf("FloorBounds undefined for outside range: %v", r)
 	}
-	return floorRat(r.Lo), floorRat(r.Hi), nil
+	lo, err := floorRat(r.Lo)
+	if err != nil {
+		return 0, 0, err
+	}
+	hi, err := floorRat(r.Hi)
+	if err != nil {
+		return 0, 0, err
+	}
+	return lo, hi, nil
 }
 
-func floorRat(x Rational) int64 {
-	// floor(p/q) with q>0
-	a, _ := floorDivMod(x.P, x.Q)
-	return a
+func floorRat(x Rational) (int64, error) {
+	if x.Q == 0 {
+		return 0, fmt.Errorf("floorRat: zero denominator")
+	}
+	p := x.P
+	q := x.Q
+	if q < 0 {
+		p = -p
+		q = -q
+	}
+
+	quo := p / q
+	rem := p % q
+	if rem != 0 && p < 0 {
+		quo -= 1
+	}
+	return quo, nil
 }
 
-// range.go v3
+// ApplyULFT maps an inside range through a ULFT and returns a conservative CLOSED enclosure.
+func (r Range) ApplyULFT(t ULFT) (Range, error) {
+	if r.IsOutside() {
+		return Range{}, fmt.Errorf("ApplyULFT requires inside range: %v", r)
+	}
+
+	// denom(x) = C*x + D; extrema at endpoints.
+	dLo, err := ulftDenomAt(t, r.Lo)
+	if err != nil {
+		return Range{}, err
+	}
+	dHi, err := ulftDenomAt(t, r.Hi)
+	if err != nil {
+		return Range{}, err
+	}
+
+	den := NewRange(dLo, dHi, true, true)
+	if den.Lo.Cmp(den.Hi) > 0 {
+		den = NewRange(dHi, dLo, true, true)
+	}
+	if den.ContainsZero() {
+		return Range{}, fmt.Errorf("ULFT denominator may cross 0 on range %v (den in [%v,%v])", r, den.Lo, den.Hi)
+	}
+
+	zLo, err := t.ApplyRat(r.Lo)
+	if err != nil {
+		return Range{}, err
+	}
+	zHi, err := t.ApplyRat(r.Hi)
+	if err != nil {
+		return Range{}, err
+	}
+
+	// Conservative enclosure must be CLOSED.
+	if zLo.Cmp(zHi) <= 0 {
+		return NewRange(zLo, zHi, true, true), nil
+	}
+	return NewRange(zHi, zLo, true, true), nil
+}
+
+func ulftDenomAt(t ULFT, x Rational) (Rational, error) {
+	c := mustRat(t.C, 1)
+	d := mustRat(t.D, 1)
+
+	cx, err := c.Mul(x)
+	if err != nil {
+		return Rational{}, err
+	}
+	return cx.Add(d)
+}
+
+// range.go v12

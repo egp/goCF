@@ -1,4 +1,4 @@
-// blft_range.go v4
+// blft_range.go v5
 package cf
 
 import "fmt"
@@ -6,7 +6,8 @@ import "fmt"
 // ApplyBLFTRange maps the rectangle rx × ry through the BLFT and returns a
 // conservative bounding interval.
 //
-// v4: denom-crossing guard delegated to DenomMayHitZero(rx,ry).
+// v5: enclosure is CLOSED (IncLo=IncHi=true) because it is a conservative bound.
+// denom-crossing guard delegated to DenomMayHitZero(rx,ry).
 func (t BLFT) ApplyBLFTRange(rx, ry Range) (Range, error) {
 	if !rx.IsInside() || !ry.IsInside() {
 		return Range{}, fmt.Errorf("ApplyBLFTRange requires inside ranges: rx=[%v,%v] ry=[%v,%v]", rx.Lo, rx.Hi, ry.Lo, ry.Hi)
@@ -53,7 +54,8 @@ func (t BLFT) ApplyBLFTRange(rx, ry Range) (Range, error) {
 		}
 	}
 
-	return Range{Lo: zmin, Hi: zmax}, nil
+	// Conservative enclosure must be CLOSED.
+	return NewRange(zmin, zmax, true, true), nil
 }
 
-// blft_range.go v4
+// blft_range.go v5

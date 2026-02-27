@@ -8,7 +8,7 @@ func TestSafeDigit_TrueWhenFloorsAgree(t *testing.T) {
 	id := NewULFT(1, 0, 0, 1)
 
 	// Range [1/3, 1/2] maps to itself; floor bounds are both 0.
-	r := MustRange(mustRat(1, 3), mustRat(1, 2))
+	r := NewRange(mustRat(1, 3), mustRat(1, 2), true, true)
 
 	d, ok, err := SafeDigit(id, r)
 	if err != nil {
@@ -24,7 +24,7 @@ func TestSafeDigit_FalseWhenFloorsDiffer(t *testing.T) {
 	id := NewULFT(1, 0, 0, 1)
 
 	// Range [1/3, 5/2] has floors 0 and 2 -> not safe.
-	r := MustRange(mustRat(1, 3), mustRat(5, 2))
+	r := NewRange(mustRat(1, 3), mustRat(5, 2), true, true)
 
 	_, ok, err := SafeDigit(id, r)
 	if err != nil {
@@ -38,7 +38,7 @@ func TestSafeDigit_FalseWhenFloorsDiffer(t *testing.T) {
 func TestSafeDigit_ErrorWhenDenominatorCrossesZero(t *testing.T) {
 	// y = 1/(x-1)
 	tform := NewULFT(0, 1, 1, -1)
-	r := MustRange(mustRat(0, 1), mustRat(2, 1))
+	r := NewRange(mustRat(0, 1), mustRat(2, 1), true, true)
 
 	_, ok, err := SafeDigit(tform, r)
 	if err == nil {
