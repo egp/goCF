@@ -1,4 +1,4 @@
-// ulft_stream.go v6
+// ulft_stream.go v7
 package cf
 
 import "fmt"
@@ -75,6 +75,16 @@ func NewULFTStream(t ULFT, src ContinuedFraction, opts ULFTStreamOptions) *ULFTS
 
 func (s *ULFTStream) Err() error { return s.err }
 
+// annotateErrULFT appends a best-effort fingerprint context to err.
+// It is intentionally non-fatal: if fingerprinting fails, we return err unchanged.
+func annotateErrULFT(err error, t ULFT, r Range) error {
+	fp, ferr := FingerprintULFT(t, r)
+	if ferr != nil {
+		return err
+	}
+	return fmt.Errorf("%w | %s", err, fp)
+}
+
 func (s *ULFTStream) Next() (int64, bool) {
 	if s.done {
 		return 0, false
@@ -131,7 +141,7 @@ func (s *ULFTStream) Next() (int64, bool) {
 
 		d, okDigit, err := SafeDigit(s.t, xRange)
 		if err != nil {
-			s.setErr(err)
+			s.setErr(annotateErrULFT(err, s.t, xRange))
 			return 0, false
 		}
 
@@ -142,7 +152,7 @@ func (s *ULFTStream) Next() (int64, bool) {
 			if s.srcDone && xRange.Lo.Cmp(xRange.Hi) == 0 {
 				y, err := s.t.ApplyRat(xRange.Lo)
 				if err != nil {
-					s.setErr(err)
+					s.setErr(annotateErrULFT(err, s.t, xRange))
 					return 0, false
 				}
 				if y.Q == 1 && y.P == d {
@@ -153,7 +163,7 @@ func (s *ULFTStream) Next() (int64, bool) {
 
 			tp, err := EmitDigit(s.t, d)
 			if err != nil {
-				s.setErr(err)
+				s.setErr(annotateErrULFT(err, s.t, xRange))
 				return 0, false
 			}
 			s.t = tp
@@ -162,7 +172,10 @@ func (s *ULFTStream) Next() (int64, bool) {
 
 		// Not safe: refine the input by ingesting another term (or finish if exhausted).
 		if s.srcDone {
-			s.setErr(fmt.Errorf("ULFTStream: cannot refine further (source finished) and digit not safe"))
+			s.setErr(annotateErrULFT(
+				fmt.Errorf("ULFTStream: cannot refine further (source finished) and digit not safe"),
+				s.t, xRange,
+			))
 			return 0, false
 		}
 
@@ -170,11 +183,17 @@ func (s *ULFTStream) Next() (int64, bool) {
 		s.refinesThisDigit++
 		s.refinesTotal++
 		if s.maxRefinesPerDigit >= 0 && s.refinesThisDigit > s.maxRefinesPerDigit {
-			s.setErr(fmt.Errorf("ULFTStream: exceeded MaxRefinesPerDigit=%d", s.maxRefinesPerDigit))
+			s.setErr(annotateErrULFT(
+				fmt.Errorf("ULFTStream: exceeded MaxRefinesPerDigit=%d", s.maxRefinesPerDigit),
+				s.t, xRange,
+			))
 			return 0, false
 		}
 		if s.maxTotalRefines >= 0 && s.refinesTotal > s.maxTotalRefines {
-			s.setErr(fmt.Errorf("ULFTStream: exceeded MaxTotalRefines=%d", s.maxTotalRefines))
+			s.setErr(annotateErrULFT(
+				fmt.Errorf("ULFTStream: exceeded MaxTotalRefines=%d", s.maxTotalRefines),
+				s.t, xRange,
+			))
 			return 0, false
 		}
 
@@ -260,4 +279,4 @@ func gcd4(a, b, c, d int64) int64 {
 	return g
 }
 
-// ulft_stream.go v6
+// ulft_stream.go v7
