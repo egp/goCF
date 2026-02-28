@@ -1,4 +1,4 @@
-// blft_stream.go v6
+// blft_stream.go v7
 package cf
 
 import "fmt"
@@ -22,6 +22,11 @@ type BLFTStream struct {
 	tail ContinuedFraction
 
 	finalizeTried bool
+
+	// Optional cycle detection (diagnostic safety guard).
+	detectCycles bool
+	maxRepeats   int
+	history      *RingBuf // recent FingerprintBLFT() values (human-readable)
 }
 
 type BLFTStreamOptions struct {
@@ -31,16 +36,45 @@ type BLFTStreamOptions struct {
 	// This is intended for rational inputs and prevents range-based denom-guard failures
 	// that can occur before the bounders shrink to the exact point.
 	MaxFinalizeDigits int
+
+	// Optional cycle detection (debugging / safety).
+	DetectCycles bool
+	MaxRepeats   int // if <=0 and DetectCycles, defaults to 2
+	HistorySize  int // if <=0, auto-sized
 }
 
 func NewBLFTStream(t BLFT, xs, ys ContinuedFraction, opts BLFTStreamOptions) *BLFTStream {
+	max := opts.MaxRepeats
+	if opts.DetectCycles && max <= 0 {
+		max = 2
+	}
+
+	var hist *RingBuf
+	if opts.DetectCycles {
+		n := opts.HistorySize
+		if n <= 0 {
+			// Heuristic: enough context to see small loops.
+			n = max * 8
+			if n < 16 {
+				n = 16
+			}
+			if n > 256 {
+				n = 256
+			}
+		}
+		hist = NewRingBuf(n)
+	}
+
 	return &BLFTStream{
-		t:    t,
-		xs:   xs,
-		ys:   ys,
-		xb:   NewBounder(),
-		yb:   NewBounder(),
-		opts: opts,
+		t:            t,
+		xs:           xs,
+		ys:           ys,
+		xb:           NewBounder(),
+		yb:           NewBounder(),
+		opts:         opts,
+		detectCycles: opts.DetectCycles,
+		maxRepeats:   max,
+		history:      hist,
 	}
 }
 
@@ -140,6 +174,23 @@ func (s *BLFTStream) Next() (int64, bool) {
 		if !ok {
 			s.setErr(fmt.Errorf("BLFTStream: internal: no yRange"))
 			return 0, false
+		}
+
+		// Cycle detection guard (diagnostic). Best-effort only.
+		if s.detectCycles && s.history != nil {
+			fp, ferr := FingerprintBLFT(s.t, xr, yr)
+			if ferr != nil {
+				s.setErr(ferr)
+				return 0, false
+			}
+			s.history.Add(fp)
+			if s.history.Count(fp) > s.maxRepeats {
+				s.setErr(fmt.Errorf(
+					"BLFTStream: cycle detected (repeats>%d): %s\nrecent:\n%s",
+					s.maxRepeats, fp, s.history.Dump(),
+				))
+				return 0, false
+			}
 		}
 
 		img, err := s.t.ApplyBLFTRange(xr, yr)
@@ -370,4 +421,4 @@ func (s *BLFTStream) emitDigitBLFT(d int64) (BLFT, error) {
 	return NewBLFT(A2, B2, C2, D2, E2, F2, G2, H2), nil
 }
 
-// blft_stream.go v6
+// blft_stream.go v7

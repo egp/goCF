@@ -1,4 +1,4 @@
-// ulft_stream.go v7
+// ulft_stream.go v8
 package cf
 
 import "fmt"
@@ -22,6 +22,7 @@ type ULFTStream struct {
 	detectCycles bool
 	seen         map[ulftStateKey]int
 	maxRepeats   int
+	history      *RingBuf // recent FingerprintULFT() values (human-readable)
 
 	// Progress guards (anti-stall).
 	//
@@ -61,6 +62,20 @@ func NewULFTStream(t ULFT, src ContinuedFraction, opts ULFTStreamOptions) *ULFTS
 		max = 2
 	}
 
+	var hist *RingBuf
+	if opts.DetectCycles {
+		// Keep enough context to see the loop structure.
+		// Heuristic: ~8 fingerprints per repeat, clamped.
+		n := max * 8
+		if n < 16 {
+			n = 16
+		}
+		if n > 256 {
+			n = 256
+		}
+		hist = NewRingBuf(n)
+	}
+
 	return &ULFTStream{
 		t:                  t,
 		src:                src,
@@ -68,6 +83,7 @@ func NewULFTStream(t ULFT, src ContinuedFraction, opts ULFTStreamOptions) *ULFTS
 		detectCycles:       opts.DetectCycles,
 		seen:               map[ulftStateKey]int{},
 		maxRepeats:         max,
+		history:            hist,
 		maxRefinesPerDigit: opts.MaxRefinesPerDigit,
 		maxTotalRefines:    opts.MaxTotalRefines,
 	}
@@ -127,15 +143,33 @@ func (s *ULFTStream) Next() (int64, bool) {
 		}
 
 		if s.detectCycles {
-			key, kerr := ulftFingerprint(s.t, xRange)
-			if kerr != nil {
-				s.setErr(kerr)
+			// Primary: human-readable fingerprint + ring-buffer history.
+			fp, ferr := FingerprintULFT(s.t, xRange)
+			if ferr != nil {
+				s.setErr(ferr)
 				return 0, false
 			}
-			s.seen[key]++
-			if s.seen[key] > s.maxRepeats {
-				s.setErr(fmt.Errorf("ULFTStream: cycle detected (repeats>%d): %v", s.maxRepeats, key))
-				return 0, false
+			if s.history != nil {
+				s.history.Add(fp)
+				if s.history.Count(fp) > s.maxRepeats {
+					s.setErr(fmt.Errorf(
+						"ULFTStream: cycle detected (repeats>%d): %s\nrecent:\n%s",
+						s.maxRepeats, fp, s.history.Dump(),
+					))
+					return 0, false
+				}
+			} else {
+				// Fallback (should not happen, but keep behavior safe).
+				key, kerr := ulftFingerprint(s.t, xRange)
+				if kerr != nil {
+					s.setErr(kerr)
+					return 0, false
+				}
+				s.seen[key]++
+				if s.seen[key] > s.maxRepeats {
+					s.setErr(fmt.Errorf("ULFTStream: cycle detected (repeats>%d): %v", s.maxRepeats, key))
+					return 0, false
+				}
 			}
 		}
 
@@ -279,4 +313,4 @@ func gcd4(a, b, c, d int64) int64 {
 	return g
 }
 
-// ulft_stream.go v7
+// ulft_stream.go v8
