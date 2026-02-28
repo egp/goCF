@@ -1,4 +1,4 @@
-// blft_stream.go v5
+// blft_stream.go v6
 package cf
 
 import "fmt"
@@ -45,6 +45,16 @@ func NewBLFTStream(t BLFT, xs, ys ContinuedFraction, opts BLFTStreamOptions) *BL
 }
 
 func (s *BLFTStream) Err() error { return s.err }
+
+// annotateErrBLFT appends a best-effort fingerprint context to err.
+// It is intentionally non-fatal: if fingerprinting fails, we return err unchanged.
+func annotateErrBLFT(err error, t BLFT, rx, ry Range) error {
+	fp, ferr := FingerprintBLFT(t, rx, ry)
+	if ferr != nil {
+		return err
+	}
+	return fmt.Errorf("%w | %s", err, fp)
+}
 
 func (s *BLFTStream) Next() (int64, bool) {
 	if s.done {
@@ -137,7 +147,7 @@ func (s *BLFTStream) Next() (int64, bool) {
 			// If denom guard trips and finalization is enabled, try finalizing now.
 			if s.opts.MaxFinalizeDigits > 0 {
 				if switched, ferr := s.tryFinalizeToTail(); ferr != nil {
-					s.setErr(ferr)
+					s.setErr(annotateErrBLFT(ferr, s.t, xr, yr))
 					return 0, false
 				} else if switched {
 					a, ok := s.tail.Next()
@@ -148,13 +158,13 @@ func (s *BLFTStream) Next() (int64, bool) {
 					return a, true
 				}
 			}
-			s.setErr(err)
+			s.setErr(annotateErrBLFT(err, s.t, xr, yr))
 			return 0, false
 		}
 
 		lo, hi, err := img.FloorBounds()
 		if err != nil {
-			s.setErr(err)
+			s.setErr(annotateErrBLFT(err, s.t, xr, yr))
 			return 0, false
 		}
 
@@ -162,7 +172,7 @@ func (s *BLFTStream) Next() (int64, bool) {
 			d := lo
 			tp, err := s.emitDigitBLFT(d)
 			if err != nil {
-				s.setErr(err)
+				s.setErr(annotateErrBLFT(err, s.t, xr, yr))
 				return 0, false
 			}
 			s.t = tp
@@ -170,7 +180,10 @@ func (s *BLFTStream) Next() (int64, bool) {
 		}
 
 		if s.xDone && s.yDone {
-			s.setErr(fmt.Errorf("BLFTStream: cannot refine further (both sources finished) and digit not safe"))
+			s.setErr(annotateErrBLFT(
+				fmt.Errorf("BLFTStream: cannot refine further (both sources finished) and digit not safe"),
+				s.t, xr, yr,
+			))
 			return 0, false
 		}
 
@@ -184,12 +197,12 @@ func (s *BLFTStream) Next() (int64, bool) {
 		} else {
 			wx, err := xr.Width()
 			if err != nil {
-				s.setErr(err)
+				s.setErr(annotateErrBLFT(err, s.t, xr, yr))
 				return 0, false
 			}
 			wy, err := yr.Width()
 			if err != nil {
-				s.setErr(err)
+				s.setErr(annotateErrBLFT(err, s.t, xr, yr))
 				return 0, false
 			}
 			c := wx.Cmp(wy)
@@ -357,4 +370,4 @@ func (s *BLFTStream) emitDigitBLFT(d int64) (BLFT, error) {
 	return NewBLFT(A2, B2, C2, D2, E2, F2, G2, H2), nil
 }
 
-// blft_stream.go v5
+// blft_stream.go v6
