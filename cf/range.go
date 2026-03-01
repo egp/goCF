@@ -1,7 +1,9 @@
-// range.go v12
+// range.go v16
 package cf
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type Range struct {
 	Lo    Rational
@@ -22,15 +24,17 @@ func (r Range) String() string {
 	if r.IsOutside() {
 		kind = "outside"
 	}
-	return fmt.Sprintf("Range[%v,%v]{incLo=%t,incHi=%t,%s}", r.Lo, r.Hi, r.IncLo, r.IncHi, kind)
+	return fmt.Sprintf("[%v,%v]{incLo=%t,incHi=%t,%s}", r.Lo, r.Hi, r.IncLo, r.IncHi, kind)
 }
 
+// Contains implements:
+//   - Inside: standard interval membership with open/closed endpoints.
+//   - Outside (Lo>Hi): union-of-rays semantics: (-∞,Hi] ∪ [Lo,∞), honoring endpoint inclusions.
 func (r Range) Contains(x Rational) bool {
-	cLo := x.Cmp(r.Lo) // x ? Lo
-	cHi := x.Cmp(r.Hi) // x ? Hi
+	cLo := x.Cmp(r.Lo)
+	cHi := x.Cmp(r.Hi)
 
 	if r.IsInside() {
-		// Inside: Lo <= x <= Hi with endpoint inclusions.
 		if cLo < 0 {
 			return false
 		}
@@ -46,101 +50,121 @@ func (r Range) Contains(x Rational) bool {
 		return true
 	}
 
-	// Outside: (-∞,Hi] ∪ [Lo,+∞)
-	// i.e. x is contained if x <= Hi OR x >= Lo (with endpoint inclusions).
+	// Outside: x <= Hi OR x >= Lo, with endpoint inclusion control.
 	if cHi < 0 {
-		// x < Hi => in (-∞,Hi)
 		return true
 	}
 	if cHi == 0 && r.IncHi {
-		// x == Hi and included
 		return true
 	}
 	if cLo > 0 {
-		// x > Lo => in (Lo,∞)
 		return true
 	}
 	if cLo == 0 && r.IncLo {
-		// x == Lo and included
 		return true
 	}
 	return false
 }
 
-// ContainsZero() ≡ Contains(0)
-func (r Range) ContainsZero() bool {
-	return r.Contains(mustRat(0, 1))
+func (r Range) ContainsZero() bool { return r.Contains(mustRat(0, 1)) }
+
+// RefineMetric is a Gosper-style “uncertainty” metric used ONLY as a refinement heuristic.
+// It supports ordering:
+//
+//	inside narrow < inside wide < outside wide < outside narrow
+type RefineMetric struct {
+	Outside bool
+	// Inside: span = Hi-Lo (>=0)
+	// Outside: gap  = Lo-Hi (>0), where (Hi,Lo) is the excluded gap.
+	Magnitude Rational
 }
 
-// Width returns Hi - Lo for inside ranges.
-// Outside ranges do not have a finite width.
-func (r Range) Width() (Rational, error) {
-	if r.IsOutside() {
-		return Rational{}, fmt.Errorf("Width undefined for outside range: %v", r)
+func (m RefineMetric) String() string {
+	k := "inside"
+	if m.Outside {
+		k = "outside"
 	}
-	return r.Hi.Sub(r.Lo)
+	return fmt.Sprintf("RefineMetric{%s,%v}", k, m.Magnitude)
 }
 
-// FloorBounds returns floor(Lo), floor(Hi) for inside ranges.
-// Outside ranges are not a single contiguous interval and are rejected here.
+func (m RefineMetric) Cmp(o RefineMetric) int {
+	if m.Outside != o.Outside {
+		// inside < outside
+		if m.Outside {
+			return 1
+		}
+		return -1
+	}
+	if !m.Outside {
+		// inside: smaller span => narrower
+		return m.Magnitude.Cmp(o.Magnitude)
+	}
+	// outside: larger excluded gap => narrower (reverse compare)
+	return -m.Magnitude.Cmp(o.Magnitude)
+}
+
+func (r Range) RefineMetric() (RefineMetric, error) {
+	if r.IsInside() {
+		span, err := r.Hi.Sub(r.Lo)
+		if err != nil {
+			return RefineMetric{}, err
+		}
+		return RefineMetric{Outside: false, Magnitude: span}, nil
+	}
+
+	gap, err := r.Lo.Sub(r.Hi)
+	if err != nil {
+		return RefineMetric{}, err
+	}
+	return RefineMetric{Outside: true, Magnitude: gap}, nil
+}
+
+// FloorBounds returns a conservative pair (flo, fhi) such that for all x in r,
+// floor(x) ∈ [flo, fhi]. Used by digit-safety checks.
+//
+// Conservative uniform implementation using only endpoint floors.
 func (r Range) FloorBounds() (int64, int64, error) {
-	if r.IsOutside() {
-		return 0, 0, fmt.Errorf("FloorBounds undefined for outside range: %v", r)
-	}
-	lo, err := floorRat(r.Lo)
+	fLo, err := floorRat(r.Lo)
 	if err != nil {
 		return 0, 0, err
 	}
-	hi, err := floorRat(r.Hi)
+	fHi, err := floorRat(r.Hi)
 	if err != nil {
 		return 0, 0, err
 	}
-	return lo, hi, nil
+	if fLo <= fHi {
+		return fLo, fHi, nil
+	}
+	return fHi, fLo, nil
 }
 
-func floorRat(x Rational) (int64, error) {
-	if x.Q == 0 {
-		return 0, fmt.Errorf("floorRat: zero denominator")
-	}
-	p := x.P
-	q := x.Q
-	if q < 0 {
-		p = -p
-		q = -q
-	}
-
-	quo := p / q
-	rem := p % q
-	if rem != 0 && p < 0 {
-		quo -= 1
-	}
-	return quo, nil
-}
-
-// ApplyULFT maps an inside range through a ULFT and returns a conservative CLOSED enclosure.
+// ApplyULFT maps an inside input range through ULFT and returns a conservative inside output range.
+// This is used by SafeDigit(t,r) and must be interval-safe.
+//
+// Current strictness (by design):
+//   - Requires r to be inside. (Bounder produces inside ranges; ULFT streaming expects that.)
+//   - Rejects if denom range may include 0 over r (pole / discontinuity).
 func (r Range) ApplyULFT(t ULFT) (Range, error) {
-	if r.IsOutside() {
-		return Range{}, fmt.Errorf("ApplyULFT requires inside range: %v", r)
+	if !r.IsInside() {
+		return Range{}, fmt.Errorf("ApplyULFT requires inside range; got %v", r)
 	}
 
-	// denom(x) = C*x + D; extrema at endpoints.
-	dLo, err := ulftDenomAt(t, r.Lo)
+	// Denom(x) = Cx + D. Over inside range, denom extrema occur at endpoints.
+	denLo, err := evalLinearOnRat(t.C, t.D, r.Lo)
 	if err != nil {
 		return Range{}, err
 	}
-	dHi, err := ulftDenomAt(t, r.Hi)
+	denHi, err := evalLinearOnRat(t.C, t.D, r.Hi)
 	if err != nil {
 		return Range{}, err
 	}
 
-	den := NewRange(dLo, dHi, true, true)
-	if den.Lo.Cmp(den.Hi) > 0 {
-		den = NewRange(dHi, dLo, true, true)
-	}
-	if den.ContainsZero() {
-		return Range{}, fmt.Errorf("ULFT denominator may cross 0 on range %v (den in [%v,%v])", r, den.Lo, den.Hi)
+	denRange := NewRange(minRat(denLo, denHi), maxRat(denLo, denHi), true, true)
+	if denRange.ContainsZero() {
+		return Range{}, fmt.Errorf("ULFT denominator crosses 0 on range %v", r)
 	}
 
+	// ULFT is monotone on an interval that avoids poles, so endpoint images bound the image.
 	zLo, err := t.ApplyRat(r.Lo)
 	if err != nil {
 		return Range{}, err
@@ -150,22 +174,61 @@ func (r Range) ApplyULFT(t ULFT) (Range, error) {
 		return Range{}, err
 	}
 
-	// Conservative enclosure must be CLOSED.
-	if zLo.Cmp(zHi) <= 0 {
-		return NewRange(zLo, zHi, true, true), nil
-	}
-	return NewRange(zHi, zLo, true, true), nil
+	outLo := minRat(zLo, zHi)
+	outHi := maxRat(zLo, zHi)
+	return NewRange(outLo, outHi, true, true), nil
 }
 
-func ulftDenomAt(t ULFT, x Rational) (Rational, error) {
-	c := mustRat(t.C, 1)
-	d := mustRat(t.D, 1)
+// ---- helpers ----
 
-	cx, err := c.Mul(x)
-	if err != nil {
-		return Rational{}, err
+// floorRat computes floor(p/q) for q>0 using Euclidean division.
+// Works for negatives correctly.
+func floorRat(x Rational) (int64, error) {
+	if x.Q <= 0 {
+		return 0, fmt.Errorf("floorRat: invalid denominator %d", x.Q)
 	}
-	return cx.Add(d)
+	p := x.P
+	q := x.Q
+
+	// Go truncates toward zero. Adjust for negative remainder.
+	quo := p / q
+	rem := p % q
+	if rem != 0 && p < 0 {
+		quo -= 1
+	}
+	return quo, nil
 }
 
-// range.go v12
+// evalLinearOnRat computes (a*x + b) exactly on x rational, with overflow detection.
+func evalLinearOnRat(a, b int64, x Rational) (Rational, error) {
+	// (a * (p/q) + b) = (a*p + b*q)/q
+	ap, ok := mul64(a, x.P)
+	if !ok {
+		return Rational{}, ErrOverflow
+	}
+	bq, ok := mul64(b, x.Q)
+	if !ok {
+		return Rational{}, ErrOverflow
+	}
+	num, ok := add64(ap, bq)
+	if !ok {
+		return Rational{}, ErrOverflow
+	}
+	return NewRational(num, x.Q)
+}
+
+func minRat(a, b Rational) Rational {
+	if a.Cmp(b) <= 0 {
+		return a
+	}
+	return b
+}
+
+func maxRat(a, b Rational) Rational {
+	if a.Cmp(b) >= 0 {
+		return a
+	}
+	return b
+}
+
+// range.go v16

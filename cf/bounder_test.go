@@ -44,7 +44,7 @@ func TestBounder_RangeShrinksAsWeIngest(t *testing.T) {
 	if err != nil || !ok {
 		t.Fatalf("range1 err=%v ok=%v", err, ok)
 	}
-	w1, _ := r1.Width()
+	w1, _ := r1.RefineMetric()
 
 	// [1;2; ...] => between 4/3 and 3/2
 	_ = b.Ingest(2)
@@ -52,7 +52,7 @@ func TestBounder_RangeShrinksAsWeIngest(t *testing.T) {
 	if err != nil || !ok {
 		t.Fatalf("range2 err=%v ok=%v", err, ok)
 	}
-	w2, _ := r2.Width()
+	w2, _ := r2.RefineMetric()
 
 	// [1;2,2; ...]
 	_ = b.Ingest(2)
@@ -60,7 +60,7 @@ func TestBounder_RangeShrinksAsWeIngest(t *testing.T) {
 	if err != nil || !ok {
 		t.Fatalf("range3 err=%v ok=%v", err, ok)
 	}
-	w3, _ := r3.Width()
+	w3, _ := r3.RefineMetric()
 
 	// Expect strict shrink: w3 < w2 < w1
 	if w2.Cmp(w1) >= 0 {

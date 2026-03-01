@@ -1,4 +1,4 @@
-// blft_stream.go v7
+// blft_stream.go v9
 package cf
 
 import "fmt"
@@ -81,7 +81,6 @@ func NewBLFTStream(t BLFT, xs, ys ContinuedFraction, opts BLFTStreamOptions) *BL
 func (s *BLFTStream) Err() error { return s.err }
 
 // annotateErrBLFT appends a best-effort fingerprint context to err.
-// It is intentionally non-fatal: if fingerprinting fails, we return err unchanged.
 func annotateErrBLFT(err error, t BLFT, rx, ry Range) error {
 	fp, ferr := FingerprintBLFT(t, rx, ry)
 	if ferr != nil {
@@ -109,7 +108,7 @@ func (s *BLFTStream) Next() (int64, bool) {
 		return a, true
 	}
 
-	// v5: early rational finalization attempt (bounded, opt-in).
+	// Early rational finalization attempt (bounded, opt-in).
 	if s.opts.MaxFinalizeDigits > 0 && !s.finalizeTried {
 		s.finalizeTried = true
 		if switched, err := s.tryFinalizeToTail(); err != nil {
@@ -126,6 +125,7 @@ func (s *BLFTStream) Next() (int64, bool) {
 	}
 
 	for {
+		// Ensure at least one ingested digit for each side (so Range() is defined).
 		if !s.xb.HasValue() && !s.xDone {
 			a, ok := s.xs.Next()
 			if !ok {
@@ -176,7 +176,7 @@ func (s *BLFTStream) Next() (int64, bool) {
 			return 0, false
 		}
 
-		// Cycle detection guard (diagnostic). Best-effort only.
+		// Cycle detection guard (best-effort diagnostic).
 		if s.detectCycles && s.history != nil {
 			fp, ferr := FingerprintBLFT(s.t, xr, yr)
 			if ferr != nil {
@@ -230,6 +230,7 @@ func (s *BLFTStream) Next() (int64, bool) {
 			return d, true
 		}
 
+		// No safe digit: refine.
 		if s.xDone && s.yDone {
 			s.setErr(annotateErrBLFT(
 				fmt.Errorf("BLFTStream: cannot refine further (both sources finished) and digit not safe"),
@@ -246,22 +247,23 @@ func (s *BLFTStream) Next() (int64, bool) {
 		} else if s.yDone {
 			refineX = true
 		} else {
-			wx, err := xr.Width()
+			mx, err := xr.RefineMetric()
 			if err != nil {
 				s.setErr(annotateErrBLFT(err, s.t, xr, yr))
 				return 0, false
 			}
-			wy, err := yr.Width()
+			my, err := yr.RefineMetric()
 			if err != nil {
 				s.setErr(annotateErrBLFT(err, s.t, xr, yr))
 				return 0, false
 			}
-			c := wx.Cmp(wy)
+			c := mx.Cmp(my)
 			if c > 0 {
 				refineX = true
 			} else if c < 0 {
 				refineY = true
 			} else {
+				// Tie-breaker: alternate.
 				if s.alt {
 					refineX = true
 				} else {
@@ -305,6 +307,8 @@ func (s *BLFTStream) setErr(err error) {
 	s.done = true
 }
 
+// tryFinalizeToTail drains up to MaxFinalizeDigits from both inputs. If both terminate
+// and collapse to exact points, it switches to an exact rational tail stream.
 func (s *BLFTStream) tryFinalizeToTail() (bool, error) {
 	limit := s.opts.MaxFinalizeDigits
 
@@ -421,4 +425,4 @@ func (s *BLFTStream) emitDigitBLFT(d int64) (BLFT, error) {
 	return NewBLFT(A2, B2, C2, D2, E2, F2, G2, H2), nil
 }
 
-// blft_stream.go v7
+// blft_stream.go v9
