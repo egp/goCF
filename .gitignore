@@ -27,9 +27,6 @@ Thumbs.db
 # Go workspace file
 go.work
 
-# Go test coverage
-coverage.out
-
 # temporary files
 tmp/
 /tmp/
