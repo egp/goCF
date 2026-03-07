@@ -4,7 +4,7 @@ import "testing"
 
 func TestULFT_ApplyRat(t *testing.T) {
 	// x -> (2x + 1) / (3x + 4)
-	tform := NewULFT(2, 1, 3, 4)
+	tform := NewULFT(bi(2), bi(1), bi(3), bi(4))
 	x, _ := NewRational(1, 2)
 
 	got, err := tform.ApplyRat(x)

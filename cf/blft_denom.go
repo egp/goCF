@@ -62,10 +62,10 @@ func (t BLFT) denomAt(x, y Rational) (Rational, error) {
 		return Rational{}, err
 	}
 
-	e := Rational{P: t.E, Q: 1}
-	f := Rational{P: t.F, Q: 1}
-	g := Rational{P: t.G, Q: 1}
-	h := Rational{P: t.H, Q: 1}
+	e := intRat(t.E)
+	f := intRat(t.F)
+	g := intRat(t.G)
+	h := intRat(t.H)
 
 	term1, err := e.Mul(xy)
 	if err != nil {

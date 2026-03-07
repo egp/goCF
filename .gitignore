@@ -31,4 +31,7 @@ go.work
 tmp/
 /tmp/
 
+#metals
+.metals/
+
 #eof

@@ -45,7 +45,7 @@ func TestPBT_BLFTStream_MatchesApplyRatPrefix_OnRationals_TinyDomain(t *testing.
 		y := pbtGenTinyRatStream().Draw(t, "y")
 
 		// Explicit skip (redundant given generator excludes 0, but keeps intent clear).
-		if x.P == 0 || y.P == 0 {
+		if x.Cmp(intRat(0)) == 0 || y.Cmp(intRat(0)) == 0 {
 			return
 		}
 

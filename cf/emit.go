@@ -1,7 +1,10 @@
-// emit.go v3
+// emit.go v4
 package cf
 
-import "fmt"
+import (
+	"fmt"
+	"math/big"
+)
 
 // SafeDigit attempts to determine a Gosper-safe next continued-fraction digit
 // from an interval and a ULFT.
@@ -34,61 +37,52 @@ func SafeDigit(t ULFT, r Range) (int64, bool, error) {
 // New transform:
 //
 //	T' = [[C, D], [A - a*C, B - a*D]]
-//
-// This version is checked: returns ErrOverflow on int64 overflow.
 func EmitDigit(t ULFT, a int64) (ULFT, error) {
 	if err := t.Validate(); err != nil {
 		return ULFT{}, err
 	}
 
-	ac, ok := mul64(a, t.C)
-	if !ok {
-		return ULFT{}, ErrOverflow
-	}
-	ad, ok := mul64(a, t.D)
-	if !ok {
-		return ULFT{}, ErrOverflow
-	}
+	ai := big.NewInt(a)
 
-	cNew, ok := sub64(t.A, ac)
-	if !ok {
-		return ULFT{}, ErrOverflow
-	}
-	dNew, ok := sub64(t.B, ad)
-	if !ok {
-		return ULFT{}, ErrOverflow
-	}
+	ac := new(big.Int).Mul(ai, t.C)
+	ad := new(big.Int).Mul(ai, t.D)
 
-	out := ULFT{A: t.C, B: t.D, C: cNew, D: dNew}
+	cNew := new(big.Int).Sub(t.A, ac)
+	dNew := new(big.Int).Sub(t.B, ad)
+
+	out := ULFT{
+		A: new(big.Int).Set(t.C),
+		B: new(big.Int).Set(t.D),
+		C: cNew,
+		D: dNew,
+	}
 	if err := out.Validate(); err != nil {
 		return ULFT{}, err
 	}
 	return out, nil
 }
 
-// Determinant returns det = A*D - B*C (checked).
+// Determinant returns det = A*D - B*C.
+//
+// Since the public API still returns int64, this returns ErrOverflow if the
+// exact determinant does not fit in int64.
 func (t ULFT) Determinant() (int64, error) {
-	ad, ok := mul64(t.A, t.D)
-	if !ok {
+	ad := new(big.Int).Mul(t.A, t.D)
+	bc := new(big.Int).Mul(t.B, t.C)
+	det := new(big.Int).Sub(ad, bc)
+
+	if !det.IsInt64() {
 		return 0, ErrOverflow
 	}
-	bc, ok := mul64(t.B, t.C)
-	if !ok {
-		return 0, ErrOverflow
-	}
-	det, ok := sub64(ad, bc)
-	if !ok {
-		return 0, ErrOverflow
-	}
-	return det, nil
+	return det.Int64(), nil
 }
 
 func (t ULFT) Validate() error {
 	// We allow many ULFTs, but disallow the all-zero denominator row.
-	if t.C == 0 && t.D == 0 {
+	if t.C.Sign() == 0 && t.D.Sign() == 0 {
 		return fmt.Errorf("invalid ULFT: denominator is identically 0: %v", t)
 	}
 	return nil
 }
 
-// emit.go v3
+// emit.go v4

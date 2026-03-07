@@ -1,7 +1,10 @@
 // ulft_stream.go v8
 package cf
 
-import "fmt"
+import (
+	"fmt"
+	"math/big"
+)
 
 // ULFTStream transforms a source continued fraction x into the continued fraction
 // of T(x), streaming digits safely using Range bounds + SafeDigit.
@@ -189,7 +192,7 @@ func (s *ULFTStream) Next() (int64, bool) {
 					s.setErr(annotateErrULFT(err, s.t, xRange))
 					return 0, false
 				}
-				if y.Q == 1 && y.P == d {
+				if y.Cmp(intRat(d)) == 0 {
 					s.done = true
 					return d, true
 				}
@@ -256,11 +259,8 @@ func (s *ULFTStream) setErr(err error) {
 // ---- fingerprinting (cycle detection) ----
 
 type ulftStateKey struct {
-	// Canonical ULFT
-	A, B, C, D int64
-	// Exact x-range endpoints
-	LoP, LoQ int64
-	HiP, HiQ int64
+	A, B, C, D string
+	Lo, Hi     string
 }
 
 func ulftFingerprint(t ULFT, r Range) (ulftStateKey, error) {
@@ -270,47 +270,61 @@ func ulftFingerprint(t ULFT, r Range) (ulftStateKey, error) {
 	tc := canonULFT(t)
 
 	return ulftStateKey{
-		A: tc.A, B: tc.B, C: tc.C, D: tc.D,
-		LoP: r.Lo.P, LoQ: r.Lo.Q,
-		HiP: r.Hi.P, HiQ: r.Hi.Q,
+		A:  tc.A.String(),
+		B:  tc.B.String(),
+		C:  tc.C.String(),
+		D:  tc.D.String(),
+		Lo: r.Lo.String(),
+		Hi: r.Hi.String(),
 	}, nil
 }
 
 func canonULFT(t ULFT) ULFT {
-	// Divide out gcd of all coefficients (if >1) and normalize sign:
-	// make the first non-zero coefficient positive.
-	g := gcd4(abs(t.A), abs(t.B), abs(t.C), abs(t.D))
-	if g > 1 {
-		t.A /= g
-		t.B /= g
-		t.C /= g
-		t.D /= g
+	// Work on copies so we do not mutate caller-owned big.Ints.
+	a := new(big.Int).Set(t.A)
+	b := new(big.Int).Set(t.B)
+	c := new(big.Int).Set(t.C)
+	d := new(big.Int).Set(t.D)
+
+	// g = gcd(|a|,|b|,|c|,|d|)
+	aa := new(big.Int).Abs(a)
+	bb := new(big.Int).Abs(b)
+	cc := new(big.Int).Abs(c)
+	dd := new(big.Int).Abs(d)
+
+	g := new(big.Int)
+	g.GCD(nil, nil, aa, bb)
+	g.GCD(nil, nil, g, cc)
+	g.GCD(nil, nil, g, dd)
+
+	one := big.NewInt(1)
+	if g.Cmp(one) > 0 {
+		a.Quo(a, g)
+		b.Quo(b, g)
+		c.Quo(c, g)
+		d.Quo(d, g)
 	}
 
-	sign := int64(0)
-	for _, v := range []int64{t.A, t.B, t.C, t.D} {
-		if v != 0 {
-			sign = v
-			break
+	// Normalize sign: make first non-zero coefficient positive.
+	first := a
+	if first.Sign() == 0 {
+		first = b
+		if first.Sign() == 0 {
+			first = c
+			if first.Sign() == 0 {
+				first = d
+			}
 		}
 	}
-	if sign < 0 {
-		t.A = -t.A
-		t.B = -t.B
-		t.C = -t.C
-		t.D = -t.D
-	}
-	return t
-}
 
-func gcd4(a, b, c, d int64) int64 {
-	g := gcd(a, b)
-	g = gcd(g, c)
-	g = gcd(g, d)
-	if g < 0 {
-		return -g
+	if first.Sign() < 0 {
+		a.Neg(a)
+		b.Neg(b)
+		c.Neg(c)
+		d.Neg(d)
 	}
-	return g
+
+	return ULFT{A: a, B: b, C: c, D: d}
 }
 
 // ulft_stream.go v8

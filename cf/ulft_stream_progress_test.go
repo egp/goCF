@@ -6,7 +6,7 @@ import "testing"
 func TestULFTStream_ProgressGuardsTrip(t *testing.T) {
 	// Identity transform on a rational requires refinement before the first digit is safe.
 	// With MaxTotalRefines=0 (strict: no refines allowed), it must fail immediately.
-	id := NewULFT(1, 0, 0, 1)
+	id := NewULFT(bi(1), bi(0), bi(0), bi(1))
 	x := mustRat(355, 113) // [3;7,16]
 
 	s := NewULFTStream(id, NewRationalCF(x), ULFTStreamOptions{

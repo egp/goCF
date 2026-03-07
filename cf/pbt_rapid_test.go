@@ -2,6 +2,7 @@
 package cf
 
 import (
+	"math/big"
 	"testing"
 
 	"pgregory.net/rapid"
@@ -46,7 +47,16 @@ func genOutsideRange() *rapid.Generator[Range] {
 			lo, hi = hi, lo
 		}
 		if lo.Cmp(hi) == 0 {
-			lo = mustRat(lo.P+1, lo.Q)
+			num, den := lo.ratNumDen()
+			_ = num // unused, but kept here if you want visibility while refactoring
+			bump, err := newRationalBig(big.NewInt(1), den)
+			if err != nil {
+				t.Fatalf("newRationalBig failed: %v", err)
+			}
+			lo, err = lo.Add(bump)
+			if err != nil {
+				t.Fatalf("lo.Add failed: %v", err)
+			}
 		}
 		if lo.Cmp(hi) <= 0 {
 			lo = mustRat(1, 1)

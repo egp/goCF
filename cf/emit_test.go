@@ -1,11 +1,19 @@
 // emit_test.go v2
 package cf
 
-import "testing"
+import (
+	"math/big"
+	"testing"
+)
 
 func TestSafeDigit_TrueWhenFloorsAgree(t *testing.T) {
 	// Identity transform: y = x
-	id := NewULFT(1, 0, 0, 1)
+	id := NewULFT(
+		big.NewInt(1),
+		big.NewInt(0),
+		big.NewInt(0),
+		big.NewInt(1),
+	)
 
 	// Range [1/3, 1/2] maps to itself; floor bounds are both 0.
 	r := NewRange(mustRat(1, 3), mustRat(1, 2), true, true)
@@ -21,7 +29,12 @@ func TestSafeDigit_TrueWhenFloorsAgree(t *testing.T) {
 
 func TestSafeDigit_FalseWhenFloorsDiffer(t *testing.T) {
 	// Identity transform: y = x
-	id := NewULFT(1, 0, 0, 1)
+	id := NewULFT(
+		big.NewInt(1),
+		big.NewInt(0),
+		big.NewInt(0),
+		big.NewInt(1),
+	)
 
 	// Range [1/3, 5/2] has floors 0 and 2 -> not safe.
 	r := NewRange(mustRat(1, 3), mustRat(5, 2), true, true)
@@ -37,7 +50,13 @@ func TestSafeDigit_FalseWhenFloorsDiffer(t *testing.T) {
 
 func TestSafeDigit_ErrorWhenDenominatorCrossesZero(t *testing.T) {
 	// y = 1/(x-1)
-	tform := NewULFT(0, 1, 1, -1)
+	tform := NewULFT(
+		big.NewInt(0),
+		big.NewInt(1),
+		big.NewInt(1),
+		big.NewInt(-1),
+	)
+
 	r := NewRange(mustRat(0, 1), mustRat(2, 1), true, true)
 
 	_, ok, err := SafeDigit(tform, r)
@@ -49,18 +68,36 @@ func TestSafeDigit_ErrorWhenDenominatorCrossesZero(t *testing.T) {
 	}
 }
 
+// helper function to compare two ULFTs for equality (since == won't work on big.Int fields)
+func equalULFT(a, b ULFT) bool {
+	return a.A.Cmp(b.A) == 0 &&
+		a.B.Cmp(b.B) == 0 &&
+		a.C.Cmp(b.C) == 0 &&
+		a.D.Cmp(b.D) == 0
+}
+
 func TestEmitDigit_IdentityAfterEmitting0(t *testing.T) {
 	// If y=x and we emit a=0, remainder should be z = 1/(x-0) = 1/x
 	// New transform should be 1/x which is [[0,1],[1,0]].
-	id := NewULFT(1, 0, 0, 1)
+	id := NewULFT(
+		big.NewInt(1),
+		big.NewInt(0),
+		big.NewInt(0),
+		big.NewInt(1),
+	)
 
 	got, err := EmitDigit(id, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := NewULFT(0, 1, 1, 0)
+	want := NewULFT(
+		big.NewInt(0),
+		big.NewInt(1),
+		big.NewInt(1),
+		big.NewInt(0),
+	)
 
-	if got != want {
+	if !equalULFT(got, want) {
 		t.Fatalf("got %v, want %v", got, want)
 	}
 }
@@ -68,7 +105,12 @@ func TestEmitDigit_IdentityAfterEmitting0(t *testing.T) {
 func TestEmitDigit_CompositionMatchesDefinition(t *testing.T) {
 	// Check: T'(x) = 1/(T(x) - a) using rationals.
 	// Choose T(x)=(2x+1)/(3x+4), a=0, x=1/2
-	T := NewULFT(2, 1, 3, 4)
+	T := NewULFT(
+		big.NewInt(2),
+		big.NewInt(1),
+		big.NewInt(3),
+		big.NewInt(4),
+	)
 	a := int64(0)
 	x := mustRat(1, 2)
 
@@ -103,7 +145,12 @@ func TestEmitDigit_CompositionMatchesDefinition(t *testing.T) {
 }
 
 func TestULFT_DeterminantHelper(t *testing.T) {
-	T := NewULFT(2, 1, 3, 4)
+	T := NewULFT(
+		big.NewInt(2),
+		big.NewInt(1),
+		big.NewInt(3),
+		big.NewInt(4),
+	)
 	det, err := T.Determinant() // 2*4 - 1*3 = 5
 	if err != nil {
 		t.Fatal(err)

@@ -1,27 +1,19 @@
-// bounder.go v1
+// bounder.go v3
 package cf
 
-import "fmt"
+import (
+	"fmt"
+	"math/big"
+)
 
 // Bounder incrementally ingests continued-fraction terms and maintains a
 // shrinking enclosure Range for the represented real number.
-//
-// Convention / assumptions (aligned with our RationalCF):
-//   - Simple continued fractions with "tail" >= 1 when not finished.
-//   - For canonical expansions of reals: a0 is any integer, and ai >= 1 for i>=1.
-//   - For rationals, you should call Finish() when the source is exhausted; then
-//     the range collapses to an exact point.
-//
-// Math:
-// Given prefix [a0; a1, ..., an] and unknown tail r in [1, +∞),
-// value is (h_n*r + h_{n-1}) / (k_n*r + k_{n-1})
-// Endpoints occur at r=1 (mediant) and r→∞ (convergent).
 type Bounder struct {
 	// Convergent recurrence state:
 	// hm1/km1 = h_n/k_n (latest)
 	// hm2/km2 = h_{n-1}/k_{n-1} (previous)
-	hm2, hm1 int64
-	km2, km1 int64
+	hm2, hm1 *big.Int
+	km2, km1 *big.Int
 
 	count int  // number of ingested terms
 	done  bool // true => exact rational (range collapses)
@@ -30,8 +22,10 @@ type Bounder struct {
 func NewBounder() *Bounder {
 	return &Bounder{
 		// h[-2]=0, h[-1]=1 ; k[-2]=1, k[-1]=0
-		hm2: 0, hm1: 1,
-		km2: 1, km1: 0,
+		hm2: big.NewInt(0),
+		hm1: big.NewInt(1),
+		km2: big.NewInt(1),
+		km1: big.NewInt(0),
 	}
 }
 
@@ -41,8 +35,16 @@ func (b *Bounder) Ingest(a int64) error {
 	if b.done {
 		return fmt.Errorf("bounder: cannot ingest after Finish()")
 	}
-	h := a*b.hm1 + b.hm2
-	k := a*b.km1 + b.km2
+
+	ai := big.NewInt(a)
+
+	// h = a*hm1 + hm2
+	h := new(big.Int).Mul(ai, b.hm1)
+	h.Add(h, b.hm2)
+
+	// k = a*km1 + km2
+	k := new(big.Int).Mul(ai, b.km1)
+	k.Add(k, b.km2)
 
 	b.hm2, b.hm1 = b.hm1, h
 	b.km2, b.km1 = b.km1, k
@@ -65,7 +67,7 @@ func (b *Bounder) Convergent() (Rational, error) {
 	if !b.HasValue() {
 		return Rational{}, fmt.Errorf("bounder: no terms ingested")
 	}
-	return NewRational(b.hm1, b.km1)
+	return newRationalBig(new(big.Int).Set(b.hm1), new(big.Int).Set(b.km1))
 }
 
 // Range returns a closed interval [Lo, Hi] that contains the represented value.
@@ -77,27 +79,30 @@ func (b *Bounder) Range() (Range, bool, error) {
 		return Range{}, false, nil
 	}
 
-	conv, err := NewRational(b.hm1, b.km1)
+	conv, err := newRationalBig(new(big.Int).Set(b.hm1), new(big.Int).Set(b.km1))
 	if err != nil {
 		return Range{}, false, err
 	}
 
 	if b.done {
-		return Range{Lo: conv, Hi: conv}, true, nil
+		return Range{Lo: conv, Hi: conv, IncLo: true, IncHi: true}, true, nil
 	}
 
 	// Mediant endpoint at r=1:
 	// (h_n + h_{n-1}) / (k_n + k_{n-1})
-	med, err := NewRational(b.hm1+b.hm2, b.km1+b.km2)
+	hn := new(big.Int).Add(b.hm1, b.hm2)
+	kn := new(big.Int).Add(b.km1, b.km2)
+
+	med, err := newRationalBig(hn, kn)
 	if err != nil {
 		return Range{}, false, err
 	}
 
-	// Order them safely by comparison (avoids parity mistakes).
+	// Order them by comparison (no parity assumptions).
 	if conv.Cmp(med) <= 0 {
-		return Range{Lo: conv, Hi: med}, true, nil
+		return Range{Lo: conv, Hi: med, IncLo: true, IncHi: true}, true, nil
 	}
-	return Range{Lo: med, Hi: conv}, true, nil
+	return Range{Lo: med, Hi: conv, IncLo: true, IncHi: true}, true, nil
 }
 
-// bounder.go v1
+// bounder.go v3

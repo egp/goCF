@@ -1,9 +1,10 @@
-// main.go v1
+// main.go v2
 package main
 
 import (
 	"flag"
 	"fmt"
+	"os"
 
 	"github.com/egp/goCF/cf"
 )
@@ -15,13 +16,23 @@ func main() {
 	flag.Parse()
 
 	if *q == 0 {
-		panic("q must be non-zero")
+		fmt.Fprintln(os.Stderr, "error: q must be non-zero")
+		os.Exit(1)
+	}
+	if *n < 0 {
+		fmt.Fprintln(os.Stderr, "error: n must be non-negative")
+		os.Exit(1)
 	}
 
-	r := cf.Rational{P: *p, Q: *q}
+	r, err := cf.NewRational(*p, *q)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: invalid rational %d/%d: %v\n", *p, *q, err)
+		os.Exit(1)
+	}
+
 	stream := cf.NewRationalCF(r)
 
-	fmt.Printf("r = %d/%d\n", r.P, r.Q)
+	fmt.Printf("r = %s\n", r.String())
 	fmt.Printf("CF terms (first %d): [", *n)
 
 	for i := 0; i < *n; i++ {
@@ -37,4 +48,4 @@ func main() {
 	fmt.Println("]")
 }
 
-// main.go v1
+// main.go v2

@@ -34,10 +34,10 @@ func denomAtNaive(tform BLFT, x, y Rational) (Rational, error) {
 	if err != nil {
 		return Rational{}, err
 	}
-	e := Rational{P: tform.E, Q: 1}
-	f := Rational{P: tform.F, Q: 1}
-	g := Rational{P: tform.G, Q: 1}
-	h := Rational{P: tform.H, Q: 1}
+	e := intRat(tform.E)
+	f := intRat(tform.F)
+	g := intRat(tform.G)
+	h := intRat(tform.H)
 
 	term1, err := e.Mul(xy)
 	if err != nil {
@@ -125,7 +125,7 @@ func TestPBT_BLF_DenomCornerBoundsExcludeZeroImpliesNoPoleSamples(t *testing.T) 
 				if err != nil {
 					t.Fatalf("denomAt failed: %v", err)
 				}
-				if d.P == 0 {
+				if d.Cmp(intRat(0)) == 0 {
 					t.Fatalf("pole found despite denomRange excluding 0: E=%d F=%d G=%d H=%d rx=[%v,%v] ry=[%v,%v] at x=%v y=%v",
 						E, F, G, H, rx.Lo, rx.Hi, ry.Lo, ry.Hi, x, y)
 				}

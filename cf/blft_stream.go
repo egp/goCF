@@ -1,4 +1,4 @@
-// blft_stream.go v9
+// blft_stream.go v11
 package cf
 
 import "fmt"
@@ -23,6 +23,11 @@ type BLFTStream struct {
 
 	finalizeTried bool
 
+	maxRefinesPerDigit int
+	maxTotalRefines    int
+	refinesThisDigit   int
+	refinesTotal       int
+
 	// Optional cycle detection (diagnostic safety guard).
 	detectCycles bool
 	maxRepeats   int
@@ -35,7 +40,9 @@ type BLFTStreamOptions struct {
 	//
 	// This is intended for rational inputs and prevents range-based denom-guard failures
 	// that can occur before the bounders shrink to the exact point.
-	MaxFinalizeDigits int
+	MaxFinalizeDigits  int
+	MaxRefinesPerDigit int
+	MaxTotalRefines    int
 
 	// Optional cycle detection (debugging / safety).
 	DetectCycles bool
@@ -65,16 +72,25 @@ func NewBLFTStream(t BLFT, xs, ys ContinuedFraction, opts BLFTStreamOptions) *BL
 		hist = NewRingBuf(n)
 	}
 
+	// Defaulting rule for refine guards:
+	// If BOTH are zero, treat that as "unset" => unlimited (-1).
+	if opts.MaxRefinesPerDigit == 0 && opts.MaxTotalRefines == 0 {
+		opts.MaxRefinesPerDigit = -1
+		opts.MaxTotalRefines = -1
+	}
+
 	return &BLFTStream{
-		t:            t,
-		xs:           xs,
-		ys:           ys,
-		xb:           NewBounder(),
-		yb:           NewBounder(),
-		opts:         opts,
-		detectCycles: opts.DetectCycles,
-		maxRepeats:   max,
-		history:      hist,
+		t:                  t,
+		xs:                 xs,
+		ys:                 ys,
+		xb:                 NewBounder(),
+		yb:                 NewBounder(),
+		opts:               opts,
+		maxRefinesPerDigit: opts.MaxRefinesPerDigit,
+		maxTotalRefines:    opts.MaxTotalRefines,
+		detectCycles:       opts.DetectCycles,
+		maxRepeats:         max,
+		history:            hist,
 	}
 }
 
@@ -97,6 +113,8 @@ func (s *BLFTStream) Next() (int64, bool) {
 		s.done = true
 		return 0, false
 	}
+
+	s.refinesThisDigit = 0
 
 	// If we have an exact tail CF, delegate.
 	if s.tail != nil {
@@ -221,6 +239,16 @@ func (s *BLFTStream) Next() (int64, bool) {
 
 		if lo == hi {
 			d := lo
+
+			// v10: integer termination short-circuit
+			//
+			// If the image interval has collapsed to an exact integer d, then the CF is exactly [d]
+			// at this point and we MUST NOT apply emitDigitBLFT (which would compute 1/(d-d)).
+			if img.Lo.Cmp(img.Hi) == 0 && img.Lo.Cmp(intRat(d)) == 0 {
+				s.done = true
+				return d, true
+			}
+
 			tp, err := s.emitDigitBLFT(d)
 			if err != nil {
 				s.setErr(annotateErrBLFT(err, s.t, xr, yr))
@@ -271,6 +299,24 @@ func (s *BLFTStream) Next() (int64, bool) {
 				}
 				s.alt = !s.alt
 			}
+		}
+
+		// Progress guards: each attempted refinement consumes one refine budget.
+		s.refinesThisDigit++
+		s.refinesTotal++
+		if s.maxRefinesPerDigit >= 0 && s.refinesThisDigit > s.maxRefinesPerDigit {
+			s.setErr(annotateErrBLFT(
+				fmt.Errorf("BLFTStream: exceeded MaxRefinesPerDigit=%d", s.maxRefinesPerDigit),
+				s.t, xr, yr,
+			))
+			return 0, false
+		}
+		if s.maxTotalRefines >= 0 && s.refinesTotal > s.maxTotalRefines {
+			s.setErr(annotateErrBLFT(
+				fmt.Errorf("BLFTStream: exceeded MaxTotalRefines=%d", s.maxTotalRefines),
+				s.t, xr, yr,
+			))
+			return 0, false
 		}
 
 		if refineX {
@@ -425,4 +471,4 @@ func (s *BLFTStream) emitDigitBLFT(d int64) (BLFT, error) {
 	return NewBLFT(A2, B2, C2, D2, E2, F2, G2, H2), nil
 }
 
-// blft_stream.go v9
+// EOF blft_stream.go v11

@@ -1,68 +1,80 @@
+// rational_cf.go v3
 package cf
 
-import "fmt"
+import "math/big"
 
 // RationalCF streams the continued-fraction terms of a Rational.
 type RationalCF struct {
-	p, q int64
+	r    Rational
 	done bool
 }
 
 func NewRationalCF(r Rational) *RationalCF {
-	return &RationalCF{p: r.P, q: r.Q}
+	return &RationalCF{r: r}
 }
 
 func (c *RationalCF) Next() (int64, bool) {
 	if c.done {
 		return 0, false
 	}
-	if c.q == 0 {
+
+	num, den := c.r.ratNumDen()
+	if den.Sign() == 0 {
 		// Should be impossible if constructed from Rational, but keep it safe.
 		c.done = true
 		return 0, false
 	}
 
-	a, rem := floorDivMod(c.p, c.q)
-	if rem == 0 {
+	a, rem := floorDivModBig(num, den)
+	if !a.IsInt64() {
 		c.done = true
-		return a, true
+		return 0, false
+	}
+	digit := a.Int64()
+
+	if rem.Sign() == 0 {
+		c.done = true
+		return digit, true
 	}
 
-	// Next step: x = q/rem with sign handled by floorDivMod remainder being >= 0
-	c.p, c.q = c.q, rem
-	return a, true
+	// Next step: x = den/rem with rem > 0
+	next, err := newRationalBig(den, rem)
+	if err != nil {
+		c.done = true
+		return 0, false
+	}
+	c.r = next
+	return digit, true
 }
 
-// floorDivMod returns (a, r) such that:
+// floorDivModBig returns (a, r) such that:
 //
 //	p = a*q + r
 //
 // with 0 <= r < |q| and a = floor(p/q) for q > 0.
 // We assume q > 0 in this library (Rational invariant), but keep it general-ish.
-func floorDivMod(p, q int64) (a, r int64) {
-	if q == 0 {
-		panic("floorDivMod: q=0")
-	}
-	if q < 0 {
-		p = -p
-		q = -q
+func floorDivModBig(p, q *big.Int) (a, r *big.Int) {
+	if q.Sign() == 0 {
+		panic("floorDivModBig: q=0")
 	}
 
-	// Go / truncates toward zero. We need floor for negatives.
-	a = p / q
-	r = p % q
-	if r < 0 {
-		r += q
-		a -= 1
+	pp := new(big.Int).Set(p)
+	qq := new(big.Int).Set(q)
+	if qq.Sign() < 0 {
+		pp.Neg(pp)
+		qq.Neg(qq)
+	}
+
+	a = new(big.Int)
+	r = new(big.Int)
+	a.QuoRem(pp, qq, r)
+
+	// big.Int QuoRem truncates toward zero. We need floor for negatives.
+	if r.Sign() < 0 {
+		r.Add(r, qq)
+		a.Sub(a, big.NewInt(1))
 	}
 	return a, r
 }
 
-// Convenience: make a Rational from ints and panic on error (tests only).
-func mustRat(p, q int64) Rational {
-	r, err := NewRational(p, q)
-	if err != nil {
-		panic(fmt.Sprintf("bad rational %d/%d: %v", p, q, err))
-	}
-	return r
-}
+// rational_cf.go v3

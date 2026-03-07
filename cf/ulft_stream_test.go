@@ -24,22 +24,22 @@ func TestULFTStream_Golden_RationalInputs(t *testing.T) {
 	cases := []tc{
 		{
 			name: "identity_355_113",
-			t:    NewULFT(1, 0, 0, 1),
+			t:    NewULFT(bi(1), bi(0), bi(0), bi(1)), // identity
 			x:    mustRat(355, 113),
 		},
 		{
 			name: "x_plus_1_on_3_2",
-			t:    NewULFT(1, 1, 0, 1), // x + 1
+			t:    NewULFT(bi(1), bi(1), bi(0), bi(1)), // x + 1
 			x:    mustRat(3, 2),
 		},
 		{
 			name: "reciprocal_on_7_5",
-			t:    NewULFT(0, 1, 1, 0), // 1/x
+			t:    NewULFT(bi(0), bi(1), bi(1), bi(0)), // 1/x
 			x:    mustRat(7, 5),
 		},
 		{
 			name: "general_on_1_2",
-			t:    NewULFT(2, 1, 3, 4), // (2x+1)/(3x+4)
+			t:    NewULFT(bi(2), bi(1), bi(3), bi(4)), // (2x+1)/(3x+4)
 			x:    mustRat(1, 2),
 		},
 	}
@@ -77,7 +77,7 @@ func TestULFTStream_Identity_ReproducesInputCF(t *testing.T) {
 	src := NewRationalCF(x)
 	want := collectAll(NewRationalCF(x))
 
-	id := NewULFT(1, 0, 0, 1)
+	id := NewULFT(bi(1), bi(0), bi(0), bi(1))
 	s := NewULFTStream(id, src, ULFTStreamOptions{DetectCycles: true})
 
 	got := collectAll(s)

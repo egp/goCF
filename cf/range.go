@@ -1,8 +1,9 @@
-// range.go v16
+// range.go v17
 package cf
 
 import (
 	"fmt"
+	"math/big"
 )
 
 type Range struct {
@@ -181,54 +182,37 @@ func (r Range) ApplyULFT(t ULFT) (Range, error) {
 
 // ---- helpers ----
 
-// floorRat computes floor(p/q) for q>0 using Euclidean division.
-// Works for negatives correctly.
+// floorRat computes floor(x) exactly and returns it as int64 if it fits.
 func floorRat(x Rational) (int64, error) {
-	if x.Q <= 0 {
-		return 0, fmt.Errorf("floorRat: invalid denominator %d", x.Q)
+	// x = num/den with den>0 (our invariant)
+	num, den := x.ratNumDen()
+	if den.Sign() <= 0 {
+		return 0, fmt.Errorf("floorRat: invalid denominator %s", den.String())
 	}
-	p := x.P
-	q := x.Q
 
-	// Go truncates toward zero. Adjust for negative remainder.
-	quo := p / q
-	rem := p % q
-	if rem != 0 && p < 0 {
-		quo -= 1
+	quo := new(big.Int)
+	rem := new(big.Int)
+	quo.QuoRem(num, den, rem) // quo truncates toward 0, rem has sign of num
+
+	// Adjust for negatives: if num<0 and rem!=0, floor is quo-1.
+	if rem.Sign() != 0 && num.Sign() < 0 {
+		quo.Sub(quo, big.NewInt(1))
 	}
-	return quo, nil
+
+	if !quo.IsInt64() {
+		return 0, fmt.Errorf("floorRat: result does not fit int64: %s", quo.String())
+	}
+	return quo.Int64(), nil
 }
 
-// evalLinearOnRat computes (a*x + b) exactly on x rational, with overflow detection.
-func evalLinearOnRat(a, b int64, x Rational) (Rational, error) {
-	// (a * (p/q) + b) = (a*p + b*q)/q
-	ap, ok := mul64(a, x.P)
-	if !ok {
-		return Rational{}, ErrOverflow
-	}
-	bq, ok := mul64(b, x.Q)
-	if !ok {
-		return Rational{}, ErrOverflow
-	}
-	num, ok := add64(ap, bq)
-	if !ok {
-		return Rational{}, ErrOverflow
-	}
-	return NewRational(num, x.Q)
+// evalLinearOnRat computes (a*x + b) exactly on x rational.
+func evalLinearOnRat(a, b *big.Int, x Rational) (Rational, error) {
+	var ax, out big.Rat
+
+	ax.Mul(ratFromBigInt(a), &x.r)
+	out.Add(&ax, ratFromBigInt(b))
+
+	return Rational{r: out}, nil
 }
 
-func minRat(a, b Rational) Rational {
-	if a.Cmp(b) <= 0 {
-		return a
-	}
-	return b
-}
-
-func maxRat(a, b Rational) Rational {
-	if a.Cmp(b) >= 0 {
-		return a
-	}
-	return b
-}
-
-// range.go v16
+// range.go v17

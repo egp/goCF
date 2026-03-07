@@ -7,7 +7,7 @@ func TestNewRational_NormalizesSignAndGCD(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if r.P != 1 || r.Q != 2 {
+	if r.Cmp(mustRat(1, 2)) != 0 {
 		t.Fatalf("got %v, want 1/2", r)
 	}
 
@@ -15,7 +15,7 @@ func TestNewRational_NormalizesSignAndGCD(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if r.P != -1 || r.Q != 2 {
+	if r.Cmp(mustRat(-1, 2)) != 0 {
 		t.Fatalf("got %v, want -1/2", r)
 	}
 }
@@ -25,12 +25,12 @@ func TestRational_Arithmetic(t *testing.T) {
 	b, _ := NewRational(1, 6)
 
 	sum, _ := a.Add(b)
-	if sum.P != 1 || sum.Q != 2 {
+	if sum.Cmp(mustRat(1, 2)) != 0 {
 		t.Fatalf("sum got %v, want 1/2", sum)
 	}
 
 	prod, _ := a.Mul(b)
-	if prod.P != 1 || prod.Q != 18 {
+	if prod.Cmp(mustRat(1, 18)) != 0 {
 		t.Fatalf("prod got %v, want 1/18", prod)
 	}
 }

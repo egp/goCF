@@ -7,8 +7,8 @@ func TestFingerprintULFT_CanonicalizesSignAndGCD(t *testing.T) {
 	r := NewRange(mustRat(1, 2), mustRat(3, 2), true, false)
 
 	// Same transform up to overall sign and gcd factor.
-	t1 := NewULFT(2, 4, 6, 8)     // gcd 2 -> (1,2,3,4)
-	t2 := NewULFT(-1, -2, -3, -4) // sign flip
+	t1 := NewULFT(bi(2), bi(4), bi(6), bi(8))     // gcd 2 -> (1,2,3,4)
+	t2 := NewULFT(bi(-1), bi(-2), bi(-3), bi(-4)) // sign flip
 
 	f1, err := FingerprintULFT(t1, r)
 	if err != nil {
@@ -24,7 +24,7 @@ func TestFingerprintULFT_CanonicalizesSignAndGCD(t *testing.T) {
 }
 
 func TestFingerprintULFT_ChangesWithRangeFlags(t *testing.T) {
-	tform := NewULFT(1, 0, 0, 1)
+	tform := NewULFT(bi(1), bi(0), bi(0), bi(1))
 
 	r1 := NewRange(mustRat(0, 1), mustRat(1, 1), true, true)
 	r2 := NewRange(mustRat(0, 1), mustRat(1, 1), false, true)
