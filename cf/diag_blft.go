@@ -25,9 +25,9 @@ func NewDiagBLFT(a, b, c, d, e, f *big.Int) DiagBLFT {
 	}
 }
 
-func bigIntAdd(x, y *big.Int) *big.Int {
-	return new(big.Int).Add(x, y)
-}
+// func bigIntAdd(x, y *big.Int) *big.Int {
+// 	return new(big.Int).Add(x, y)
+// }
 
 // DiagFromBLFT specializes a BLFT to the diagonal x=y.
 //

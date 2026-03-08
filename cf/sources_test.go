@@ -87,7 +87,7 @@ func assertDiagSquaresToInt(t *testing.T, name string, src func() ContinuedFract
 	}
 
 	if err := s.Err(); err != nil {
-		t.Fatalf("%s^2: expected first digit, stream exhausted; err=%v", name, s.Err())
+		t.Fatalf("%s^2: stream error: %v", name, err)
 	}
 }
 
