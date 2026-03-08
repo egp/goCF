@@ -108,19 +108,4 @@ func (t BLFT) ApplyRat(x, y Rational) (Rational, error) {
 	return Rational{r: out}, nil
 }
 
-// func bigIntFitsInt64(z *big.Int) bool {
-// 	if z.Sign() == 0 {
-// 		return true
-// 	}
-// 	if z.BitLen() < 63 {
-// 		return true
-// 	}
-// 	if z.BitLen() > 63 {
-// 		return false
-// 	}
-// 	max := big.NewInt(int64(^uint64(0) >> 1))
-// 	min := new(big.Int).Neg(new(big.Int).Add(max, big.NewInt(1)))
-// 	return z.Cmp(min) >= 0 && z.Cmp(max) <= 0
-// }
-
 // lft.go v3
