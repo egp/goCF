@@ -1,4 +1,4 @@
-// sqrt_api_policy.go v2
+// sqrt_api_policy.go v3
 package cf
 
 import "fmt"
@@ -6,6 +6,9 @@ import "fmt"
 // SqrtApproxWithPolicy computes a bounded rational approximation to sqrt(x)
 // using the supplied policy and the default seed policy.
 func SqrtApproxWithPolicy(x Rational, p SqrtPolicy) (Rational, error) {
+	if err := p.Validate(); err != nil {
+		return Rational{}, err
+	}
 	approx, _, err := SqrtApproxRationalUntilResidualDefault(x, p.MaxSteps, p.Tol)
 	return approx, err
 }
@@ -33,4 +36,4 @@ func SqrtApproxTermsWithPolicy(x Rational, p SqrtPolicy, digits int) ([]int64, e
 	return collectTerms(cf, digits), nil
 }
 
-// sqrt_api_policy.go v2
+// sqrt_api_policy.go v3

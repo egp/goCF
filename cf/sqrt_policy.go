@@ -1,5 +1,7 @@
-// sqrt_policy.go v1
+// sqrt_policy.go v2
 package cf
+
+import "fmt"
 
 type SqrtPolicy struct {
 	MaxSteps int
@@ -13,4 +15,14 @@ func DefaultSqrtPolicy() SqrtPolicy {
 	}
 }
 
-// sqrt_policy.go v1
+func (p SqrtPolicy) Validate() error {
+	if p.MaxSteps < 0 {
+		return fmt.Errorf("SqrtPolicy: negative MaxSteps %d", p.MaxSteps)
+	}
+	if p.Tol.Cmp(intRat(0)) < 0 {
+		return fmt.Errorf("SqrtPolicy: negative Tol %v", p.Tol)
+	}
+	return nil
+}
+
+// sqrt_policy.go v2

@@ -1,4 +1,4 @@
-// sqrt_policy_test.go v1
+// sqrt_policy_test.go v2
 package cf
 
 import "testing"
@@ -14,4 +14,30 @@ func TestDefaultSqrtPolicy(t *testing.T) {
 	}
 }
 
-// sqrt_policy_test.go v1
+func TestSqrtPolicyValidate(t *testing.T) {
+	ok := SqrtPolicy{
+		MaxSteps: 3,
+		Tol:      mustRat(1, 1000),
+	}
+	if err := ok.Validate(); err != nil {
+		t.Fatalf("expected valid policy, got %v", err)
+	}
+
+	badSteps := SqrtPolicy{
+		MaxSteps: -1,
+		Tol:      mustRat(1, 1000),
+	}
+	if err := badSteps.Validate(); err == nil {
+		t.Fatalf("expected error for negative MaxSteps")
+	}
+
+	badTol := SqrtPolicy{
+		MaxSteps: 3,
+		Tol:      mustRat(-1, 1000),
+	}
+	if err := badTol.Validate(); err == nil {
+		t.Fatalf("expected error for negative Tol")
+	}
+}
+
+// sqrt_policy_test.go v2
