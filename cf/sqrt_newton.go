@@ -1,4 +1,4 @@
-// sqrt_newton.go v2
+// sqrt_newton.go v3
 package cf
 
 import (
@@ -147,6 +147,175 @@ func SqrtApproxRational(x, seed Rational, steps int) (Rational, error) {
 	return ys[len(ys)-1], nil
 }
 
+// SqrtResidual returns the exact residual y^2 - x.
+func SqrtResidual(x, y Rational) (Rational, error) {
+	y2, err := y.Mul(y)
+	if err != nil {
+		return Rational{}, err
+	}
+	return y2.Sub(x)
+}
+
+// SqrtResidualAbs returns the exact absolute residual |y^2 - x|.
+func SqrtResidualAbs(x, y Rational) (Rational, error) {
+	r, err := SqrtResidual(x, y)
+	if err != nil {
+		return Rational{}, err
+	}
+	if r.Cmp(intRat(0)) < 0 {
+		return intRat(0).Sub(r)
+	}
+	return r, nil
+}
+
+// SqrtApproxRationalUntilExact performs Newton iterations for sqrt(x),
+// stopping early if an iterate becomes exact (residual == 0), or after
+// maxSteps iterations.
+//
+// Returns:
+//   - the last iterate examined/produced
+//   - exact=true if that iterate is an exact square root of x
+//   - error on invalid input
+//
+// Behavior:
+//   - maxSteps < 0 => error
+//   - if x has an exact rational square root, returns it immediately with exact=true
+//   - otherwise, if maxSteps == 0, returns seed with exact=false after validation
+func SqrtApproxRationalUntilExact(x, seed Rational, maxSteps int) (Rational, bool, error) {
+	if maxSteps < 0 {
+		return Rational{}, false, fmt.Errorf("SqrtApproxRationalUntilExact: negative maxSteps %d", maxSteps)
+	}
+	if x.r.Sign() < 0 {
+		return Rational{}, false, fmt.Errorf("sqrt of negative rational: %v", x)
+	}
+
+	if root, ok, err := RationalSqrtExact(x); err != nil {
+		return Rational{}, false, err
+	} else if ok {
+		return root, true, nil
+	}
+
+	if seed.r.Sign() == 0 {
+		return Rational{}, false, fmt.Errorf("SqrtApproxRationalUntilExact: zero seed")
+	}
+	if seed.r.Sign() < 0 {
+		return Rational{}, false, fmt.Errorf("SqrtApproxRationalUntilExact: negative seed %v", seed)
+	}
+	if maxSteps == 0 {
+		return seed, false, nil
+	}
+
+	y := seed
+	for i := 0; i < maxSteps; i++ {
+		next, err := NewtonSqrtStep(x, y)
+		if err != nil {
+			return Rational{}, false, err
+		}
+		res, err := SqrtResidual(x, next)
+		if err != nil {
+			return Rational{}, false, err
+		}
+		if res.Cmp(intRat(0)) == 0 {
+			return next, true, nil
+		}
+		y = next
+	}
+	return y, false, nil
+}
+
+// SqrtApproxRationalUntilExactDefault performs bounded Newton iteration for
+// sqrt(x), using DefaultSqrtSeed(x), and stops early if exact convergence occurs.
+func SqrtApproxRationalUntilExactDefault(x Rational, maxSteps int) (Rational, bool, error) {
+	seed, err := DefaultSqrtSeed(x)
+	if err != nil {
+		return Rational{}, false, err
+	}
+	return SqrtApproxRationalUntilExact(x, seed, maxSteps)
+}
+
+// SqrtApproxRationalUntilResidual performs Newton iterations for sqrt(x),
+// stopping early once the exact absolute residual satisfies:
+//
+//	|y^2 - x| <= tol
+//
+// Returns:
+//   - the last iterate examined/produced
+//   - satisfied=true if the tolerance condition was met
+//   - error on invalid input
+//
+// Behavior:
+//   - maxSteps < 0 => error
+//   - tol < 0      => error
+//   - if x has an exact rational square root, returns it immediately with satisfied=true
+//   - if maxSteps == 0, returns seed with satisfied determined from the residual
+func SqrtApproxRationalUntilResidual(x, seed Rational, maxSteps int, tol Rational) (Rational, bool, error) {
+	if maxSteps < 0 {
+		return Rational{}, false, fmt.Errorf("SqrtApproxRationalUntilResidual: negative maxSteps %d", maxSteps)
+	}
+	if x.r.Sign() < 0 {
+		return Rational{}, false, fmt.Errorf("sqrt of negative rational: %v", x)
+	}
+	if tol.Cmp(intRat(0)) < 0 {
+		return Rational{}, false, fmt.Errorf("SqrtApproxRationalUntilResidual: negative tolerance %v", tol)
+	}
+
+	if root, ok, err := RationalSqrtExact(x); err != nil {
+		return Rational{}, false, err
+	} else if ok {
+		return root, true, nil
+	}
+
+	if seed.r.Sign() == 0 {
+		return Rational{}, false, fmt.Errorf("SqrtApproxRationalUntilResidual: zero seed")
+	}
+	if seed.r.Sign() < 0 {
+		return Rational{}, false, fmt.Errorf("SqrtApproxRationalUntilResidual: negative seed %v", seed)
+	}
+
+	check := func(y Rational) (bool, error) {
+		r, err := SqrtResidualAbs(x, y)
+		if err != nil {
+			return false, err
+		}
+		return r.Cmp(tol) <= 0, nil
+	}
+
+	if maxSteps == 0 {
+		ok, err := check(seed)
+		if err != nil {
+			return Rational{}, false, err
+		}
+		return seed, ok, nil
+	}
+
+	y := seed
+	for i := 0; i < maxSteps; i++ {
+		next, err := NewtonSqrtStep(x, y)
+		if err != nil {
+			return Rational{}, false, err
+		}
+		ok, err := check(next)
+		if err != nil {
+			return Rational{}, false, err
+		}
+		if ok {
+			return next, true, nil
+		}
+		y = next
+	}
+	return y, false, nil
+}
+
+// SqrtApproxRationalUntilResidualDefault performs bounded Newton iteration for
+// sqrt(x), using DefaultSqrtSeed(x), and stops early once |y^2 - x| <= tol.
+func SqrtApproxRationalUntilResidualDefault(x Rational, maxSteps int, tol Rational) (Rational, bool, error) {
+	seed, err := DefaultSqrtSeed(x)
+	if err != nil {
+		return Rational{}, false, err
+	}
+	return SqrtApproxRationalUntilResidual(x, seed, maxSteps, tol)
+}
+
 // exactSqrtBig returns sqrt(n),true iff n is a perfect square and n >= 0.
 func exactSqrtBig(n *big.Int) (*big.Int, bool) {
 	if n.Sign() < 0 {
@@ -160,4 +329,4 @@ func exactSqrtBig(n *big.Int) (*big.Int, bool) {
 	return s, true
 }
 
-// sqrt_newton.go v2
+// sqrt_newton.go v3
