@@ -1,4 +1,4 @@
-// diag_stream.go v3
+// diag_stream.go v4
 package cf
 
 import (
@@ -46,9 +46,9 @@ func NewDiagBLFTStream(t DiagBLFT, src ContinuedFraction, opts DiagBLFTStreamOpt
 
 func (s *DiagBLFTStream) Err() error { return s.err }
 
-// exactIntFromQuadraticRadical returns n,true when:
+// exactIntFromQuadraticRadical returns z,true when:
 //   - src advertises itself as sqrt(n)
-//   - t is exactly x^2
+//   - t is exactly (x^2 + k) / 1 for some integer k that fits in int64
 //
 // This is a deliberately narrow algebraic proof hook.
 func (s *DiagBLFTStream) exactIntFromQuadraticRadical() (int64, bool) {
@@ -61,18 +61,27 @@ func (s *DiagBLFTStream) exactIntFromQuadraticRadical() (int64, bool) {
 		return 0, false
 	}
 
-	isSquare :=
+	// Match: (x^2 + k) / 1
+	isSquarePlusConst :=
 		s.t.A.Cmp(big.NewInt(1)) == 0 &&
 			s.t.B.Sign() == 0 &&
-			s.t.C.Sign() == 0 &&
 			s.t.D.Sign() == 0 &&
 			s.t.E.Sign() == 0 &&
 			s.t.F.Cmp(big.NewInt(1)) == 0
 
-	if !isSquare {
+	if !isSquarePlusConst {
 		return 0, false
 	}
-	return n, true
+	if !s.t.C.IsInt64() {
+		return 0, false
+	}
+
+	k := s.t.C.Int64()
+	z, ok := add64(n, k)
+	if !ok {
+		return 0, false
+	}
+	return z, true
 }
 
 func (s *DiagBLFTStream) Next() (int64, bool) {
@@ -85,7 +94,7 @@ func (s *DiagBLFTStream) Next() (int64, bool) {
 	}
 
 	// Narrow exact algebraic shortcut:
-	// if src is sqrt(n) and transform is x^2, emit [n] exactly.
+	// if src is sqrt(n) and transform is x^2 + k, emit [n+k] exactly.
 	if n, ok := s.exactIntFromQuadraticRadical(); ok {
 		s.done = true
 		return n, true
@@ -187,4 +196,4 @@ func (s *DiagBLFTStream) setErr(err error) {
 	s.done = true
 }
 
-// diag_stream.go v3
+// diag_stream.go v4

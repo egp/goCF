@@ -1,4 +1,4 @@
-// diag_stream_test.go v1
+// diag_stream_test.go v2
 package cf
 
 import (
@@ -74,10 +74,58 @@ func TestDiagBLFTStream_ExactSquareShortcut_Sqrt7(t *testing.T) {
 	}
 }
 
-func TestDiagBLFTStream_NoShortcut_ForNonSquareTransform(t *testing.T) {
-	// x^2 + 1, not exactly x^2, so no algebraic shortcut should fire.
+func TestDiagBLFTStream_ExactSquarePlusConstShortcut_Sqrt2Plus1(t *testing.T) {
 	tform := NewDiagBLFT(
 		big.NewInt(1), big.NewInt(0), big.NewInt(1),
+		big.NewInt(0), big.NewInt(0), big.NewInt(1),
+	)
+
+	s := NewDiagBLFTStream(tform, Sqrt2CF(), DiagBLFTStreamOptions{})
+
+	a0, ok := s.Next()
+	if !ok {
+		t.Fatalf("expected first digit, got termination; err=%v", s.Err())
+	}
+	if a0 != 3 {
+		t.Fatalf("got %d, want 3", a0)
+	}
+
+	if _, ok := s.Next(); ok {
+		t.Fatalf("expected clean termination after [3]")
+	}
+	if err := s.Err(); err != nil {
+		t.Fatalf("expected nil err, got %v", err)
+	}
+}
+
+func TestDiagBLFTStream_ExactSquarePlusConstShortcut_Sqrt5Minus1(t *testing.T) {
+	tform := NewDiagBLFT(
+		big.NewInt(1), big.NewInt(0), big.NewInt(-1),
+		big.NewInt(0), big.NewInt(0), big.NewInt(1),
+	)
+
+	s := NewDiagBLFTStream(tform, Sqrt5CF(), DiagBLFTStreamOptions{})
+
+	a0, ok := s.Next()
+	if !ok {
+		t.Fatalf("expected first digit, got termination; err=%v", s.Err())
+	}
+	if a0 != 4 {
+		t.Fatalf("got %d, want 4", a0)
+	}
+
+	if _, ok := s.Next(); ok {
+		t.Fatalf("expected clean termination after [4]")
+	}
+	if err := s.Err(); err != nil {
+		t.Fatalf("expected nil err, got %v", err)
+	}
+}
+
+func TestDiagBLFTStream_NoShortcut_ForNonSquareTransform(t *testing.T) {
+	// 2*x^2 + 1, not exactly x^2 + k, so no algebraic shortcut should fire.
+	tform := NewDiagBLFT(
+		big.NewInt(2), big.NewInt(0), big.NewInt(1),
 		big.NewInt(0), big.NewInt(0), big.NewInt(1),
 	)
 
@@ -95,4 +143,4 @@ func TestDiagBLFTStream_NoShortcut_ForNonSquareTransform(t *testing.T) {
 	}
 }
 
-// diag_stream_test.go v1
+// diag_stream_test.go v2
