@@ -1,4 +1,4 @@
-// sqrt_api_policy_test.go v1
+// sqrt_api_policy_test.go v2
 package cf
 
 import "testing"
@@ -24,6 +24,25 @@ func TestSqrtApproxWithPolicy_Sqrt2_ThreeSteps(t *testing.T) {
 	p := SqrtPolicy{
 		MaxSteps: 3,
 		Tol:      mustRat(1, 1000),
+	}
+
+	got, err := SqrtApproxWithPolicy(mustRat(2, 1), p)
+	if err != nil {
+		t.Fatalf("SqrtApproxWithPolicy failed: %v", err)
+	}
+
+	want := mustRat(577, 408)
+	if got.Cmp(want) != 0 {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+}
+
+func TestSqrtApproxWithPolicy_ExplicitSeedOverride(t *testing.T) {
+	seed := mustRat(1, 1)
+	p := SqrtPolicy{
+		MaxSteps: 3,
+		Tol:      mustRat(1, 1000),
+		Seed:     &seed,
 	}
 
 	got, err := SqrtApproxWithPolicy(mustRat(2, 1), p)
@@ -91,4 +110,4 @@ func TestSqrtApproxTermsWithPolicy_RejectsNegativeDigits(t *testing.T) {
 	}
 }
 
-// sqrt_api_policy_test.go v1
+// sqrt_api_policy_test.go v2
