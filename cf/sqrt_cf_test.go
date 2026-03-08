@@ -63,4 +63,31 @@ func TestNewSqrtApproxCF_RejectsZeroSeed(t *testing.T) {
 	}
 }
 
+func TestNewSqrtApproxCFFromSourceRangeMidpoint_Sqrt2Prefix2(t *testing.T) {
+	p := SqrtPolicy{
+		MaxSteps: 3,
+		Tol:      mustRat(1, 1000),
+	}
+
+	cf, err := NewSqrtApproxCFFromSourceRangeMidpoint(Sqrt2CF(), 2, p)
+	if err != nil {
+		t.Fatalf("NewSqrtApproxCFFromSourceRangeMidpoint failed: %v", err)
+	}
+
+	got := collectTerms(cf, 8)
+	if len(got) == 0 {
+		t.Fatalf("expected non-empty CF")
+	}
+	if got[0] != 1 {
+		t.Fatalf("got first digit %d, want 1; full=%v", got[0], got)
+	}
+}
+
+func TestSqrtApproxTermsFromSourceRangeMidpointDefault_RejectsNegativeDigits(t *testing.T) {
+	_, err := SqrtApproxTermsFromSourceRangeMidpointDefault(Sqrt2CF(), 2, -1)
+	if err == nil {
+		t.Fatalf("expected error for negative digits")
+	}
+}
+
 // sqrt_cf_test.go v1

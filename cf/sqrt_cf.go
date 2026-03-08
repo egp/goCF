@@ -1,4 +1,4 @@
-// sqrt_cf.go v2
+// sqrt_cf.go v3
 package cf
 
 import "fmt"
@@ -331,4 +331,72 @@ func SqrtApproxTermsFromSourceRangeSeedDefault(src ContinuedFraction, prefixTerm
 	return SqrtApproxTermsFromSourceRangeSeed(src, prefixTerms, DefaultSqrtPolicy(), digits)
 }
 
-// sqrt_cf.go v2
+// NewSqrtApproxCFFromApproxRangeMidpoint takes a bundled CFApprox, uses the
+// midpoint of its enclosure as the sqrt target, and returns a ContinuedFraction
+// source for the bounded sqrt approximation under the supplied policy.
+//
+// IMPORTANT:
+//   - this is an experimental heuristic path
+//   - it is not yet a proof-safe conservative sqrt operator
+func NewSqrtApproxCFFromApproxRangeMidpoint(a CFApprox, p SqrtPolicy) (ContinuedFraction, error) {
+	m, err := rangeMidpoint(a.Range)
+	if err != nil {
+		return nil, err
+	}
+	return SqrtApproxCFWithPolicy(m, p)
+}
+
+// NewSqrtApproxCFFromSourceRangeMidpoint consumes a finite prefix of src,
+// converts that prefix to a CFApprox, uses the midpoint of the enclosure as
+// the sqrt target, and returns a ContinuedFraction source for the bounded
+// sqrt approximation under the supplied policy.
+func NewSqrtApproxCFFromSourceRangeMidpoint(src ContinuedFraction, prefixTerms int, p SqrtPolicy) (ContinuedFraction, error) {
+	a, err := CFApproxFromPrefix(src, prefixTerms)
+	if err != nil {
+		return nil, err
+	}
+	return NewSqrtApproxCFFromApproxRangeMidpoint(a, p)
+}
+
+// NewSqrtApproxCFFromSourceRangeMidpointDefault is the default-policy wrapper
+// around NewSqrtApproxCFFromSourceRangeMidpoint.
+func NewSqrtApproxCFFromSourceRangeMidpointDefault(src ContinuedFraction, prefixTerms int) (ContinuedFraction, error) {
+	return NewSqrtApproxCFFromSourceRangeMidpoint(src, prefixTerms, DefaultSqrtPolicy())
+}
+
+// SqrtApproxTermsFromApproxRangeMidpoint returns up to digits CF terms for the
+// bounded sqrt approximation produced by NewSqrtApproxCFFromApproxRangeMidpoint.
+func SqrtApproxTermsFromApproxRangeMidpoint(a CFApprox, p SqrtPolicy, digits int) ([]int64, error) {
+	if digits < 0 {
+		return nil, fmt.Errorf("SqrtApproxTermsFromApproxRangeMidpoint: negative digits %d", digits)
+	}
+	cf, err := NewSqrtApproxCFFromApproxRangeMidpoint(a, p)
+	if err != nil {
+		return nil, err
+	}
+	return collectTerms(cf, digits), nil
+}
+
+// SqrtApproxTermsFromSourceRangeMidpoint returns up to digits CF terms for the
+// bounded sqrt approximation produced by NewSqrtApproxCFFromSourceRangeMidpoint.
+func SqrtApproxTermsFromSourceRangeMidpoint(src ContinuedFraction, prefixTerms int, p SqrtPolicy, digits int) ([]int64, error) {
+	if digits < 0 {
+		return nil, fmt.Errorf("SqrtApproxTermsFromSourceRangeMidpoint: negative digits %d", digits)
+	}
+	cf, err := NewSqrtApproxCFFromSourceRangeMidpoint(src, prefixTerms, p)
+	if err != nil {
+		return nil, err
+	}
+	return collectTerms(cf, digits), nil
+}
+
+// SqrtApproxTermsFromSourceRangeMidpointDefault is the default-policy wrapper
+// around SqrtApproxTermsFromSourceRangeMidpoint.
+func SqrtApproxTermsFromSourceRangeMidpointDefault(src ContinuedFraction, prefixTerms int, digits int) ([]int64, error) {
+	if digits < 0 {
+		return nil, fmt.Errorf("SqrtApproxTermsFromSourceRangeMidpointDefault: negative digits %d", digits)
+	}
+	return SqrtApproxTermsFromSourceRangeMidpoint(src, prefixTerms, DefaultSqrtPolicy(), digits)
+}
+
+// sqrt_cf.go v
