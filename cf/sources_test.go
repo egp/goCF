@@ -1,4 +1,4 @@
-// sources_test.go v5
+// sources_test.go v7
 package cf
 
 import "testing"
@@ -64,10 +64,37 @@ func TestSources_Sqrt7Prefix(t *testing.T) {
 	assertPrefix(t, got, want)
 }
 
-func TestSources_Sqrt2SquaresTo2(t *testing.T) { t.Skip("pending algebraic-source support") }
-func TestSources_Sqrt3SquaresTo3(t *testing.T) { t.Skip("pending algebraic-source support") }
-func TestSources_Sqrt5SquaresTo5(t *testing.T) { t.Skip("pending algebraic-source support") }
-func TestSources_Sqrt6SquaresTo6(t *testing.T) { t.Skip("pending algebraic-source support") }
-func TestSources_Sqrt7SquaresTo7(t *testing.T) { t.Skip("pending algebraic-source support") }
+func assertDiagSquaresToInt(t *testing.T, name string, src func() ContinuedFraction, n int64) {
+	t.Helper()
 
-// sources_test.go v5
+	sq := NewDiagBLFT(
+		bi(1), bi(0), bi(0),
+		bi(0), bi(0), bi(1),
+	)
+
+	s := NewDiagBLFTStream(sq, src(), DiagBLFTStreamOptions{})
+
+	a0, ok := s.Next()
+	if !ok {
+		t.Fatalf("%s^2: expected first digit, stream exhausted; err=%v", name, s.Err())
+	}
+	if a0 != n {
+		t.Fatalf("%s^2: first digit mismatch: got=%d want=%d err=%v", name, a0, n, s.Err())
+	}
+
+	if a1, ok := s.Next(); ok {
+		t.Fatalf("%s^2: expected termination after first digit; got extra digit %d err=%v", name, a1, s.Err())
+	}
+
+	if err := s.Err(); err != nil {
+		t.Fatalf("%s^2: expected first digit, stream exhausted; err=%v", name, s.Err())
+	}
+}
+
+func TestSources_Sqrt2SquaresTo2(t *testing.T) { assertDiagSquaresToInt(t, "sqrt2", Sqrt2CF, 2) }
+func TestSources_Sqrt3SquaresTo3(t *testing.T) { assertDiagSquaresToInt(t, "sqrt3", Sqrt3CF, 3) }
+func TestSources_Sqrt5SquaresTo5(t *testing.T) { assertDiagSquaresToInt(t, "sqrt5", Sqrt5CF, 5) }
+func TestSources_Sqrt6SquaresTo6(t *testing.T) { assertDiagSquaresToInt(t, "sqrt6", Sqrt6CF, 6) }
+func TestSources_Sqrt7SquaresTo7(t *testing.T) { assertDiagSquaresToInt(t, "sqrt7", Sqrt7CF, 7) }
+
+// sources_test.go v7
