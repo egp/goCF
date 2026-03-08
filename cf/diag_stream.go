@@ -1,7 +1,10 @@
-// diag_stream.go v2
+// diag_stream.go v3
 package cf
 
-import "fmt"
+import (
+	"fmt"
+	"math/big"
+)
 
 type DiagBLFTStream struct {
 	t   DiagBLFT
@@ -43,6 +46,35 @@ func NewDiagBLFTStream(t DiagBLFT, src ContinuedFraction, opts DiagBLFTStreamOpt
 
 func (s *DiagBLFTStream) Err() error { return s.err }
 
+// exactIntFromQuadraticRadical returns n,true when:
+//   - src advertises itself as sqrt(n)
+//   - t is exactly x^2
+//
+// This is a deliberately narrow algebraic proof hook.
+func (s *DiagBLFTStream) exactIntFromQuadraticRadical() (int64, bool) {
+	qr, ok := s.src.(QuadraticRadicalSource)
+	if !ok {
+		return 0, false
+	}
+	n, ok := qr.Radicand()
+	if !ok {
+		return 0, false
+	}
+
+	isSquare :=
+		s.t.A.Cmp(big.NewInt(1)) == 0 &&
+			s.t.B.Sign() == 0 &&
+			s.t.C.Sign() == 0 &&
+			s.t.D.Sign() == 0 &&
+			s.t.E.Sign() == 0 &&
+			s.t.F.Cmp(big.NewInt(1)) == 0
+
+	if !isSquare {
+		return 0, false
+	}
+	return n, true
+}
+
 func (s *DiagBLFTStream) Next() (int64, bool) {
 	if s.done {
 		return 0, false
@@ -50,6 +82,13 @@ func (s *DiagBLFTStream) Next() (int64, bool) {
 	if s.err != nil {
 		s.done = true
 		return 0, false
+	}
+
+	// Narrow exact algebraic shortcut:
+	// if src is sqrt(n) and transform is x^2, emit [n] exactly.
+	if n, ok := s.exactIntFromQuadraticRadical(); ok {
+		s.done = true
+		return n, true
 	}
 
 	s.refinesThisDigit = 0
@@ -148,4 +187,4 @@ func (s *DiagBLFTStream) setErr(err error) {
 	s.done = true
 }
 
-// diag_stream.go v2
+// diag_stream.go v3
