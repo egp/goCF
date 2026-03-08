@@ -1,4 +1,4 @@
-// sqrt_seed_from_range_test.go v1
+// sqrt_seed_from_range_test.go v2
 package cf
 
 import "testing"
@@ -44,9 +44,6 @@ func TestDefaultSqrtSeedFromRange_Sqrt2PrefixTwoTerms(t *testing.T) {
 		t.Fatalf("DefaultSqrtSeedFromRange failed: %v", err)
 	}
 
-	// midpoint = (4/3 + 3/2)/2 = 17/12
-	// one Newton step toward sqrt(17/12) from base 17/12 gives:
-	// ((17/12) + 1) / 2 = 29/24
 	want := mustRat(29, 24)
 	if got.Cmp(want) != 0 {
 		t.Fatalf("got %v, want %v", got, want)
@@ -85,6 +82,30 @@ func TestNewSqrtApproxCFFromSourceRangeSeed_Sqrt2PrefixTwoTerms(t *testing.T) {
 	}
 }
 
+func TestNewSqrtApproxCFFromApproxRangeSeed_Sqrt2PrefixTwoTerms(t *testing.T) {
+	p := SqrtPolicy{
+		MaxSteps: 3,
+		Tol:      mustRat(1, 1000),
+	}
+	a, err := CFApproxFromPrefix(Sqrt2CF(), 2)
+	if err != nil {
+		t.Fatalf("CFApproxFromPrefix failed: %v", err)
+	}
+
+	cf, err := NewSqrtApproxCFFromApproxRangeSeed(a, p)
+	if err != nil {
+		t.Fatalf("NewSqrtApproxCFFromApproxRangeSeed failed: %v", err)
+	}
+
+	got := collectTerms(cf, 8)
+	if len(got) == 0 {
+		t.Fatalf("expected non-empty CF")
+	}
+	if got[0] != 1 {
+		t.Fatalf("got first digit %d, want 1; full=%v", got[0], got)
+	}
+}
+
 func TestSqrtApproxTermsFromSourceRangeSeedDefault_RejectsNegativeDigits(t *testing.T) {
 	_, err := SqrtApproxTermsFromSourceRangeSeedDefault(Sqrt2CF(), 2, -1)
 	if err == nil {
@@ -92,4 +113,4 @@ func TestSqrtApproxTermsFromSourceRangeSeedDefault_RejectsNegativeDigits(t *test
 	}
 }
 
-// sqrt_seed_from_range_test.go v1
+// sqrt_seed_from_range_test.go v2
