@@ -177,33 +177,81 @@ The spec should drive:
 
 ---
 
-## P5. Prepare for square root as an operator
 
-This is now a planned major feature.
+## P5. Square root operator track
 
-### P5.1 Implement square root via Newton iteration
-Goal:
+### Current status
 
-- unary operator `sqrt(x)`
+Completed so far:
 
-Newton update:
+- Exact rational square-root detection:
+  - `RationalSqrtExact(x)`
+- Exact Newton update scaffold:
+  - `NewtonSqrtStep(x, y)`
+  - `NewtonSqrtIterates(x, seed, steps)`
+- Single bounded rational approximation:
+  - `SqrtApproxRational(x, seed, steps)`
+- Continued-fraction output helpers for bounded approximations:
+  - `SqrtApproxTerms(x, seed, steps, digits)`
+  - `NewSqrtApproxCF(x, seed, steps)`
+- Default exact seed policy:
+  - `DefaultSqrtSeed(x)`
+  - `NewSqrtApproxCFDefault(x, steps)`
 
-- `y_(n+1) = (y_n + x / y_n) / 2`
+This means we now have a complete bounded path:
 
-### P5.2 Streaming implications
-Need design decisions for:
+exact rational input
+-> exact Newton rational approximation
+-> RationalCF
+-> CF terms
 
-- initial seed selection
-- when a Newton iterate is safe enough to emit digits
-- how output feeds back into the next iteration
-- convergence / stagnation detection
-- interaction with exact range proofs
+### What is not done yet
 
-### P5.3 Use diagonal machinery where possible
-Diagonal support will help because Newton-style formulas often involve repeated use of the same evolving approximation stream.
+Still missing:
 
----
+- true streaming `sqrt()` for irrational CF inputs
+- feedback loop from emitted approximation back into the next Newton stage
+- safe-digit proof logic for sqrt-specific streaming
+- generalized algebraic proof support beyond the current narrow `sqrt(n)` diagonal shortcuts
 
+### Next few baby steps
+
+#### P5.1 Next
+Add default-seed convenience helpers for the existing term-level API:
+
+- `SqrtApproxTermsDefault(x, steps, digits)`
+
+This keeps the bounded sqrt API consistent and easier to use.
+
+#### P5.2 After that
+Add quality / error-measure helpers for bounded sqrt approximations, such as:
+
+- exact residual:
+  - `residual = y^2 - x`
+- optional absolute residual helper
+
+This gives us a clean way to test improvement per Newton step.
+
+#### P5.3 After that
+Add a bounded “iterate until good enough” helper for rationals, for example:
+
+- iterate until residual is exactly zero, or
+- iterate until max steps reached
+
+This is still not true streaming sqrt, but gets us closer to an operator API.
+
+#### P5.4 Then
+Design the first true streaming sqrt skeleton for CF inputs:
+
+- source CF input
+- seed policy
+- bounded internal rational/CF approximation stages
+- future hook for self-feedback / safe-digit emission
+
+### Recommendation
+
+Keep taking the square-root work in bounded exact-rational steps until all helper layers are solid.
+Only then attempt the true streaming irrational `sqrt()` operator.
 ## P6. Generalized CF ingestion deeper work
 
 ### P6.1 Formal ingestion algebra
