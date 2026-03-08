@@ -1,4 +1,4 @@
-// sqrt_newton.go v1
+// sqrt_newton.go v2
 package cf
 
 import (
@@ -109,6 +109,44 @@ func NewtonSqrtIterates(x, seed Rational, steps int) ([]Rational, error) {
 	return out, nil
 }
 
+// SqrtApproxRational returns a single exact rational approximation to sqrt(x)
+// after the requested number of Newton iterations from the given seed.
+//
+// Behavior:
+//   - steps < 0 => error
+//   - steps == 0 => returns seed (after domain/seed validation, unless x is exact square)
+//   - if x has an exact rational square root, returns that exact root immediately
+func SqrtApproxRational(x, seed Rational, steps int) (Rational, error) {
+	if steps < 0 {
+		return Rational{}, fmt.Errorf("SqrtApproxRational: negative steps %d", steps)
+	}
+	if x.r.Sign() < 0 {
+		return Rational{}, fmt.Errorf("sqrt of negative rational: %v", x)
+	}
+
+	if root, ok, err := RationalSqrtExact(x); err != nil {
+		return Rational{}, err
+	} else if ok {
+		return root, nil
+	}
+
+	if seed.r.Sign() == 0 {
+		return Rational{}, fmt.Errorf("SqrtApproxRational: zero seed")
+	}
+	if seed.r.Sign() < 0 {
+		return Rational{}, fmt.Errorf("SqrtApproxRational: negative seed %v", seed)
+	}
+	if steps == 0 {
+		return seed, nil
+	}
+
+	ys, err := NewtonSqrtIterates(x, seed, steps)
+	if err != nil {
+		return Rational{}, err
+	}
+	return ys[len(ys)-1], nil
+}
+
 // exactSqrtBig returns sqrt(n),true iff n is a perfect square and n >= 0.
 func exactSqrtBig(n *big.Int) (*big.Int, bool) {
 	if n.Sign() < 0 {
@@ -122,4 +160,4 @@ func exactSqrtBig(n *big.Int) (*big.Int, bool) {
 	return s, true
 }
 
-// sqrt_newton.go v1
+// sqrt_newton.go v2
