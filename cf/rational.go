@@ -79,49 +79,6 @@ func (r Rational) ratNumDen() (num *big.Int, den *big.Int) {
 	return new(big.Int).Set(r.r.Num()), new(big.Int).Set(r.r.Denom())
 }
 
-// rationalFromInt64 returns v/1.
-// func rationalFromInt64(v int64) Rational {
-// 	var rr big.Rat
-// 	rr.SetInt64(v)
-// 	return Rational{r: rr}
-// }
-
-// rationalZero returns 0/1.
-// func rationalZero() Rational { return rationalFromInt64(0) }
-
-// // rationalOne returns 1/1.
-// func rationalOne() Rational { return rationalFromInt64(1) }
-
-// // rationalNegOne returns -1/1.
-// func rationalNegOne() Rational { return rationalFromInt64(-1) }
-
-// rationalAbs returns |r|.
-// func rationalAbs(r Rational) Rational {
-// 	if r.r.Sign() >= 0 {
-// 		return r
-// 	}
-// 	var out big.Rat
-// 	out.Neg(&r.r)
-// 	return Rational{r: out}
-// }
-
-// rationalIsInteger reports whether r is an integer (den==1).
-// func rationalIsInteger(r Rational) bool {
-// 	return r.r.IsInt()
-// }
-
-// rationalInt64Exact returns (value,true) if r is an exact int64 integer.
-// func rationalInt64Exact(r Rational) (int64, bool) {
-// 	if !r.r.IsInt() {
-// 		return 0, false
-// 	}
-// 	num := r.r.Num() // already reduced, denom=1
-// 	if !num.IsInt64() {
-// 		return 0, false
-// 	}
-// 	return num.Int64(), true
-// }
-
 // rationalMin / Max
 func minRat(a, b Rational) Rational {
 	if a.Cmp(b) <= 0 {
