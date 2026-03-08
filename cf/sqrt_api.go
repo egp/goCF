@@ -13,9 +13,8 @@ import "fmt"
 //
 // This is a convenience API, not yet a true streaming sqrt operator.
 func SqrtApprox(x Rational) (Rational, error) {
-	const maxSteps = 5
-	tol := mustRat(1, 1_000_000_000_000)
-	approx, _, err := SqrtApproxRationalUntilResidualDefault(x, maxSteps, tol)
+	p := DefaultSqrtPolicy()
+	approx, _, err := SqrtApproxRationalUntilResidualDefault(x, p.MaxSteps, p.Tol)
 	return approx, err
 }
 
