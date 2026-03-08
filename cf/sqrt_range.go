@@ -1,4 +1,4 @@
-// sqrt_range.go v1
+// sqrt_range.go v2
 package cf
 
 import "fmt"
@@ -43,4 +43,51 @@ func SqrtRangeExactFromCFApprox(a CFApprox) (Range, bool, error) {
 	return SqrtRangeExact(a.Range)
 }
 
-// sqrt_range.go v1
+// SqrtRangeHeuristic returns a bounded rational approximation to the monotone
+// image of a nonnegative inside range under sqrt(x).
+//
+// IMPORTANT:
+//   - this is a heuristic helper
+//   - it is not yet a proof-safe conservative enclosure for irrational endpoints
+//   - it should not be used anywhere that requires a formally guaranteed range
+//
+// Current policy:
+//   - first try SqrtRangeExact
+//   - otherwise approximate sqrt(lo) and sqrt(hi) independently using SqrtApprox
+//   - preserve endpoint inclusions
+func SqrtRangeHeuristic(r Range) (Range, error) {
+	if !r.IsInside() {
+		return Range{}, fmt.Errorf("SqrtRangeHeuristic: requires inside range; got %v", r)
+	}
+	if r.Lo.Cmp(intRat(0)) < 0 {
+		return Range{}, fmt.Errorf("SqrtRangeHeuristic: negative range %v", r)
+	}
+
+	if exact, ok, err := SqrtRangeExact(r); err != nil {
+		return Range{}, err
+	} else if ok {
+		return exact, nil
+	}
+
+	lo, err := SqrtApprox(r.Lo)
+	if err != nil {
+		return Range{}, err
+	}
+	hi, err := SqrtApprox(r.Hi)
+	if err != nil {
+		return Range{}, err
+	}
+
+	if lo.Cmp(hi) > 0 {
+		lo, hi = hi, lo
+	}
+	return NewRange(lo, hi, r.IncLo, r.IncHi), nil
+}
+
+// SqrtRangeHeuristicFromCFApprox applies SqrtRangeHeuristic to the enclosure
+// carried by CFApprox.
+func SqrtRangeHeuristicFromCFApprox(a CFApprox) (Range, error) {
+	return SqrtRangeHeuristic(a.Range)
+}
+
+// sqrt_range.go v2
