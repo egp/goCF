@@ -29,6 +29,7 @@ print -P "%F{cyan}==> tests (no cache)%f"
 go test -count=1 ./cf
 
 print -P "%F{cyan}==> coverage summary%f"
+mkdir -p ./tmp
 go test -count=1 -cover ./cf > ./tmp/cover.out
 
 print -P "%F{green}OK%f"
