@@ -1,4 +1,4 @@
-// sources.go v10
+// sources.go v11
 package cf
 
 // GCFSource streams generalized continued-fraction terms (p,q), using the convention:
@@ -265,4 +265,31 @@ func (s *UnitPArithmeticQGCFSource) NextPQ() (int64, int64, bool) {
 	return 1, q, true
 }
 
-// sources.go v10
+// Brouncker4OverPiGCFSource is Brouncker's generalized continued fraction for 4/pi:
+//
+//	4/pi = 1 + 1/(2 + 9/(2 + 25/(2 + 49/(2 + ...))))
+//
+// In (p,q) terms under x = p + q/x', this emits:
+//
+//	(1,1), (2,9), (2,25), (2,49), ...
+type Brouncker4OverPiGCFSource struct {
+	i int
+}
+
+func NewBrouncker4OverPiGCFSource() *Brouncker4OverPiGCFSource {
+	return &Brouncker4OverPiGCFSource{}
+}
+
+func (s *Brouncker4OverPiGCFSource) NextPQ() (int64, int64, bool) {
+	if s.i == 0 {
+		s.i++
+		return 1, 1, true
+	}
+
+	odd := int64(2*s.i - 1) // 1,3,5,7,... for i=1,2,3,4,...
+	q := odd * odd
+	s.i++
+	return 2, q, true
+}
+
+// sources.go v11
