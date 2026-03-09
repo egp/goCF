@@ -356,14 +356,23 @@ Named / algorithmic sources currently include:
 - `NewBrouncker4OverPiGCFSource()`
 - `NewLambertPiOver4GCFSource()`
 - `NewUnitPArithmeticQGCFSource(startQ, step)`
+## 13. GCF ingestion, evaluation, and bounded prefix semantics
 
-## 13. GCF ingestion and evaluation
+### GCF convention
+
+Generalized continued fractions in this package use:
+
+- `x = p + q/x'`
+
+with `q > 0` required by ingestion logic.
 
 ### Forward composition
 
 - `ComposeGCFToULFT(src)`
 
-Composes a finite GCF prefix into a ULFT without buffering all terms.
+Composes a finite GCF prefix into a ULFT without buffering the whole stream.
+
+This is useful for exact algebraic reasoning and for future enclosure logic.
 
 ### Exact finite evaluation
 
@@ -373,22 +382,71 @@ Evaluates a finite GCF exactly under the package’s finite-tail convention.
 
 ### `GCFBounder`
 
-`GCFBounder` is the GCF analogue of `Bounder`, but it is currently more limited.
+`GCFBounder` is the current bounded-ingestion object for generalized continued fractions.
 
 Main methods:
 
 - `NewGCFBounder()`
 - `IngestPQ(p, q)`
+- `SetTailLowerBound(lower)`
 - `Finish()`
 - `HasValue()`
 - `Convergent()`
 - `Range()`
 
-Important warning:
+### Exact convergents
 
-- current `Range()` behavior is only a point placeholder around the current
-  convergent
-- it is not yet a conservative enclosure for unfinished infinite GCFs
+`Convergent()` returns the exact rational value of the finite prefix seen so far,
+using the finite-tail convention that the last ingested term contributes just
+its `p` value.
+
+### Finished vs unfinished prefixes
+
+After `Finish()`:
+
+- `Range()` collapses to an exact point range
+
+Before `Finish()`:
+
+- if no tail lower bound is known, `Range()` currently falls back to a point
+  placeholder at the current convergent
+- if a positive lower bound for the unfinished tail is known, `Range()` uses a
+  conservative ULFT ray-image enclosure
+
+### Positive tail lower bound metadata
+
+Some GCF sources implement:
+
+- `PositiveTailLowerBoundedGCFSource`
+
+with:
+
+- `TailLowerBound() Rational`
+
+This means the unfinished tail is known to satisfy:
+
+- `tail >= L`
+- with `L > 0`
+
+For such sources, bounded prefix ingestion can produce a conservative enclosure
+for the unfinished prefix by mapping the ray `[L, +∞)` through the composed
+prefix ULFT.
+
+This is the first real conservative unfinished-prefix enclosure mechanism for
+GCF in the package.
+
+### Current limitations
+
+This enclosure model is still intentionally narrow:
+
+- it depends on a positive lower bound for the unfinished tail
+- it currently uses ray-image logic, not a fully general tail enclosure model
+- some GCF sources may need richer metadata later than just `TailLowerBound()`
+
+So today, unfinished GCF range semantics are:
+
+- conservative for supported positive-tail sources
+- still limited / placeholder-like for unsupported source classes
 
 ## 14. Bounded GCF prefix APIs
 
@@ -397,10 +455,21 @@ Important warning:
 - `IngestAllGCF(src)`
 - `IngestGCFPrefix(src, prefixTerms)`
 
+If the source also provides positive tail lower-bound metadata, prefix ingestion
+will automatically configure the returned `GCFBounder` to use conservative
+unfinished-prefix ray enclosures.
+
 ### Snapshot API
 
 - `GCFApprox`
 - `GCFApproxFromPrefix(src, prefixTerms)`
+
+`GCFApprox` currently stores:
+
+- exact convergent
+- prefix length used
+
+Unlike `CFApprox`, it does not yet carry a full enclosure object.
 
 ### Inspection helpers
 
@@ -409,29 +478,30 @@ Important warning:
 - `GCFSourceConvergent`
 - `GCFSourceTerms`
 
-These are currently the most practical GCF-facing APIs for experimentation.
+These are currently the easiest way to inspect bounded GCF prefixes:
+- as exact rationals
+- or as regular CF term lists derived from those exact rational convergents
 
-## 15. Recommended workflows
+## 15. Named GCF sources
 
-### Regular CF workflow
+Current named or algorithmic GCF sources include:
 
-- choose a source
-- ingest prefixes with `Bounder` or `CFApproxFromPrefix`
-- inspect convergents and ranges
-- use transform streams where needed
+- `NewECFGSource()`
+- `NewBrouncker4OverPiGCFSource()`
+- `NewLambertPiOver4GCFSource()`
+- `NewUnitPArithmeticQGCFSource(startQ, step)`
 
-### Bounded sqrt workflow
+### Brouncker and Lambert
 
-- start with `SqrtApprox`, `SqrtApproxCF`, or `SqrtApproxTermsAuto`
-- use policy variants only if you need more control
-- use source-based sqrt variants only when exploring CF-driven behavior
+The current GCF enclosure design has been exercised on:
 
-### GCF workflow
+- Brouncker for `4/pi`
+- Lambert for `pi/4`
 
-- start with a `GCFSource`
-- inspect bounded prefixes with `GCFApproxFromPrefix`
-- compare exact convergents with `GCFSourceConvergent`
-- inspect regular CF expansions with `GCFSourceTerms`
+using bounded prefixes and conservative unfinished-tail enclosures derived from
+positive tail lower-bound metadata.
+
+These sources are now good reference cases for testing and examples.
 
 ## 16. Debugging tips
 
