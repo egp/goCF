@@ -1,5 +1,7 @@
-// gcf_ingest_all.go v1
+// gcf_ingest_all.go v2
 package cf
+
+import "fmt"
 
 // IngestAllGCF drains a finite generalized continued-fraction source into a new
 // GCFBounder and then marks it finished.
@@ -22,4 +24,37 @@ func IngestAllGCF(src GCFSource) (*GCFBounder, error) {
 	return b, nil
 }
 
-// gcf_ingest_all.go v1
+// IngestGCFPrefix ingests up to prefixTerms terms from a GCFSource into a new
+// GCFBounder.
+//
+// Behavior:
+//   - prefixTerms < 0 => error
+//   - prefixTerms == 0 => returns an empty bounder
+//   - if the source terminates before prefixTerms terms, the returned bounder is finished
+//   - otherwise the returned bounder contains exactly prefixTerms ingested terms
+//     and is not yet finished
+func IngestGCFPrefix(src GCFSource, prefixTerms int) (*GCFBounder, error) {
+	if prefixTerms < 0 {
+		return nil, fmt.Errorf("IngestGCFPrefix: negative prefixTerms %d", prefixTerms)
+	}
+
+	b := NewGCFBounder()
+	if prefixTerms == 0 {
+		return b, nil
+	}
+
+	for i := 0; i < prefixTerms; i++ {
+		p, q, ok := src.NextPQ()
+		if !ok {
+			b.Finish()
+			return b, nil
+		}
+		if err := b.IngestPQ(p, q); err != nil {
+			return nil, err
+		}
+	}
+
+	return b, nil
+}
+
+// gcf_ingest_all.go v2

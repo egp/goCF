@@ -77,4 +77,106 @@ func TestIngestAllGCF_RejectsBadQ(t *testing.T) {
 	}
 }
 
+func TestIngestGCFPrefix_ZeroTerms(t *testing.T) {
+	b, err := IngestGCFPrefix(NewSliceGCF(
+		[2]int64{3, 2},
+	), 0)
+	if err != nil {
+		t.Fatalf("IngestGCFPrefix failed: %v", err)
+	}
+	if b == nil {
+		t.Fatalf("expected non-nil bounder")
+	}
+	if b.HasValue() {
+		t.Fatalf("expected empty bounder")
+	}
+}
+
+func TestIngestGCFPrefix_NegativeTerms(t *testing.T) {
+	_, err := IngestGCFPrefix(NewSliceGCF(
+		[2]int64{3, 2},
+	), -1)
+	if err == nil {
+		t.Fatalf("expected error for negative prefixTerms")
+	}
+}
+
+func TestIngestGCFPrefix_StopsAtPrefixLimit(t *testing.T) {
+	b, err := IngestGCFPrefix(NewSliceGCF(
+		[2]int64{1, 1},
+		[2]int64{2, 1},
+		[2]int64{2, 1},
+	), 2)
+	if err != nil {
+		t.Fatalf("IngestGCFPrefix failed: %v", err)
+	}
+
+	got, err := b.Convergent()
+	if err != nil {
+		t.Fatalf("Convergent failed: %v", err)
+	}
+
+	// 1 + 1/2 = 3/2
+	want := mustRat(3, 2)
+	if got.Cmp(want) != 0 {
+		t.Fatalf("got %v want %v", got, want)
+	}
+}
+
+func TestIngestGCFPrefix_FinishesIfSourceEndsEarly(t *testing.T) {
+	b, err := IngestGCFPrefix(NewSliceGCF(
+		[2]int64{3, 2},
+		[2]int64{5, 7},
+	), 10)
+	if err != nil {
+		t.Fatalf("IngestGCFPrefix failed: %v", err)
+	}
+
+	got, err := b.Convergent()
+	if err != nil {
+		t.Fatalf("Convergent failed: %v", err)
+	}
+
+	// 3 + 2/5 = 17/5
+	want := mustRat(17, 5)
+	if got.Cmp(want) != 0 {
+		t.Fatalf("got %v want %v", got, want)
+	}
+
+	r, ok, err := b.Range()
+	if err != nil {
+		t.Fatalf("Range failed: %v", err)
+	}
+	if !ok {
+		t.Fatalf("expected range")
+	}
+	if r.Lo.Cmp(want) != 0 || r.Hi.Cmp(want) != 0 {
+		t.Fatalf("got [%v,%v] want exact [%v,%v]", r.Lo, r.Hi, want, want)
+	}
+}
+
+func TestIngestGCFPrefix_PeriodicGCFBoundedPrefix(t *testing.T) {
+	g := NewPeriodicGCF(
+		[][2]int64{{1, 1}},
+		[][2]int64{{2, 1}},
+	)
+
+	b, err := IngestGCFPrefix(g, 3)
+	if err != nil {
+		t.Fatalf("IngestGCFPrefix failed: %v", err)
+	}
+
+	got, err := b.Convergent()
+	if err != nil {
+		t.Fatalf("Convergent failed: %v", err)
+	}
+
+	// prefix terms: (1,1), (2,1), (2,1)
+	// 1 + 1/(2 + 1/2) = 7/5
+	want := mustRat(7, 5)
+	if got.Cmp(want) != 0 {
+		t.Fatalf("got %v want %v", got, want)
+	}
+}
+
 // gcf_ingest_all_test.go v1
