@@ -1,4 +1,4 @@
-// sources.go v9
+// sources.go v10
 package cf
 
 // GCFSource streams generalized continued-fraction terms (p,q), using the convention:
@@ -237,4 +237,32 @@ func (s *ECFGSource) NextPQ() (int64, int64, bool) {
 	return a, 1, true
 }
 
-// sources.go v9
+// UnitPArithmeticQGCFSource is an infinite generalized continued-fraction source
+// emitting:
+//
+//	(1,startQ), (1,startQ+step), (1,startQ+2*step), ...
+//
+// with step > 0 and startQ > 0.
+//
+// This is a simple nontrivial algorithmic GCF source used to exercise genuine
+// generalized ingestion where q is not always 1.
+type UnitPArithmeticQGCFSource struct {
+	nextQ int64
+	step  int64
+}
+
+func NewUnitPArithmeticQGCFSource(startQ, step int64) *UnitPArithmeticQGCFSource {
+	// Caller responsibility for now: startQ > 0 and step > 0.
+	return &UnitPArithmeticQGCFSource{
+		nextQ: startQ,
+		step:  step,
+	}
+}
+
+func (s *UnitPArithmeticQGCFSource) NextPQ() (int64, int64, bool) {
+	q := s.nextQ
+	s.nextQ += s.step
+	return 1, q, true
+}
+
+// sources.go v10
