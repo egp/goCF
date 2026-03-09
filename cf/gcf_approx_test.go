@@ -198,4 +198,55 @@ func TestGCFApproxFromPrefix_LambertCarriesConservativeRange(t *testing.T) {
 	}
 }
 
+func TestGCFApprox_HasRangeAndExactRange_Finite(t *testing.T) {
+	a, err := GCFApproxFromPrefix(NewSliceGCF(
+		[2]int64{3, 2},
+		[2]int64{5, 7},
+	), 10)
+	if err != nil {
+		t.Fatalf("GCFApproxFromPrefix failed: %v", err)
+	}
+
+	if !a.HasRange() {
+		t.Fatalf("expected HasRange=true")
+	}
+	if !a.ExactRange() {
+		t.Fatalf("expected ExactRange=true")
+	}
+	if !a.RangeContainsConvergent() {
+		t.Fatalf("expected RangeContainsConvergent=true")
+	}
+}
+
+func TestGCFApprox_HasRangeAndExactRange_UnfinishedBrouncker(t *testing.T) {
+	a, err := GCFApproxFromPrefix(NewBrouncker4OverPiGCFSource(), 3)
+	if err != nil {
+		t.Fatalf("GCFApproxFromPrefix failed: %v", err)
+	}
+
+	if !a.HasRange() {
+		t.Fatalf("expected HasRange=true")
+	}
+	if a.ExactRange() {
+		t.Fatalf("expected ExactRange=false")
+	}
+	if !a.RangeContainsConvergent() {
+		t.Fatalf("expected RangeContainsConvergent=true")
+	}
+}
+
+func TestGCFApprox_ZeroValueHelpers(t *testing.T) {
+	var a GCFApprox
+
+	if a.HasRange() {
+		t.Fatalf("expected HasRange=false")
+	}
+	if a.ExactRange() {
+		t.Fatalf("expected ExactRange=false")
+	}
+	if a.RangeContainsConvergent() {
+		t.Fatalf("expected RangeContainsConvergent=false")
+	}
+}
+
 // gcf_approx_test.go v1

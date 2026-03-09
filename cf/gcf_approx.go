@@ -1,4 +1,4 @@
-// gcf_approx.go v2
+// gcf_approx.go v5
 package cf
 
 import "fmt"
@@ -98,4 +98,20 @@ func GCFSourceConvergent(src GCFSource, prefixTerms int) (Rational, error) {
 	return a.Convergent, nil
 }
 
-// gcf_approx.go v2
+// HasRange reports whether the GCFApprox carries a conservative enclosure.
+func (a GCFApprox) HasRange() bool {
+	return a.Range != nil
+}
+
+// ExactRange reports whether the GCFApprox range exists and is an exact point range.
+func (a GCFApprox) ExactRange() bool {
+	return a.Range != nil && a.Range.Lo.Cmp(a.Range.Hi) == 0
+}
+
+// RangeContainsConvergent reports whether the stored enclosure exists and contains
+// the exact convergent.
+func (a GCFApprox) RangeContainsConvergent() bool {
+	return a.Range != nil && a.Range.Contains(a.Convergent)
+}
+
+// gcf_approx.go v5
