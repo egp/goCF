@@ -1,4 +1,4 @@
-// gcf_bounder.go v2
+// gcf_bounder.go v3
 package cf
 
 import (
@@ -13,12 +13,15 @@ import (
 //
 // It maintains exact convergents for the finite prefixes seen so far.
 //
-// Current v2 semantics:
+// Current v3 semantics:
 //   - Convergent() returns the exact value of the finite prefix under the
 //     finite-tail convention that the last ingested term contributes just p_last.
-//   - Range() returns the convergent as a degenerate point range.
-//   - After Finish(), that point range is exact for the whole finite source.
-//   - Before Finish(), this is not yet a conservative enclosure for an infinite GCF.
+//   - After Finish(), Range() returns an exact point range.
+//   - Before Finish():
+//   - if no tail lower bound is configured, Range() returns the convergent as a
+//     degenerate point placeholder
+//   - if a positive tail lower bound is configured, Range() returns the
+//     conservative image of tail ∈ [lower, +∞) through the composed prefix ULFT
 //
 // Memory discipline:
 //   - constant space in the number of ingested terms
@@ -31,10 +34,20 @@ type GCFBounder struct {
 	prevQ *big.Int // q_n from the latest ingested term
 	count int
 	done  bool
+
+	// Prefix transform for enclosure work:
+	// if tail is the remaining unknown value after the ingested prefix,
+	// then represented value = prefixT(tail).
+	prefixT ULFT
+
+	// Optional positive lower bound for unfinished tails.
+	tailLowerBound *Rational
 }
 
 func NewGCFBounder() *GCFBounder {
-	return &GCFBounder{}
+	return &GCFBounder{
+		prefixT: NewULFT(big.NewInt(1), big.NewInt(0), big.NewInt(0), big.NewInt(1)),
+	}
 }
 
 // IngestPQ adds the next generalized term (p,q).
@@ -47,6 +60,13 @@ func (b *GCFBounder) IngestPQ(p, q int64) error {
 	if q <= 0 {
 		return fmt.Errorf("gcfbounder: require q>0, got q=%d", q)
 	}
+
+	// Keep the prefix transform in sync with the ingested terms.
+	tp, err := b.prefixT.IngestGCF(p, q)
+	if err != nil {
+		return err
+	}
+	b.prefixT = tp
 
 	pi := big.NewInt(p)
 	qi := big.NewInt(q)
@@ -83,6 +103,17 @@ func (b *GCFBounder) IngestPQ(p, q int64) error {
 	return nil
 }
 
+// SetTailLowerBound configures a positive lower bound for the unfinished tail.
+// This is used only before Finish().
+func (b *GCFBounder) SetTailLowerBound(lower Rational) error {
+	if lower.Cmp(intRat(0)) <= 0 {
+		return fmt.Errorf("gcfbounder: tail lower bound must be > 0, got %v", lower)
+	}
+	x := lower
+	b.tailLowerBound = &x
+	return nil
+}
+
 // Finish marks the GCF source as exhausted (finite termination).
 func (b *GCFBounder) Finish() {
 	b.done = true
@@ -104,13 +135,6 @@ func (b *GCFBounder) Convergent() (Rational, error) {
 }
 
 // Range returns the current range information for the ingested GCF prefix.
-//
-// Current v2 behavior:
-//   - if no terms: returns (Range{}, false, nil)
-//   - otherwise: returns the convergent as a degenerate point range
-//
-// This is exact after Finish(), but before Finish() it is only a placeholder
-// until true conservative GCF enclosure logic is added later.
 func (b *GCFBounder) Range() (Range, bool, error) {
 	if !b.HasValue() {
 		return Range{}, false, nil
@@ -121,7 +145,22 @@ func (b *GCFBounder) Range() (Range, bool, error) {
 		return Range{}, false, err
 	}
 
+	// Finite source => exact point.
+	if b.done {
+		return NewRange(conv, conv, true, true), true, nil
+	}
+
+	// Unfinished source with explicit positive tail bound => conservative ray image.
+	if b.tailLowerBound != nil {
+		r, err := ApplyULFTToTailRay(b.prefixT, *b.tailLowerBound)
+		if err != nil {
+			return Range{}, false, err
+		}
+		return r, true, nil
+	}
+
+	// Honest placeholder until richer enclosure logic is available.
 	return NewRange(conv, conv, true, true), true, nil
 }
 
-// gcf_bounder.go v2
+// gcf_bounder.go v3
