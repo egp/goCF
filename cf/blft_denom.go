@@ -1,4 +1,4 @@
-// blft_denom.go v1
+// blft_denom.go v2
 package cf
 
 import "fmt"
@@ -11,6 +11,7 @@ import "fmt"
 //
 // Postconditions:
 //   - returned range is inside (Lo<=Hi)
+//   - returned range is CLOSED, because extrema are attained at corners
 func (t BLFT) DenomRange(rx, ry Range) (Range, error) {
 	if !rx.IsInside() || !ry.IsInside() {
 		return Range{}, fmt.Errorf("DenomRange requires inside ranges: rx=[%v,%v] ry=[%v,%v]", rx.Lo, rx.Hi, ry.Lo, ry.Hi)
@@ -42,7 +43,7 @@ func (t BLFT) DenomRange(rx, ry Range) (Range, error) {
 		}
 	}
 
-	return Range{Lo: dmin, Hi: dmax}, nil
+	return NewRange(dmin, dmax, true, true), nil
 }
 
 // DenomMayHitZero reports whether the denominator may be zero anywhere in rx×ry.
@@ -95,4 +96,4 @@ func (t BLFT) denomAt(x, y Rational) (Rational, error) {
 	return s, nil
 }
 
-// blft_denom.go v1
+// blft_denom.go v2

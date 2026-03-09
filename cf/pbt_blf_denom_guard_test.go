@@ -1,4 +1,4 @@
-// pbt_blf_denom_guard_test.go v2
+// pbt_blf_denom_guard_test.go v3
 package cf
 
 import (
@@ -23,9 +23,9 @@ func genInsideRangeTiny() *rapid.Generator[Range] {
 		a := genTinyRat().Draw(t, "a")
 		b := genTinyRat().Draw(t, "b")
 		if a.Cmp(b) <= 0 {
-			return Range{Lo: a, Hi: b}
+			return NewRange(a, b, true, true)
 		}
-		return Range{Lo: b, Hi: a}
+		return NewRange(b, a, true, true)
 	})
 }
 
@@ -89,7 +89,7 @@ func TestPBT_BLF_DenomCornerBoundsExcludeZeroImpliesNoPoleSamples(t *testing.T) 
 			for _, y := range ys {
 				d, err := denomAtNaive(tform, x, y)
 				if err != nil {
-					return // overflow etc: ignore this trial
+					return // ignore this trial
 				}
 				if first {
 					dmin, dmax = d, d
@@ -105,7 +105,7 @@ func TestPBT_BLF_DenomCornerBoundsExcludeZeroImpliesNoPoleSamples(t *testing.T) 
 			}
 		}
 
-		denRange := Range{Lo: dmin, Hi: dmax}
+		denRange := NewRange(dmin, dmax, true, true)
 		if denRange.ContainsZero() {
 			return // pole hazard cases: allowed to reject
 		}
@@ -130,7 +130,7 @@ func TestPBT_BLF_DenomCornerBoundsExcludeZeroImpliesNoPoleSamples(t *testing.T) 
 						E, F, G, H, rx.Lo, rx.Hi, ry.Lo, ry.Hi, x, y)
 				}
 
-				bounds := Range{Lo: dmin, Hi: dmax} // <— FIX: composite literal assigned, not inline in if
+				bounds := NewRange(dmin, dmax, true, true)
 				if !bounds.Contains(d) {
 					t.Fatalf("denom out of corner bounds: den=%v not in [%v,%v]", d, dmin, dmax)
 				}
@@ -139,4 +139,4 @@ func TestPBT_BLF_DenomCornerBoundsExcludeZeroImpliesNoPoleSamples(t *testing.T) 
 	})
 }
 
-// pbt_blf_denom_guard_test.go v2
+// pbt_blf_denom_guard_test.go v3

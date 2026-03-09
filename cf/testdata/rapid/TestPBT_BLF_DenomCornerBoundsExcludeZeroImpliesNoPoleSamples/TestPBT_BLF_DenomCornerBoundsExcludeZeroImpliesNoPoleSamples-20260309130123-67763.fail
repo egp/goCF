@@ -1,0 +1,73 @@
+# 2026/03/09 13:01:23.346692 [TestPBT_BLF_DenomCornerBoundsExcludeZeroImpliesNoPoleSamples] [rapid] draw E: 0
+# 2026/03/09 13:01:23.346712 [TestPBT_BLF_DenomCornerBoundsExcludeZeroImpliesNoPoleSamples] [rapid] draw F: 0
+# 2026/03/09 13:01:23.346713 [TestPBT_BLF_DenomCornerBoundsExcludeZeroImpliesNoPoleSamples] [rapid] draw G: 0
+# 2026/03/09 13:01:23.346714 [TestPBT_BLF_DenomCornerBoundsExcludeZeroImpliesNoPoleSamples] [rapid] draw H: 1
+# 2026/03/09 13:01:23.346717 [TestPBT_BLF_DenomCornerBoundsExcludeZeroImpliesNoPoleSamples] [rapid] draw rx: cf.Range{Lo:cf.Rational{r:big.Rat{a:big.Int{neg:true, abs:big.nat{0x1}}, b:big.Int{neg:false, abs:big.nat{0x1}}}}, Hi:cf.Rational{r:big.Rat{a:big.Int{neg:false, abs:big.nat(nil)}, b:big.Int{neg:false, abs:big.nat{0x1}}}}, IncLo:false, IncHi:false}
+# 2026/03/09 13:01:23.346788 [TestPBT_BLF_DenomCornerBoundsExcludeZeroImpliesNoPoleSamples] [rapid] draw ry: cf.Range{Lo:cf.Rational{r:big.Rat{a:big.Int{neg:true, abs:big.nat{0x2}}, b:big.Int{neg:false, abs:big.nat{0x1}}}}, Hi:cf.Rational{r:big.Rat{a:big.Int{neg:false, abs:big.nat(nil)}, b:big.Int{neg:false, abs:big.nat{0x1}}}}, IncLo:false, IncHi:false}
+# 2026/03/09 13:01:23.346796 [TestPBT_BLF_DenomCornerBoundsExcludeZeroImpliesNoPoleSamples] [rapid] draw x1: cf.Rational{r:big.Rat{a:big.Int{neg:false, abs:big.nat(nil)}, b:big.Int{neg:false, abs:big.nat{0x1}}}}
+# 2026/03/09 13:01:23.346797 [TestPBT_BLF_DenomCornerBoundsExcludeZeroImpliesNoPoleSamples] [rapid] draw x2: cf.Rational{r:big.Rat{a:big.Int{neg:true, abs:big.nat{0x1}}, b:big.Int{neg:false, abs:big.nat{0x2}}}}
+# 2026/03/09 13:01:23.346799 [TestPBT_BLF_DenomCornerBoundsExcludeZeroImpliesNoPoleSamples] [rapid] draw y1: cf.Rational{r:big.Rat{a:big.Int{neg:false, abs:big.nat(nil)}, b:big.Int{neg:false, abs:big.nat{0x1}}}}
+# 2026/03/09 13:01:23.346800 [TestPBT_BLF_DenomCornerBoundsExcludeZeroImpliesNoPoleSamples] [rapid] draw y2: cf.Rational{r:big.Rat{a:big.Int{neg:true, abs:big.nat{0x1}}, b:big.Int{neg:false, abs:big.nat{0x1}}}}
+# 2026/03/09 13:01:23.346805 [TestPBT_BLF_DenomCornerBoundsExcludeZeroImpliesNoPoleSamples] denom out of corner bounds: den=1 not in [1,1]
+# 
+v0.4.8#2847371429323886248
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x1
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x10000000000000
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x10000000000000
+0x0
+0x1
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x10000000000000
+0x0
+0x0
+0x0
+0x0
+0x1
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x10000000000000
+0x0
+0x0
+0x0
+0x0
+0x0

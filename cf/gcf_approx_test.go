@@ -249,4 +249,64 @@ func TestGCFApprox_ZeroValueHelpers(t *testing.T) {
 	}
 }
 
+func TestInspectGCFSource_Finite(t *testing.T) {
+	got, err := InspectGCFSource(NewSliceGCF(
+		[2]int64{3, 2},
+		[2]int64{5, 7},
+	), 10, 8)
+	if err != nil {
+		t.Fatalf("InspectGCFSource failed: %v", err)
+	}
+
+	wantConv := mustRat(17, 5)
+	if got.Approx.Convergent.Cmp(wantConv) != 0 {
+		t.Fatalf("got convergent %v want %v", got.Approx.Convergent, wantConv)
+	}
+
+	wantTerms := []int64{3, 2, 2}
+	if len(got.Terms) != len(wantTerms) {
+		t.Fatalf("len(got)=%d want=%d got=%v", len(got.Terms), len(wantTerms), got.Terms)
+	}
+	for i := range wantTerms {
+		if got.Terms[i] != wantTerms[i] {
+			t.Fatalf("got[%d]=%d want=%d full=%v", i, got.Terms[i], wantTerms[i], got.Terms)
+		}
+	}
+}
+
+func TestInspectGCFSource_Brouncker(t *testing.T) {
+	got, err := InspectGCFSource(NewBrouncker4OverPiGCFSource(), 4, 16)
+	if err != nil {
+		t.Fatalf("InspectGCFSource failed: %v", err)
+	}
+
+	wantConv := mustRat(41, 28)
+	if got.Approx.Convergent.Cmp(wantConv) != 0 {
+		t.Fatalf("got convergent %v want %v", got.Approx.Convergent, wantConv)
+	}
+	if !got.Approx.HasRange() {
+		t.Fatalf("expected HasRange=true")
+	}
+	if !got.Approx.RangeContainsConvergent() {
+		t.Fatalf("expected range to contain convergent")
+	}
+
+	wantTerms := []int64{1, 2, 6, 2}
+	if len(got.Terms) != len(wantTerms) {
+		t.Fatalf("len(got)=%d want=%d got=%v", len(got.Terms), len(wantTerms), got.Terms)
+	}
+	for i := range wantTerms {
+		if got.Terms[i] != wantTerms[i] {
+			t.Fatalf("got[%d]=%d want=%d full=%v", i, got.Terms[i], wantTerms[i], got.Terms)
+		}
+	}
+}
+
+func TestInspectGCFSource_RejectsNegativeDigits(t *testing.T) {
+	_, err := InspectGCFSource(NewSliceGCF([2]int64{3, 2}), 1, -1)
+	if err == nil {
+		t.Fatalf("expected error for negative digits")
+	}
+}
+
 // gcf_approx_test.go v1

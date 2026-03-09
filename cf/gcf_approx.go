@@ -114,4 +114,35 @@ func (a GCFApprox) RangeContainsConvergent() bool {
 	return a.Range != nil && a.Range.Contains(a.Convergent)
 }
 
+// GCFInspect bundles a bounded GCF prefix snapshot together with regular CF terms
+// of its exact rational convergent.
+type GCFInspect struct {
+	Approx GCFApprox
+	Terms  []int64
+}
+
+// InspectGCFSource ingests up to prefixTerms terms from src, forms a GCFApprox,
+// and returns that snapshot together with up to digits regular CF terms of the
+// exact rational convergent.
+func InspectGCFSource(src GCFSource, prefixTerms int, digits int) (GCFInspect, error) {
+	if digits < 0 {
+		return GCFInspect{}, fmt.Errorf("InspectGCFSource: negative digits %d", digits)
+	}
+
+	a, err := GCFApproxFromPrefix(src, prefixTerms)
+	if err != nil {
+		return GCFInspect{}, err
+	}
+
+	terms, err := GCFApproxTerms(a, digits)
+	if err != nil {
+		return GCFInspect{}, err
+	}
+
+	return GCFInspect{
+		Approx: a,
+		Terms:  terms,
+	}, nil
+}
+
 // gcf_approx.go v5
