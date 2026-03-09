@@ -1,5 +1,16 @@
-// sources.go v3
+// sources.go v5
 package cf
+
+// GCFSource streams generalized continued-fraction terms (p,q), using the convention:
+//
+//	x = p + q/x'
+//
+// with q > 0 for each emitted term.
+//
+// NextPQ returns (p, q, true) or (_, _, false) if exhausted.
+type GCFSource interface {
+	NextPQ() (int64, int64, bool)
+}
 
 // QuadraticRadicalSource is an optional interface for sources that know they
 // represent the positive square root of an integer radicand.
@@ -10,6 +21,28 @@ package cf
 type QuadraticRadicalSource interface {
 	ContinuedFraction
 	Radicand() (int64, bool)
+}
+
+// SliceGCF is a trivial finite generalized continued-fraction source, useful for tests.
+//
+// Terms are interpreted using x = p + q/x' with q > 0 expected by downstream ingestion logic.
+type SliceGCF struct {
+	terms [][2]int64
+	i     int
+}
+
+func NewSliceGCF(terms ...[2]int64) *SliceGCF {
+	cp := append([][2]int64(nil), terms...)
+	return &SliceGCF{terms: cp}
+}
+
+func (s *SliceGCF) NextPQ() (int64, int64, bool) {
+	if s.i >= len(s.terms) {
+		return 0, 0, false
+	}
+	t := s.terms[s.i]
+	s.i++
+	return t[0], t[1], true
 }
 
 // PeriodicCF is a simple continued fraction source with a finite prefix
@@ -99,4 +132,4 @@ func Sqrt7CF() ContinuedFraction {
 	return newPeriodicCFWithRadicand([]int64{2}, []int64{1, 1, 1, 4}, 7)
 }
 
-// sources.go v3
+// sources.go v5
