@@ -52,62 +52,12 @@ func LambertPiOver4TailRangeAfterPrefix(prefixTerms int) (Range, bool, error) {
 // It prefers a prefix-aware tighter tail interval when currently available;
 // otherwise it falls back to the generic lower-bound-only enclosure path.
 func LambertPiOver4ApproxFromPrefix(prefixTerms int) (GCFApprox, error) {
-	if prefixTerms < 0 {
-		return GCFApprox{}, fmt.Errorf("LambertPiOver4ApproxFromPrefix: negative prefixTerms %d", prefixTerms)
-	}
-	if prefixTerms == 0 {
-		return GCFApprox{}, fmt.Errorf("LambertPiOver4ApproxFromPrefix: prefixTerms must be > 0")
-	}
-
-	src := NewLambertPiOver4GCFSource()
-	b := NewGCFBounder()
-
-	// Prefer tighter prefix-aware tail interval when we currently know one.
-	if r, ok, err := LambertPiOver4TailRangeAfterPrefix(prefixTerms); err != nil {
-		return GCFApprox{}, err
-	} else if ok {
-		if err := b.SetTailRange(r); err != nil {
-			return GCFApprox{}, err
-		}
-	} else {
-		if err := b.SetTailLowerBound(LambertPiOver4TailLowerBoundAfterPrefix(prefixTerms)); err != nil {
-			return GCFApprox{}, err
-		}
-	}
-
-	for i := 0; i < prefixTerms; i++ {
-		p, q, ok := src.NextPQ()
-		if !ok {
-			b.Finish()
-			break
-		}
-		if err := b.IngestPQ(p, q); err != nil {
-			return GCFApprox{}, err
-		}
-	}
-
-	if !b.HasValue() {
-		return GCFApprox{}, fmt.Errorf("LambertPiOver4ApproxFromPrefix: empty source")
-	}
-
-	conv, err := b.Convergent()
-	if err != nil {
-		return GCFApprox{}, err
-	}
-
-	var rp *Range
-	if r, ok, err := b.Range(); err != nil {
-		return GCFApprox{}, err
-	} else if ok {
-		rr := r
-		rp = &rr
-	}
-
-	return GCFApprox{
-		Convergent:  conv,
-		Range:       rp,
-		PrefixTerms: prefixTerms,
-	}, nil
+	return specializedGCFApproxFromPrefix(
+		prefixTerms,
+		func() GCFSource { return NewLambertPiOver4GCFSource() },
+		LambertPiOver4TailRangeAfterPrefix,
+		LambertPiOver4TailLowerBoundAfterPrefix,
+	)
 }
 
 // lambert_pi_tail.go v1

@@ -49,61 +49,12 @@ func Brouncker4OverPiTailRangeAfterPrefix(prefixTerms int) (Range, bool, error) 
 // It prefers a prefix-aware tighter tail interval when currently available;
 // otherwise it falls back to the generic lower-bound-only enclosure path.
 func Brouncker4OverPiApproxFromPrefix(prefixTerms int) (GCFApprox, error) {
-	if prefixTerms < 0 {
-		return GCFApprox{}, fmt.Errorf("Brouncker4OverPiApproxFromPrefix: negative prefixTerms %d", prefixTerms)
-	}
-	if prefixTerms == 0 {
-		return GCFApprox{}, fmt.Errorf("Brouncker4OverPiApproxFromPrefix: prefixTerms must be > 0")
-	}
-
-	src := NewBrouncker4OverPiGCFSource()
-	b := NewGCFBounder()
-
-	if r, ok, err := Brouncker4OverPiTailRangeAfterPrefix(prefixTerms); err != nil {
-		return GCFApprox{}, err
-	} else if ok {
-		if err := b.SetTailRange(r); err != nil {
-			return GCFApprox{}, err
-		}
-	} else {
-		if err := b.SetTailLowerBound(Brouncker4OverPiTailLowerBoundAfterPrefix(prefixTerms)); err != nil {
-			return GCFApprox{}, err
-		}
-	}
-
-	for i := 0; i < prefixTerms; i++ {
-		p, q, ok := src.NextPQ()
-		if !ok {
-			b.Finish()
-			break
-		}
-		if err := b.IngestPQ(p, q); err != nil {
-			return GCFApprox{}, err
-		}
-	}
-
-	if !b.HasValue() {
-		return GCFApprox{}, fmt.Errorf("Brouncker4OverPiApproxFromPrefix: empty source")
-	}
-
-	conv, err := b.Convergent()
-	if err != nil {
-		return GCFApprox{}, err
-	}
-
-	var rp *Range
-	if r, ok, err := b.Range(); err != nil {
-		return GCFApprox{}, err
-	} else if ok {
-		rr := r
-		rp = &rr
-	}
-
-	return GCFApprox{
-		Convergent:  conv,
-		Range:       rp,
-		PrefixTerms: prefixTerms,
-	}, nil
+	return specializedGCFApproxFromPrefix(
+		prefixTerms,
+		func() GCFSource { return NewBrouncker4OverPiGCFSource() },
+		Brouncker4OverPiTailRangeAfterPrefix,
+		Brouncker4OverPiTailLowerBoundAfterPrefix,
+	)
 }
 
 // brouncker_pi_tail.go v1
