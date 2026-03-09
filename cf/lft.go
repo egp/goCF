@@ -1,4 +1,4 @@
-// lft.go v4
+// lft.go v5
 package cf
 
 import (
@@ -151,4 +151,36 @@ func (t ULFT) IngestGCF(p, q int64) (ULFT, error) {
 	return out, nil
 }
 
-// lft.go v4
+// ComposeGCFToULFT composes a finite generalized continued-fraction source into
+// a ULFT, starting from the identity transform and repeatedly ingesting terms
+// using the convention:
+//
+//	x = p + q/x'
+//
+// So if the source emits finite terms (p0,q0), (p1,q1), ..., (pn,qn), the
+// returned ULFT T satisfies:
+//
+//	x = T(x_tail)
+//
+// where x_tail is the remaining tail variable after the finite prefix.
+//
+// Preconditions enforced here:
+//   - every emitted term must satisfy q > 0
+func ComposeGCFToULFT(src GCFSource) (ULFT, error) {
+	// Identity transform: x
+	t := NewULFT(big.NewInt(1), big.NewInt(0), big.NewInt(0), big.NewInt(1))
+
+	for {
+		p, q, ok := src.NextPQ()
+		if !ok {
+			return t, nil
+		}
+		var err error
+		t, err = t.IngestGCF(p, q)
+		if err != nil {
+			return ULFT{}, err
+		}
+	}
+}
+
+// lft.go v5
