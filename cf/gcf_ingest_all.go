@@ -44,12 +44,12 @@ func IngestGCFPrefix(src GCFSource, prefixTerms int) (*GCFBounder, error) {
 
 	b := NewGCFBounder()
 
-	// Prefer richer tail-range metadata if available.
-	if ranged, ok := src.(TailRangeBoundedGCFSource); ok {
-		if err := b.SetTailRange(ranged.TailRange()); err != nil {
-			return nil, err
-		}
-	} else if bounded, ok := src.(PositiveTailLowerBoundedGCFSource); ok {
+	// Only apply stable lower-bound metadata automatically.
+	//
+	// Do NOT auto-apply TailRangeBoundedGCFSource here: for stateful sources,
+	// a source-level TailRange() is not stable across consumed prefixes unless
+	// the contract is made prefix-aware.
+	if bounded, ok := src.(PositiveTailLowerBoundedGCFSource); ok {
 		if err := b.SetTailLowerBound(bounded.TailLowerBound()); err != nil {
 			return nil, err
 		}

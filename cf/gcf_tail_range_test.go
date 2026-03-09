@@ -1,4 +1,4 @@
-// gcf_tail_range_test.go v1
+// gcf_tail_range_test.go v2
 package cf
 
 import "testing"
@@ -36,7 +36,93 @@ func TestGCFBounder_SetTailRange_RejectsNonPositive(t *testing.T) {
 	}
 }
 
-func TestIngestGCFPrefix_PrefersTailRangeMetadata(t *testing.T) {
+func TestGCFBounder_ExplicitTailRangeProducesExpectedRange(t *testing.T) {
+	// Prefix terms (1,1), (2,1) define:
+	// x = 1 + 1/(2 + 1/tail)
+	// with explicit tail in [1,2]
+	// tail=1 -> 4/3
+	// tail=2 -> 7/5
+	b := NewGCFBounder()
+	if err := b.IngestPQ(1, 1); err != nil {
+		t.Fatalf("IngestPQ failed: %v", err)
+	}
+	if err := b.IngestPQ(2, 1); err != nil {
+		t.Fatalf("IngestPQ failed: %v", err)
+	}
+	if err := b.SetTailRange(NewRange(mustRat(1, 1), mustRat(2, 1), true, true)); err != nil {
+		t.Fatalf("SetTailRange failed: %v", err)
+	}
+
+	r, ok, err := b.Range()
+	if err != nil {
+		t.Fatalf("Range failed: %v", err)
+	}
+	if !ok {
+		t.Fatalf("expected ok=true")
+	}
+
+	wantLo := mustRat(4, 3)
+	wantHi := mustRat(7, 5)
+	if r.Lo.Cmp(wantLo) != 0 || r.Hi.Cmp(wantHi) != 0 {
+		t.Fatalf("got [%v,%v] want [%v,%v]", r.Lo, r.Hi, wantLo, wantHi)
+	}
+}
+
+func TestGCFBounder_ExplicitTailRangeBeatsLowerBoundInPrecision(t *testing.T) {
+	// Explicit tail range [1,2] should be tighter than lower-bound-only [1,+∞).
+	bRange := NewGCFBounder()
+	if err := bRange.IngestPQ(1, 1); err != nil {
+		t.Fatalf("IngestPQ failed: %v", err)
+	}
+	if err := bRange.IngestPQ(2, 1); err != nil {
+		t.Fatalf("IngestPQ failed: %v", err)
+	}
+	if err := bRange.SetTailRange(NewRange(mustRat(1, 1), mustRat(2, 1), true, true)); err != nil {
+		t.Fatalf("SetTailRange failed: %v", err)
+	}
+
+	rRange, ok, err := bRange.Range()
+	if err != nil {
+		t.Fatalf("Range failed: %v", err)
+	}
+	if !ok {
+		t.Fatalf("expected ok=true")
+	}
+
+	bLower := NewGCFBounder()
+	if err := bLower.IngestPQ(1, 1); err != nil {
+		t.Fatalf("IngestPQ failed: %v", err)
+	}
+	if err := bLower.IngestPQ(2, 1); err != nil {
+		t.Fatalf("IngestPQ failed: %v", err)
+	}
+	if err := bLower.SetTailLowerBound(mustRat(1, 1)); err != nil {
+		t.Fatalf("SetTailLowerBound failed: %v", err)
+	}
+
+	rLower, ok, err := bLower.Range()
+	if err != nil {
+		t.Fatalf("Range failed: %v", err)
+	}
+	if !ok {
+		t.Fatalf("expected ok=true")
+	}
+
+	spanRange, err := rRange.Hi.Sub(rRange.Lo)
+	if err != nil {
+		t.Fatalf("spanRange failed: %v", err)
+	}
+	spanLower, err := rLower.Hi.Sub(rLower.Lo)
+	if err != nil {
+		t.Fatalf("spanLower failed: %v", err)
+	}
+
+	if spanRange.Cmp(spanLower) >= 0 {
+		t.Fatalf("expected explicit tail range to be tighter: explicit=%v lower=%v", spanRange, spanLower)
+	}
+}
+
+func TestIngestGCFPrefix_DoesNotAutoApplyTailRangeMetadata(t *testing.T) {
 	src := &stubTailRangeGCF{
 		terms: [][2]int64{
 			{1, 1},
@@ -58,41 +144,12 @@ func TestIngestGCFPrefix_PrefersTailRangeMetadata(t *testing.T) {
 		t.Fatalf("expected ok=true")
 	}
 
-	// x = 1 + 1/(2 + 1/tail), tail in [1,2]
-	// tail=1 -> 4/3
-	// tail=2 -> 7/5
-	wantLo := mustRat(4, 3)
-	wantHi := mustRat(7, 5)
-	if r.Lo.Cmp(wantLo) != 0 || r.Hi.Cmp(wantHi) != 0 {
-		t.Fatalf("got [%v,%v] want [%v,%v]", r.Lo, r.Hi, wantLo, wantHi)
+	// Since tail-range metadata is no longer auto-applied, unfinished range falls
+	// back to the current convergent placeholder.
+	want := mustRat(3, 2)
+	if r.Lo.Cmp(want) != 0 || r.Hi.Cmp(want) != 0 {
+		t.Fatalf("got [%v,%v] want placeholder [%v,%v]", r.Lo, r.Hi, want, want)
 	}
 }
 
-func TestTailRangeBeatsLowerBoundInPrecision(t *testing.T) {
-	src := &stubTailRangeGCF{
-		terms: [][2]int64{
-			{1, 1},
-			{2, 1},
-		},
-		r: NewRange(mustRat(1, 1), mustRat(2, 1), true, true),
-	}
-
-	b, err := IngestGCFPrefix(src, 2)
-	if err != nil {
-		t.Fatalf("IngestGCFPrefix failed: %v", err)
-	}
-
-	got, ok, err := b.Range()
-	if err != nil {
-		t.Fatalf("Range failed: %v", err)
-	}
-	if !ok {
-		t.Fatalf("expected ok=true")
-	}
-
-	// Compare with the old ray-based lower-bound enclosure [4/3, 3/2].
-	oldHi := mustRat(3, 2)
-	if got.Hi.Cmp(oldHi) >= 0 {
-		t.Fatalf("expected tighter upper bound than %v, got %v", oldHi, got.Hi)
-	}
-}
+// gcf_tail_range_test.go v2

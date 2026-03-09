@@ -1,4 +1,4 @@
-// sources.go v14
+// sources.go v15
 package cf
 
 // GCFSource streams generalized continued-fraction terms (p,q), using the convention:
@@ -360,4 +360,4 @@ type TailRangeBoundedGCFSource interface {
 	TailRange() Range
 }
 
-// sources.go v14
+// sources.go v15
