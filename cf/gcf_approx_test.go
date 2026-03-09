@@ -137,4 +137,65 @@ func TestGCFSourceTerms_RejectsNegativeDigits(t *testing.T) {
 	}
 }
 
+func TestGCFApproxFromPrefix_FiniteSourceCarriesExactPointRange(t *testing.T) {
+	got, err := GCFApproxFromPrefix(NewSliceGCF(
+		[2]int64{3, 2},
+		[2]int64{5, 7},
+	), 10)
+	if err != nil {
+		t.Fatalf("GCFApproxFromPrefix failed: %v", err)
+	}
+
+	want := mustRat(17, 5)
+	if got.Convergent.Cmp(want) != 0 {
+		t.Fatalf("got convergent %v want %v", got.Convergent, want)
+	}
+	if got.Range == nil {
+		t.Fatalf("expected non-nil Range")
+	}
+	if got.Range.Lo.Cmp(want) != 0 || got.Range.Hi.Cmp(want) != 0 {
+		t.Fatalf("got range [%v,%v] want exact [%v,%v]", got.Range.Lo, got.Range.Hi, want, want)
+	}
+}
+
+func TestGCFApproxFromPrefix_BrounckerCarriesConservativeRange(t *testing.T) {
+	got, err := GCFApproxFromPrefix(NewBrouncker4OverPiGCFSource(), 3)
+	if err != nil {
+		t.Fatalf("GCFApproxFromPrefix failed: %v", err)
+	}
+
+	if got.Range == nil {
+		t.Fatalf("expected non-nil Range")
+	}
+
+	wantLo := mustRat(7, 5)
+	wantHi := mustRat(34, 23)
+	if got.Range.Lo.Cmp(wantLo) != 0 || got.Range.Hi.Cmp(wantHi) != 0 {
+		t.Fatalf("got range [%v,%v] want [%v,%v]", got.Range.Lo, got.Range.Hi, wantLo, wantHi)
+	}
+	if !got.Range.Contains(got.Convergent) {
+		t.Fatalf("range %v does not contain convergent %v", *got.Range, got.Convergent)
+	}
+}
+
+func TestGCFApproxFromPrefix_LambertCarriesConservativeRange(t *testing.T) {
+	got, err := GCFApproxFromPrefix(NewLambertPiOver4GCFSource(), 3)
+	if err != nil {
+		t.Fatalf("GCFApproxFromPrefix failed: %v", err)
+	}
+
+	if got.Range == nil {
+		t.Fatalf("expected non-nil Range")
+	}
+
+	wantLo := mustRat(3, 4)
+	wantHi := mustRat(7, 8)
+	if got.Range.Lo.Cmp(wantLo) != 0 || got.Range.Hi.Cmp(wantHi) != 0 {
+		t.Fatalf("got range [%v,%v] want [%v,%v]", got.Range.Lo, got.Range.Hi, wantLo, wantHi)
+	}
+	if !got.Range.Contains(got.Convergent) {
+		t.Fatalf("range %v does not contain convergent %v", *got.Range, got.Convergent)
+	}
+}
+
 // gcf_approx_test.go v1

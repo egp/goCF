@@ -1,11 +1,15 @@
-// gcf_approx.go v3
+// gcf_approx.go v2
 package cf
 
 import "fmt"
 
 // GCFApprox bundles the exact convergent implied by a finite GCF prefix.
+// If Range is non-nil, it is a conservative enclosure for that prefix under the
+// current unfinished-tail semantics. If Range is nil, no conservative enclosure
+// is currently available.
 type GCFApprox struct {
 	Convergent  Rational
+	Range       *Range
 	PrefixTerms int
 }
 
@@ -16,6 +20,9 @@ type GCFApprox struct {
 //   - prefixTerms == 0 => error
 //   - if src terminates early, the returned convergent is exact for the whole finite source
 //   - otherwise the returned convergent is exact for the finite prefix only
+//
+// If a conservative enclosure is available from GCFBounder.Range(), it is stored in Range.
+// Otherwise Range is nil.
 func GCFApproxFromPrefix(src GCFSource, prefixTerms int) (GCFApprox, error) {
 	if prefixTerms < 0 {
 		return GCFApprox{}, fmt.Errorf("GCFApproxFromPrefix: negative prefixTerms %d", prefixTerms)
@@ -37,8 +44,17 @@ func GCFApproxFromPrefix(src GCFSource, prefixTerms int) (GCFApprox, error) {
 		return GCFApprox{}, err
 	}
 
+	var rp *Range
+	if r, ok, err := b.Range(); err != nil {
+		return GCFApprox{}, err
+	} else if ok {
+		rr := r
+		rp = &rr
+	}
+
 	return GCFApprox{
 		Convergent:  conv,
+		Range:       rp,
 		PrefixTerms: prefixTerms,
 	}, nil
 }
@@ -82,4 +98,4 @@ func GCFSourceConvergent(src GCFSource, prefixTerms int) (Rational, error) {
 	return a.Convergent, nil
 }
 
-// gcf_approx.go v3
+// gcf_approx.go v2
