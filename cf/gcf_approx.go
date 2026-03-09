@@ -110,6 +110,13 @@ func (a GCFApprox) ExactRange() bool {
 
 // RangeContainsConvergent reports whether the stored enclosure exists and contains
 // the exact convergent.
+//
+// Warning:
+//
+//	For unfinished GCF prefixes, Range may describe the family of values obtained
+//	by varying the unknown remaining tail, while Convergent is the finite-tail
+//	truncation value. In that case this may be false even when both values are
+//	individually correct.
 func (a GCFApprox) RangeContainsConvergent() bool {
 	return a.Range != nil && a.Range.Contains(a.Convergent)
 }
