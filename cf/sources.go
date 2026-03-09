@@ -1,4 +1,4 @@
-// sources.go v11
+// sources.go v12
 package cf
 
 // GCFSource streams generalized continued-fraction terms (p,q), using the convention:
@@ -292,4 +292,32 @@ func (s *Brouncker4OverPiGCFSource) NextPQ() (int64, int64, bool) {
 	return 2, q, true
 }
 
-// sources.go v11
+// LambertPiOver4GCFSource is Lambert's generalized continued fraction for pi/4:
+//
+//	pi/4 = 1 / (1 + 1/(3 + 4/(5 + 9/(7 + 16/(9 + ...)))))
+//
+// In (p,q) terms under x = p + q/x', this emits:
+//
+//	(0,1), (1,1), (3,4), (5,9), (7,16), (9,25), ...
+type LambertPiOver4GCFSource struct {
+	i int
+}
+
+func NewLambertPiOver4GCFSource() *LambertPiOver4GCFSource {
+	return &LambertPiOver4GCFSource{}
+}
+
+func (s *LambertPiOver4GCFSource) NextPQ() (int64, int64, bool) {
+	if s.i == 0 {
+		s.i++
+		return 0, 1, true
+	}
+
+	n := int64(s.i) // 1,2,3,...
+	p := 2*n - 1
+	q := n * n
+	s.i++
+	return p, q, true
+}
+
+// sources.go v12
