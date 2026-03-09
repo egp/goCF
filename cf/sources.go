@@ -1,4 +1,4 @@
-// sources.go v12
+// sources.go v13
 package cf
 
 // GCFSource streams generalized continued-fraction terms (p,q), using the convention:
@@ -320,4 +320,39 @@ func (s *LambertPiOver4GCFSource) NextPQ() (int64, int64, bool) {
 	return p, q, true
 }
 
-// sources.go v12
+// PositiveTailLowerBoundedGCFSource is an optional interface for GCF sources
+// whose unfinished tails are known to satisfy tail >= L for some positive L.
+//
+// This metadata is used to derive conservative unfinished-prefix enclosures.
+type PositiveTailLowerBoundedGCFSource interface {
+	GCFSource
+	TailLowerBound() Rational
+}
+
+func (a *CFGCFAdapter) TailLowerBound() Rational {
+	// Regular CF tails are >= 1 when interpreted after a prefix in the usual
+	// positive-term setting. This adapter is intended for that standard usage.
+	return mustRat(1, 1)
+}
+
+func (p *PeriodicGCF) TailLowerBound() Rational {
+	return mustRat(1, 1)
+}
+
+func (s *ECFGSource) TailLowerBound() Rational {
+	return mustRat(1, 1)
+}
+
+func (s *Brouncker4OverPiGCFSource) TailLowerBound() Rational {
+	return mustRat(1, 1)
+}
+
+func (s *LambertPiOver4GCFSource) TailLowerBound() Rational {
+	return mustRat(1, 1)
+}
+
+func (s *UnitPArithmeticQGCFSource) TailLowerBound() Rational {
+	return mustRat(1, 1)
+}
+
+// sources.go v13

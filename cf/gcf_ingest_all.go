@@ -1,4 +1,4 @@
-// gcf_ingest_all.go v2
+// gcf_ingest_all.go v3
 package cf
 
 import "fmt"
@@ -33,12 +33,22 @@ func IngestAllGCF(src GCFSource) (*GCFBounder, error) {
 //   - if the source terminates before prefixTerms terms, the returned bounder is finished
 //   - otherwise the returned bounder contains exactly prefixTerms ingested terms
 //     and is not yet finished
+//
+// If src also implements PositiveTailLowerBoundedGCFSource, the returned bounder
+// is configured with that lower bound so unfinished prefixes can produce a
+// conservative ray-based enclosure.
 func IngestGCFPrefix(src GCFSource, prefixTerms int) (*GCFBounder, error) {
 	if prefixTerms < 0 {
 		return nil, fmt.Errorf("IngestGCFPrefix: negative prefixTerms %d", prefixTerms)
 	}
 
 	b := NewGCFBounder()
+	if bounded, ok := src.(PositiveTailLowerBoundedGCFSource); ok {
+		if err := b.SetTailLowerBound(bounded.TailLowerBound()); err != nil {
+			return nil, err
+		}
+	}
+
 	if prefixTerms == 0 {
 		return b, nil
 	}
@@ -57,4 +67,4 @@ func IngestGCFPrefix(src GCFSource, prefixTerms int) (*GCFBounder, error) {
 	return b, nil
 }
 
-// gcf_ingest_all.go v2
+// gcf_ingest_all.go v3

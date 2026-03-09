@@ -147,4 +147,50 @@ func TestGCFBounder_RejectsNonPositiveTailLowerBound(t *testing.T) {
 	}
 }
 
+func TestIngestGCFPrefix_UsesPositiveTailLowerBoundMetadata_Brouncker(t *testing.T) {
+	b, err := IngestGCFPrefix(NewBrouncker4OverPiGCFSource(), 2)
+	if err != nil {
+		t.Fatalf("IngestGCFPrefix failed: %v", err)
+	}
+
+	r, ok, err := b.Range()
+	if err != nil {
+		t.Fatalf("Range failed: %v", err)
+	}
+	if !ok {
+		t.Fatalf("expected ok=true")
+	}
+
+	// Prefix (1,1),(2,1) => x = 1 + 1/(2 + 1/tail), tail >= 1
+	// so range is [4/3, 3/2].
+	wantLo := mustRat(4, 3)
+	wantHi := mustRat(3, 2)
+	if r.Lo.Cmp(wantLo) != 0 || r.Hi.Cmp(wantHi) != 0 {
+		t.Fatalf("got [%v,%v] want [%v,%v]", r.Lo, r.Hi, wantLo, wantHi)
+	}
+}
+
+func TestIngestGCFPrefix_UsesPositiveTailLowerBoundMetadata_Lambert(t *testing.T) {
+	b, err := IngestGCFPrefix(NewLambertPiOver4GCFSource(), 2)
+	if err != nil {
+		t.Fatalf("IngestGCFPrefix failed: %v", err)
+	}
+
+	r, ok, err := b.Range()
+	if err != nil {
+		t.Fatalf("Range failed: %v", err)
+	}
+	if !ok {
+		t.Fatalf("expected ok=true")
+	}
+
+	// Prefix (0,1),(1,1) => x = 0 + 1/(1 + 1/tail), tail >= 1
+	// denominator tail image gives range [1/2, 1].
+	wantLo := mustRat(1, 2)
+	wantHi := mustRat(1, 1)
+	if r.Lo.Cmp(wantLo) != 0 || r.Hi.Cmp(wantHi) != 0 {
+		t.Fatalf("got [%v,%v] want [%v,%v]", r.Lo, r.Hi, wantLo, wantHi)
+	}
+}
+
 // gcf_tail_ray_test.go v1
