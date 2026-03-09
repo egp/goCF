@@ -1,4 +1,4 @@
-// sources.go v8
+// sources.go v9
 package cf
 
 // GCFSource streams generalized continued-fraction terms (p,q), using the convention:
@@ -201,4 +201,40 @@ func (s *FuncGCFSource) NextPQ() (int64, int64, bool) {
 	return p, q, true
 }
 
-// sources.go v8
+// ECFGSource is an algorithmic generalized continued-fraction source for e,
+// emitted via the regular continued-fraction pattern mapped into GCF terms
+// (p,q) = (a,1).
+//
+// Regular CF for e:
+//
+//	[2; 1,2,1, 1,4,1, 1,6,1, ...]
+type ECFGSource struct {
+	i int
+}
+
+func NewECFGSource() *ECFGSource {
+	return &ECFGSource{}
+}
+
+func (s *ECFGSource) NextPQ() (int64, int64, bool) {
+	// a0 = 2
+	if s.i == 0 {
+		s.i++
+		return 2, 1, true
+	}
+
+	// For n>=1:
+	// positions 2,5,8,... (1-based after a0) are 2,4,6,...
+	// in zero-based global indexing, that's i % 3 == 2.
+	var a int64
+	if s.i%3 == 2 {
+		a = 2 * int64((s.i+1)/3)
+	} else {
+		a = 1
+	}
+
+	s.i++
+	return a, 1, true
+}
+
+// sources.go v9
