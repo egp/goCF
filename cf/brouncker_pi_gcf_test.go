@@ -1,4 +1,4 @@
-// brouncker_pi_gcf_test.go v1
+// brouncker_pi_gcf_test.go v2
 package cf
 
 import "testing"
@@ -95,4 +95,53 @@ func TestBrouncker4OverPiGCFSource_IngestPrefix(t *testing.T) {
 	}
 }
 
-// brouncker_pi_gcf_test.go v1
+func TestBrouncker4OverPiGCFSource_Convergents(t *testing.T) {
+	tests := []struct {
+		prefix int
+		want   Rational
+	}{
+		{1, mustRat(1, 1)},
+		{2, mustRat(3, 2)},
+		{3, mustRat(7, 5)},
+		{4, mustRat(41, 28)},
+	}
+
+	for _, tc := range tests {
+		got, err := GCFSourceConvergent(NewBrouncker4OverPiGCFSource(), tc.prefix)
+		if err != nil {
+			t.Fatalf("prefix %d: GCFSourceConvergent failed: %v", tc.prefix, err)
+		}
+		if got.Cmp(tc.want) != 0 {
+			t.Fatalf("prefix %d: got %v want %v", tc.prefix, got, tc.want)
+		}
+	}
+}
+
+func TestBrouncker4OverPiGCFSource_AsRegularCFTerms(t *testing.T) {
+	tests := []struct {
+		prefix int
+		want   []int64
+	}{
+		{1, []int64{1}},
+		{2, []int64{1, 2}},       // 3/2
+		{3, []int64{1, 2, 2}},    // 7/5
+		{4, []int64{1, 2, 6, 2}}, // 41/28
+	}
+
+	for _, tc := range tests {
+		got, err := GCFSourceTerms(NewBrouncker4OverPiGCFSource(), tc.prefix, 16)
+		if err != nil {
+			t.Fatalf("prefix %d: GCFSourceTerms failed: %v", tc.prefix, err)
+		}
+		if len(got) != len(tc.want) {
+			t.Fatalf("prefix %d: len(got)=%d want=%d got=%v", tc.prefix, len(got), len(tc.want), got)
+		}
+		for i := range tc.want {
+			if got[i] != tc.want[i] {
+				t.Fatalf("prefix %d: got[%d]=%d want=%d full=%v", tc.prefix, i, got[i], tc.want[i], got)
+			}
+		}
+	}
+}
+
+// brouncker_pi_gcf_test.go v2
