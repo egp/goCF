@@ -1,4 +1,4 @@
-// sources.go v5
+// sources.go v6
 package cf
 
 // GCFSource streams generalized continued-fraction terms (p,q), using the convention:
@@ -132,4 +132,24 @@ func Sqrt7CF() ContinuedFraction {
 	return newPeriodicCFWithRadicand([]int64{2}, []int64{1, 1, 1, 4}, 7)
 }
 
-// sources.go v5
+// CFGCFAdapter adapts an ordinary continued fraction source into a generalized
+// continued-fraction source by mapping each regular term a to generalized term
+// (p,q) = (a,1).
+type CFGCFAdapter struct {
+	src ContinuedFraction
+}
+
+// AdaptCFToGCF wraps a ContinuedFraction as a GCFSource using (a,1) terms.
+func AdaptCFToGCF(src ContinuedFraction) GCFSource {
+	return &CFGCFAdapter{src: src}
+}
+
+func (a *CFGCFAdapter) NextPQ() (int64, int64, bool) {
+	v, ok := a.src.Next()
+	if !ok {
+		return 0, 0, false
+	}
+	return v, 1, true
+}
+
+// sources.go v6
