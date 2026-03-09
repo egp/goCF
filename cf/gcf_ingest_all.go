@@ -43,7 +43,13 @@ func IngestGCFPrefix(src GCFSource, prefixTerms int) (*GCFBounder, error) {
 	}
 
 	b := NewGCFBounder()
-	if bounded, ok := src.(PositiveTailLowerBoundedGCFSource); ok {
+
+	// Prefer richer tail-range metadata if available.
+	if ranged, ok := src.(TailRangeBoundedGCFSource); ok {
+		if err := b.SetTailRange(ranged.TailRange()); err != nil {
+			return nil, err
+		}
+	} else if bounded, ok := src.(PositiveTailLowerBoundedGCFSource); ok {
 		if err := b.SetTailLowerBound(bounded.TailLowerBound()); err != nil {
 			return nil, err
 		}

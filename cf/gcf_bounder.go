@@ -1,4 +1,4 @@
-// gcf_bounder.go v3
+// gcf_bounder.go v4
 package cf
 
 import (
@@ -42,6 +42,9 @@ type GCFBounder struct {
 
 	// Optional positive lower bound for unfinished tails.
 	tailLowerBound *Rational
+
+	// add field
+	tailRange *Range
 }
 
 func NewGCFBounder() *GCFBounder {
@@ -150,7 +153,16 @@ func (b *GCFBounder) Range() (Range, bool, error) {
 		return NewRange(conv, conv, true, true), true, nil
 	}
 
-	// Unfinished source with explicit positive tail bound => conservative ray image.
+	// Preferred: explicit positive tail interval.
+	if b.tailRange != nil {
+		r, err := b.tailRange.ApplyULFT(b.prefixT)
+		if err != nil {
+			return Range{}, false, err
+		}
+		return r, true, nil
+	}
+
+	// Fallback: positive tail lower bound => ray image.
 	if b.tailLowerBound != nil {
 		r, err := ApplyULFTToTailRay(b.prefixT, *b.tailLowerBound)
 		if err != nil {
@@ -163,4 +175,16 @@ func (b *GCFBounder) Range() (Range, bool, error) {
 	return NewRange(conv, conv, true, true), true, nil
 }
 
-// gcf_bounder.go v3
+func (b *GCFBounder) SetTailRange(r Range) error {
+	if !r.IsInside() {
+		return fmt.Errorf("gcfbounder: tail range must be inside, got %v", r)
+	}
+	if r.Lo.Cmp(intRat(0)) <= 0 {
+		return fmt.Errorf("gcfbounder: tail range must be strictly positive, got %v", r)
+	}
+	rr := r
+	b.tailRange = &rr
+	return nil
+}
+
+// gcf_bounder.go v4

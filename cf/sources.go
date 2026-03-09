@@ -1,4 +1,4 @@
-// sources.go v13
+// sources.go v14
 package cf
 
 // GCFSource streams generalized continued-fraction terms (p,q), using the convention:
@@ -355,4 +355,9 @@ func (s *UnitPArithmeticQGCFSource) TailLowerBound() Rational {
 	return mustRat(1, 1)
 }
 
-// sources.go v13
+type TailRangeBoundedGCFSource interface {
+	GCFSource
+	TailRange() Range
+}
+
+// sources.go v14
