@@ -1,4 +1,4 @@
-// gcf_approx.go v2
+// gcf_approx.go v3
 package cf
 
 import "fmt"
@@ -58,4 +58,28 @@ func GCFApproxTerms(a GCFApprox, digits int) ([]int64, error) {
 	return collectTerms(GCFApproxCF(a), digits), nil
 }
 
-// gcf_approx.go v2
+// GCFSourceTerms ingests up to prefixTerms terms from src, forms a GCFApprox,
+// and returns up to digits regular CF terms for the exact rational convergent.
+func GCFSourceTerms(src GCFSource, prefixTerms int, digits int) ([]int64, error) {
+	if digits < 0 {
+		return nil, fmt.Errorf("GCFSourceTerms: negative digits %d", digits)
+	}
+
+	a, err := GCFApproxFromPrefix(src, prefixTerms)
+	if err != nil {
+		return nil, err
+	}
+	return GCFApproxTerms(a, digits)
+}
+
+// GCFSourceConvergent ingests up to prefixTerms terms from src and returns the
+// exact rational convergent of that bounded GCF prefix.
+func GCFSourceConvergent(src GCFSource, prefixTerms int) (Rational, error) {
+	a, err := GCFApproxFromPrefix(src, prefixTerms)
+	if err != nil {
+		return Rational{}, err
+	}
+	return a.Convergent, nil
+}
+
+// gcf_approx.go v3

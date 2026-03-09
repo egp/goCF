@@ -95,4 +95,46 @@ func TestGCFApproxTerms_RejectsNegativeDigits(t *testing.T) {
 	}
 }
 
+func TestGCFSourceConvergent(t *testing.T) {
+	got, err := GCFSourceConvergent(NewSliceGCF(
+		[2]int64{3, 2},
+		[2]int64{5, 7},
+	), 10)
+	if err != nil {
+		t.Fatalf("GCFSourceConvergent failed: %v", err)
+	}
+
+	want := mustRat(17, 5)
+	if got.Cmp(want) != 0 {
+		t.Fatalf("got %v want %v", got, want)
+	}
+}
+
+func TestGCFSourceTerms(t *testing.T) {
+	got, err := GCFSourceTerms(NewSliceGCF(
+		[2]int64{3, 2},
+		[2]int64{5, 7},
+	), 10, 8)
+	if err != nil {
+		t.Fatalf("GCFSourceTerms failed: %v", err)
+	}
+
+	want := []int64{3, 2, 2} // 17/5 = [3;2,2]
+	if len(got) != len(want) {
+		t.Fatalf("len(got)=%d want=%d got=%v", len(got), len(want), got)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("got[%d]=%d want=%d full=%v", i, got[i], want[i], got)
+		}
+	}
+}
+
+func TestGCFSourceTerms_RejectsNegativeDigits(t *testing.T) {
+	_, err := GCFSourceTerms(NewSliceGCF([2]int64{3, 2}), 1, -1)
+	if err == nil {
+		t.Fatalf("expected error for negative digits")
+	}
+}
+
 // gcf_approx_test.go v1
