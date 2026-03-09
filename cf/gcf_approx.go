@@ -1,4 +1,4 @@
-// gcf_approx.go v1
+// gcf_approx.go v2
 package cf
 
 import "fmt"
@@ -43,4 +43,19 @@ func GCFApproxFromPrefix(src GCFSource, prefixTerms int) (GCFApprox, error) {
 	}, nil
 }
 
-// gcf_approx.go v1
+// GCFApproxCF returns a regular continued-fraction source for the exact rational
+// convergent carried by the GCFApprox snapshot.
+func GCFApproxCF(a GCFApprox) ContinuedFraction {
+	return NewRationalCF(a.Convergent)
+}
+
+// GCFApproxTerms returns up to digits regular CF terms for the exact rational
+// convergent carried by the GCFApprox snapshot.
+func GCFApproxTerms(a GCFApprox, digits int) ([]int64, error) {
+	if digits < 0 {
+		return nil, fmt.Errorf("GCFApproxTerms: negative digits %d", digits)
+	}
+	return collectTerms(GCFApproxCF(a), digits), nil
+}
+
+// gcf_approx.go v2

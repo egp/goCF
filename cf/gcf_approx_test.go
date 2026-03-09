@@ -55,4 +55,44 @@ func TestGCFApproxFromPrefix_RejectsEmptySource(t *testing.T) {
 	}
 }
 
+func TestGCFApproxCF_AndTerms(t *testing.T) {
+	a, err := GCFApproxFromPrefix(NewSliceGCF(
+		[2]int64{3, 2},
+		[2]int64{5, 7},
+	), 10)
+	if err != nil {
+		t.Fatalf("GCFApproxFromPrefix failed: %v", err)
+	}
+
+	// convergent = 17/5 = [3; 2, 2]
+	got, err := GCFApproxTerms(a, 8)
+	if err != nil {
+		t.Fatalf("GCFApproxTerms failed: %v", err)
+	}
+
+	want := []int64{3, 2, 2}
+	if len(got) != len(want) {
+		t.Fatalf("len(got)=%d want=%d got=%v", len(got), len(want), got)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("got[%d]=%d want=%d full=%v", i, got[i], want[i], got)
+		}
+	}
+}
+
+func TestGCFApproxTerms_RejectsNegativeDigits(t *testing.T) {
+	a, err := GCFApproxFromPrefix(NewSliceGCF(
+		[2]int64{3, 2},
+	), 1)
+	if err != nil {
+		t.Fatalf("GCFApproxFromPrefix failed: %v", err)
+	}
+
+	_, err = GCFApproxTerms(a, -1)
+	if err == nil {
+		t.Fatalf("expected error for negative digits")
+	}
+}
+
 // gcf_approx_test.go v1
