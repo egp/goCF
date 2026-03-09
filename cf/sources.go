@@ -1,4 +1,4 @@
-// sources.go v6
+// sources.go v7
 package cf
 
 // GCFSource streams generalized continued-fraction terms (p,q), using the convention:
@@ -152,4 +152,34 @@ func (a *CFGCFAdapter) NextPQ() (int64, int64, bool) {
 	return v, 1, true
 }
 
-// sources.go v6
+// PeriodicGCF is a generalized continued-fraction source with a finite prefix
+// followed by an infinitely repeating period of (p,q) terms.
+type PeriodicGCF struct {
+	prefix [][2]int64
+	period [][2]int64
+	i      int
+}
+
+func NewPeriodicGCF(prefix [][2]int64, period [][2]int64) *PeriodicGCF {
+	// Caller responsibility: period must be non-empty for an infinite source.
+	pfx := append([][2]int64(nil), prefix...)
+	per := append([][2]int64(nil), period...)
+	return &PeriodicGCF{prefix: pfx, period: per}
+}
+
+func (p *PeriodicGCF) NextPQ() (int64, int64, bool) {
+	if p.i < len(p.prefix) {
+		t := p.prefix[p.i]
+		p.i++
+		return t[0], t[1], true
+	}
+	if len(p.period) == 0 {
+		return 0, 0, false
+	}
+	j := (p.i - len(p.prefix)) % len(p.period)
+	t := p.period[j]
+	p.i++
+	return t[0], t[1], true
+}
+
+// sources.go v7
