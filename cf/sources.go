@@ -1,4 +1,4 @@
-// sources.go v7
+// sources.go v8
 package cf
 
 // GCFSource streams generalized continued-fraction terms (p,q), using the convention:
@@ -182,4 +182,23 @@ func (p *PeriodicGCF) NextPQ() (int64, int64, bool) {
 	return t[0], t[1], true
 }
 
-// sources.go v7
+// FuncGCFSource is a generalized continued-fraction source backed by a generator function.
+type FuncGCFSource struct {
+	fn func(i int) (p, q int64, ok bool)
+	i  int
+}
+
+func NewFuncGCFSource(fn func(i int) (p, q int64, ok bool)) *FuncGCFSource {
+	return &FuncGCFSource{fn: fn}
+}
+
+func (s *FuncGCFSource) NextPQ() (int64, int64, bool) {
+	p, q, ok := s.fn(s.i)
+	if !ok {
+		return 0, 0, false
+	}
+	s.i++
+	return p, q, true
+}
+
+// sources.go v8

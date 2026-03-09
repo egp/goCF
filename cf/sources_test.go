@@ -97,4 +97,57 @@ func TestSources_Sqrt5SquaresTo5(t *testing.T) { assertDiagSquaresToInt(t, "sqrt
 func TestSources_Sqrt6SquaresTo6(t *testing.T) { assertDiagSquaresToInt(t, "sqrt6", Sqrt6CF, 6) }
 func TestSources_Sqrt7SquaresTo7(t *testing.T) { assertDiagSquaresToInt(t, "sqrt7", Sqrt7CF, 7) }
 
+func TestFuncGCFSource_Finite(t *testing.T) {
+	s := NewFuncGCFSource(func(i int) (int64, int64, bool) {
+		switch i {
+		case 0:
+			return 3, 2, true
+		case 1:
+			return 5, 7, true
+		default:
+			return 0, 0, false
+		}
+	})
+
+	p, q, ok := s.NextPQ()
+	if !ok || p != 3 || q != 2 {
+		t.Fatalf("got (%d,%d,%v), want (3,2,true)", p, q, ok)
+	}
+
+	p, q, ok = s.NextPQ()
+	if !ok || p != 5 || q != 7 {
+		t.Fatalf("got (%d,%d,%v), want (5,7,true)", p, q, ok)
+	}
+
+	_, _, ok = s.NextPQ()
+	if ok {
+		t.Fatalf("expected termination")
+	}
+}
+
+func TestFuncGCFSource_WithGCFApproxFromPrefix(t *testing.T) {
+	s := NewFuncGCFSource(func(i int) (int64, int64, bool) {
+		switch i {
+		case 0:
+			return 1, 1, true
+		case 1:
+			return 2, 1, true
+		case 2:
+			return 2, 1, true
+		default:
+			return 0, 0, false
+		}
+	})
+
+	got, err := GCFApproxFromPrefix(s, 3)
+	if err != nil {
+		t.Fatalf("GCFApproxFromPrefix failed: %v", err)
+	}
+
+	want := mustRat(7, 5)
+	if got.Convergent.Cmp(want) != 0 {
+		t.Fatalf("got %v want %v", got.Convergent, want)
+	}
+}
+
 // sources_test.go v7
