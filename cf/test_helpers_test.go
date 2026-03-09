@@ -22,4 +22,8 @@ func takeN(src ContinuedFraction, n int) ([]int64, error) {
 
 func bi(n int64) *big.Int { return big.NewInt(n) }
 
+func mustBig(n int64) *big.Int {
+	return big.NewInt(n)
+}
+
 // EOF test_helpers_test.go v3

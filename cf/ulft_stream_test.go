@@ -89,4 +89,39 @@ func TestULFTStream_Identity_ReproducesInputCF(t *testing.T) {
 	}
 }
 
+func TestULFTStreamIdentity(t *testing.T) {
+	src := NewSliceCF(1, 2, 3)
+
+	tform := NewULFT(
+		mustBig(1),
+		mustBig(0),
+		mustBig(0),
+		mustBig(1),
+	)
+
+	s := NewULFTStream(tform, src, ULFTStreamOptions{})
+
+	var digits []int64
+
+	for {
+		d, ok := s.Next()
+		if !ok {
+			break
+		}
+		digits = append(digits, d)
+	}
+
+	want := []int64{1, 2, 3}
+
+	if len(digits) != len(want) {
+		t.Fatalf("got %v want %v", digits, want)
+	}
+
+	for i := range want {
+		if digits[i] != want[i] {
+			t.Fatalf("got %v want %v", digits, want)
+		}
+	}
+}
+
 // ulft_stream_test.go v2
