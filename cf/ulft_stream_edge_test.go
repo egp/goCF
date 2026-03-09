@@ -154,21 +154,30 @@ func TestULFTStreamNext_CannotRefineFurther(t *testing.T) {
 	}
 }
 
-func TestULFTStreamNext_ApplyRangeErrorPath(t *testing.T) {
-	// Denominator crosses zero on initial range [1,2].
-	tform := NewULFT(big.NewInt(1), big.NewInt(0), big.NewInt(1), big.NewInt(-1))
+func TestULFTStreamNext_ExactPointRemainderPoleTerminatesCleanly(t *testing.T) {
+	// T(x) = (x+1)/2, and x = 1 exactly, so T(x) = 1 => CF [1].
+	//
+	// After emitting 1, the transformed remainder ULFT has a pole at the exact
+	// input point x=1. That is clean exhaustion, not an error.
+	x := mustRat(1, 1)
+	tform := NewULFT(big.NewInt(-1), big.NewInt(-1), big.NewInt(0), big.NewInt(-2))
 
-	s := NewULFTStream(tform, NewSliceCF(1), ULFTStreamOptions{})
+	s := NewULFTStream(tform, NewRationalCF(x), ULFTStreamOptions{})
 
-	_, ok := s.Next()
+	d, ok := s.Next()
+	if !ok {
+		t.Fatalf("expected first digit, err=%v", s.Err())
+	}
+	if d != 1 {
+		t.Fatalf("got %d want 1", d)
+	}
+
+	_, ok = s.Next()
 	if ok {
 		t.Fatalf("expected termination")
 	}
-	if s.Err() == nil {
-		t.Fatalf("expected non-nil error")
-	}
-	if !strings.Contains(s.Err().Error(), "denominator crosses 0") {
-		t.Fatalf("unexpected error: %v", s.Err())
+	if err := s.Err(); err != nil {
+		t.Fatalf("expected clean termination, got err=%v", err)
 	}
 }
 
@@ -213,6 +222,95 @@ func TestUlftFingerprint_CanonicalizesSignAndGCD(t *testing.T) {
 
 	if k1 != k2 {
 		t.Fatalf("canonical fingerprints differ: %+v vs %+v", k1, k2)
+	}
+}
+
+func TestULFTStream_ExactConstantZeroTerminatesCleanly(t *testing.T) {
+	x := mustRat(1, 1)
+	u := NewULFT(mustBig(0), mustBig(0), mustBig(0), mustBig(1)) // T(x)=0
+
+	s := NewULFTStream(u, NewRationalCF(x), ULFTStreamOptions{})
+
+	d, ok := s.Next()
+	if !ok {
+		t.Fatalf("expected first digit, err=%v", s.Err())
+	}
+	if d != 0 {
+		t.Fatalf("got %d want 0", d)
+	}
+
+	_, ok = s.Next()
+	if ok {
+		t.Fatalf("expected clean termination after exact [0]")
+	}
+	if err := s.Err(); err != nil {
+		t.Fatalf("expected nil err, got %v", err)
+	}
+}
+
+func TestULFTStream_RefinesInsteadOfFailingOnTransientPoleAfterEmit(t *testing.T) {
+	// T(x) = (x+1)/2, and x = 1 exactly, so T(x) = 1 => CF [1].
+	//
+	// After emitting 1, the transformed ULFT has a pole on the broad prefix range
+	// [1,2], but not at the exact point x=1. The stream must refine to exactness
+	// instead of failing early.
+	x := mustRat(1, 1)
+	u := NewULFT(mustBig(-1), mustBig(-1), mustBig(0), mustBig(-2))
+
+	s := NewULFTStream(u, NewRationalCF(x), ULFTStreamOptions{})
+
+	d, ok := s.Next()
+	if !ok {
+		t.Fatalf("expected first digit, err=%v", s.Err())
+	}
+	if d != 1 {
+		t.Fatalf("got %d want 1", d)
+	}
+
+	_, ok = s.Next()
+	if ok {
+		t.Fatalf("expected clean termination after exact [1]")
+	}
+	if err := s.Err(); err != nil {
+		t.Fatalf("expected nil err, got %v", err)
+	}
+}
+
+func TestULFTStream_ExactPointPoleAfterFinalEmitTerminatesCleanly(t *testing.T) {
+	x := mustRat(1, 1)
+	u := NewULFT(mustBig(-1), mustBig(-1), mustBig(0), mustBig(-2)) // (x+1)/2
+
+	s := NewULFTStream(u, NewRationalCF(x), ULFTStreamOptions{})
+
+	d, ok := s.Next()
+	if !ok {
+		t.Fatalf("expected first digit, err=%v", s.Err())
+	}
+	if d != 1 {
+		t.Fatalf("got %d want 1", d)
+	}
+
+	_, ok = s.Next()
+	if ok {
+		t.Fatalf("expected clean termination")
+	}
+	if err := s.Err(); err != nil {
+		t.Fatalf("expected nil err, got %v", err)
+	}
+}
+
+func TestULFTStreamNext_ExactInputPoleIsError(t *testing.T) {
+	// T(x) = x/(x-1), and x = 1 exactly, so T(1) is undefined.
+	tform := NewULFT(big.NewInt(1), big.NewInt(0), big.NewInt(1), big.NewInt(-1))
+
+	s := NewULFTStream(tform, NewSliceCF(1), ULFTStreamOptions{})
+
+	_, ok := s.Next()
+	if ok {
+		t.Fatalf("expected failure, not a digit")
+	}
+	if err := s.Err(); err == nil {
+		t.Fatalf("expected non-nil error")
 	}
 }
 

@@ -1,4 +1,4 @@
-// ulft_stream.go v8
+// ulft_stream.go v9
 package cf
 
 import (
@@ -37,6 +37,9 @@ type ULFTStream struct {
 	maxTotalRefines    int
 	refinesThisDigit   int
 	refinesTotal       int
+
+	// Set to true whenever a digit is successfully returned
+	emittedAny bool
 }
 
 type ULFTStreamOptions struct {
@@ -145,6 +148,24 @@ func (s *ULFTStream) Next() (int64, bool) {
 			return 0, false
 		}
 
+		// Exact-point termination check.
+		//
+		// After emitting the final CF digit of an exact rational image, the
+		// transformed remainder ULFT may have denominator zero at the exact input
+		// point. That is not an error; it means the stream is finished.
+		if s.emittedAny && s.srcDone && xRange.Lo.Cmp(xRange.Hi) == 0 {
+			den, err := evalLinearOnRat(s.t.C, s.t.D, xRange.Lo)
+			if err != nil {
+				s.setErr(annotateErrULFT(err, s.t, xRange))
+				return 0, false
+			}
+			if den.Cmp(intRat(0)) == 0 {
+				s.done = true
+				s.emittedAny = true
+				return 0, false
+			}
+		}
+
 		if s.detectCycles {
 			// Primary: human-readable fingerprint + ring-buffer history.
 			fp, ferr := FingerprintULFT(s.t, xRange)
@@ -178,21 +199,77 @@ func (s *ULFTStream) Next() (int64, bool) {
 
 		d, okDigit, err := SafeDigit(s.t, xRange)
 		if err != nil {
+			// If the current range is still uncertain, try refining the source
+			// before treating range-level transform failure as fatal.
+			if !s.srcDone {
+				s.refinesThisDigit++
+				s.refinesTotal++
+
+				if s.maxRefinesPerDigit >= 0 && s.refinesThisDigit > s.maxRefinesPerDigit {
+					s.setErr(annotateErrULFT(
+						fmt.Errorf("ULFTStream: exceeded MaxRefinesPerDigit=%d", s.maxRefinesPerDigit),
+						s.t, xRange,
+					))
+					return 0, false
+				}
+				if s.maxTotalRefines >= 0 && s.refinesTotal > s.maxTotalRefines {
+					s.setErr(annotateErrULFT(
+						fmt.Errorf("ULFTStream: exceeded MaxTotalRefines=%d", s.maxTotalRefines),
+						s.t, xRange,
+					))
+					return 0, false
+				}
+
+				a, okSrc := s.src.Next()
+				if okSrc {
+					if err := s.b.Ingest(a); err != nil {
+						s.setErr(err)
+						return 0, false
+					}
+					continue
+				}
+
+				// Source exhausted: collapse to an exact point and retry.
+				s.srcDone = true
+				continue
+			}
+
 			s.setErr(annotateErrULFT(err, s.t, xRange))
 			return 0, false
 		}
 
 		if okDigit {
+			// Exact-integer termination short-circuit.
+			//
+			// If the image of the current range has collapsed to the exact integer d,
+			// then the CF is exactly [d] at this point and we must not apply
+			// EmitDigit, because that would compute 1/(d-d).
+			img, err := xRange.ApplyULFT(s.t)
+			if err != nil {
+				// Exact-point pole after the final emitted digit is clean exhaustion,
+				// not an error.
+				if s.srcDone && xRange.Lo.Cmp(xRange.Hi) == 0 {
+					den, derr := evalLinearOnRat(s.t.C, s.t.D, xRange.Lo)
+					if derr == nil && den.Cmp(intRat(0)) == 0 {
+						s.done = true
+						return 0, false
+					}
+				}
+				s.setErr(annotateErrULFT(err, s.t, xRange))
+				return 0, false
+			}
+			if img.Lo.Cmp(img.Hi) == 0 && img.Lo.Cmp(intRat(d)) == 0 {
+				s.done = true
+				s.emittedAny = true
+				return d, true
+			}
+
 			// IMPORTANT termination case for rationals:
 			// If x is exact and T(x) is exact integer d, then emitting d ends the CF.
-			// Do NOT apply EmitDigit, because it would compute 1/(d-d) and blow up.
+			// Do NOT apply EmitDigit, because it would compute 1/(d-d).
 			if s.srcDone && xRange.Lo.Cmp(xRange.Hi) == 0 {
 				y, err := s.t.ApplyRat(xRange.Lo)
-				if err != nil {
-					s.setErr(annotateErrULFT(err, s.t, xRange))
-					return 0, false
-				}
-				if y.Cmp(intRat(d)) == 0 {
+				if err == nil && y.Cmp(intRat(d)) == 0 {
 					s.done = true
 					return d, true
 				}
@@ -204,6 +281,7 @@ func (s *ULFTStream) Next() (int64, bool) {
 				return 0, false
 			}
 			s.t = tp
+			s.emittedAny = true
 			return d, true
 		}
 
@@ -327,4 +405,4 @@ func canonULFT(t ULFT) ULFT {
 	return ULFT{A: a, B: b, C: c, D: d}
 }
 
-// ulft_stream.go v8
+// ulft_stream.go v9

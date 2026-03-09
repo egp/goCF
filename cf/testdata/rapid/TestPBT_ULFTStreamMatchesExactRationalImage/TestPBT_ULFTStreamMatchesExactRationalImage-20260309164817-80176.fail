@@ -1,0 +1,23 @@
+# 2026/03/09 16:48:17.334862 [TestPBT_ULFTStreamMatchesExactRationalImage] [rapid] draw x: cf.Rational{r:big.Rat{a:big.Int{neg:false, abs:big.nat{0x1}}, b:big.Int{neg:false, abs:big.nat{0x1}}}}
+# 2026/03/09 16:48:17.334908 [TestPBT_ULFTStreamMatchesExactRationalImage] [rapid] draw u: cf.ULFT{A:0, B:0, C:0, D:1}
+# 2026/03/09 16:48:17.334963 [TestPBT_ULFTStreamMatchesExactRationalImage] ULFTStream error: invalid ULFT: denominator is identically 0: [[0 1],[0 0]] | ULFT[a=0 b=0 c=0 d=1] x=[1,2]{incLo=true,incHi=true,inside}
+# 
+v0.4.8#53335754492257841
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x1
