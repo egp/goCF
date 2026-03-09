@@ -177,81 +177,82 @@ The spec should drive:
 
 ---
 
-
 ## P5. Square root operator track
 
 ### Current status
 
-Completed so far:
+Implemented and green:
 
-- Exact rational square-root detection:
-  - `RationalSqrtExact(x)`
-- Exact Newton update scaffold:
-  - `NewtonSqrtStep(x, y)`
-  - `NewtonSqrtIterates(x, seed, steps)`
-- Single bounded rational approximation:
-  - `SqrtApproxRational(x, seed, steps)`
-- Continued-fraction output helpers for bounded approximations:
-  - `SqrtApproxTerms(x, seed, steps, digits)`
-  - `NewSqrtApproxCF(x, seed, steps)`
-- Default exact seed policy:
-  - `DefaultSqrtSeed(x)`
-  - `NewSqrtApproxCFDefault(x, steps)`
+- Exact rational sqrt detection:
+  - `RationalSqrtExact`
+- Exact Newton machinery:
+  - `NewtonSqrtStep`
+  - `NewtonSqrtIterates`
+  - bounded rational approximation helpers
+  - stop-on-exact helpers
+  - stop-on-residual helpers
+- Default seed and policy support:
+  - `DefaultSqrtSeed`
+  - `SqrtPolicy`
+  - default / explicit policy APIs
+  - explicit seed compatibility wrappers
+- CF-facing bounded sqrt APIs:
+  - rational -> CF wrappers
+  - term extraction helpers
+- CF-prefix bridge:
+  - `CFApprox`
+  - convergent-based approximation from CF prefix
+  - range-seeded approximation from CF prefix
+  - midpoint-targeted approximation from CF prefix
+- Range-side sqrt support:
+  - `SqrtRangeExact`
+  - `SqrtRangeHeuristic`
 
-This means we now have a complete bounded path:
+### Current architecture
 
-exact rational input
--> exact Newton rational approximation
--> RationalCF
--> CF terms
+The sqrt subsystem is now consolidated into four coherent production files:
 
-### What is not done yet
+- `sqrt_newton.go`
+- `sqrt_api.go`
+- `sqrt_cf.go`
+- `sqrt_range.go`
 
-Still missing:
+This is a good medium-sized layout and should remain stable unless the design changes substantially.
 
-- true streaming `sqrt()` for irrational CF inputs
-- feedback loop from emitted approximation back into the next Newton stage
-- safe-digit proof logic for sqrt-specific streaming
-- generalized algebraic proof support beyond the current narrow `sqrt(n)` diagonal shortcuts
+### Coverage checkpoint
 
-### Next few baby steps
+Current package coverage is about 70%.
 
-#### P5.1 Next
-Add default-seed convenience helpers for the existing term-level API:
+Largest meaningful remaining low-coverage targets:
 
-- `SqrtApproxTermsDefault(x, steps, digits)`
+- `BLFTStream.Next`
+- `ULFTStream.Next`
 
-This keeps the bounded sqrt API consistent and easier to use.
+These are now more important than adding new sqrt production code immediately.
 
-#### P5.2 After that
-Add quality / error-measure helpers for bounded sqrt approximations, such as:
+### Next baby steps
 
-- exact residual:
-  - `residual = y^2 - x`
-- optional absolute residual helper
+1. Add targeted tests for `ULFTStream` branch/error paths.
+2. Add one tiny smoke test covering:
+   - `DiagBLFT.String`
+   - `ULFT.String`
+   - `Range.String`
+3. Re-run coverage and reassess whether `BLFTStream` or `ULFTStream` still dominates the remaining risk.
+4. Then return to production sqrt work.
 
-This gives us a clean way to test improvement per Newton step.
+### Next production step after the coverage detour
 
-#### P5.3 After that
-Add a bounded “iterate until good enough” helper for rationals, for example:
+Compare the CF-prefix sqrt strategies on the same prefix:
 
-- iterate until residual is exactly zero, or
-- iterate until max steps reached
+- convergent-targeted
+- range-seeded
+- midpoint-targeted
 
-This is still not true streaming sqrt, but gets us closer to an operator API.
+using exact residual comparisons against the same rational target.
 
-#### P5.4 Then
-Design the first true streaming sqrt skeleton for CF inputs:
+That comparison should tell us which bridge toward a future true streaming `sqrt()` is the most promising.
 
-- source CF input
-- seed policy
-- bounded internal rational/CF approximation stages
-- future hook for self-feedback / safe-digit emission
 
-### Recommendation
-
-Keep taking the square-root work in bounded exact-rational steps until all helper layers are solid.
-Only then attempt the true streaming irrational `sqrt()` operator.
 ## P6. Generalized CF ingestion deeper work
 
 ### P6.1 Formal ingestion algebra
