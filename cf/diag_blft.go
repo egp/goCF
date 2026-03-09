@@ -1,4 +1,4 @@
-// diag_blft.go v2
+// diag_blft.go v3
 package cf
 
 import (
@@ -182,4 +182,65 @@ func (t DiagBLFT) emitDigitDiag(d int64) (DiagBLFT, error) {
 	return NewDiagBLFT(A2, B2, C2, D2, E2, F2), nil
 }
 
-// diag_blft.go v2
+// IngestGCF rewrites the diagonal transform after ingesting one generalized
+// continued-fraction term into x, using the convention:
+//
+//	x = p + q/x' = (p*x' + q)/x'
+//
+// If
+//
+//	T(x) = (A*x^2 + B*x + C) / (D*x^2 + E*x + F)
+//
+// then after substitution and clearing x'^2, the rewritten diagonal transform
+// in x' has coefficients:
+//
+//	Numerator:
+//	  A' = A*p^2 + B*p + C
+//	  B' = 2*A*p*q + B*q
+//	  C' = A*q^2
+//
+//	Denominator:
+//	  D' = D*p^2 + E*p + F
+//	  E' = 2*D*p*q + E*q
+//	  F' = D*q^2
+//
+// Preconditions:
+//   - q > 0
+func (t DiagBLFT) IngestGCF(p, q int64) (DiagBLFT, error) {
+	if q <= 0 {
+		return DiagBLFT{}, fmt.Errorf("DiagBLFT IngestGCF: require q>0, got q=%d", q)
+	}
+
+	P := big.NewInt(p)
+	Q := big.NewInt(q)
+
+	P2 := new(big.Int).Mul(P, P)
+	Q2 := new(big.Int).Mul(Q, Q)
+	PQ2 := new(big.Int).Mul(big.NewInt(2), new(big.Int).Mul(P, Q))
+
+	// Numerator
+	Ap2 := new(big.Int).Mul(t.A, P2)
+	Bp := new(big.Int).Mul(t.B, P)
+	A2 := new(big.Int).Add(new(big.Int).Add(Ap2, Bp), t.C)
+
+	Apq2 := new(big.Int).Mul(t.A, PQ2)
+	Bq := new(big.Int).Mul(t.B, Q)
+	B2 := new(big.Int).Add(Apq2, Bq)
+
+	C2 := new(big.Int).Mul(t.A, Q2)
+
+	// Denominator
+	Dp2 := new(big.Int).Mul(t.D, P2)
+	Ep := new(big.Int).Mul(t.E, P)
+	D2 := new(big.Int).Add(new(big.Int).Add(Dp2, Ep), t.F)
+
+	Dpq2 := new(big.Int).Mul(t.D, PQ2)
+	Eq := new(big.Int).Mul(t.E, Q)
+	E2 := new(big.Int).Add(Dpq2, Eq)
+
+	F2 := new(big.Int).Mul(t.D, Q2)
+
+	return NewDiagBLFT(A2, B2, C2, D2, E2, F2), nil
+}
+
+// diag_blft.go v3

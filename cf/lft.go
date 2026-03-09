@@ -1,4 +1,4 @@
-// lft.go v3
+// lft.go v4
 package cf
 
 import (
@@ -108,4 +108,47 @@ func (t BLFT) ApplyRat(x, y Rational) (Rational, error) {
 	return Rational{r: out}, nil
 }
 
-// lft.go v3
+// IngestGCF rewrites the ULFT after ingesting one generalized continued-fraction
+// term into x, using the convention:
+//
+//	x = p + q/x' = (p*x' + q)/x'
+//
+// Therefore, if T(x) = (A*x + B)/(C*x + D), the rewritten transform in x' is:
+//
+//	T((p*x' + q)/x') = ((A*p + B)*x' + A*q) / ((C*p + D)*x' + C*q)
+//
+// Preconditions:
+//   - q > 0
+func (t ULFT) IngestGCF(p, q int64) (ULFT, error) {
+	if q <= 0 {
+		return ULFT{}, fmt.Errorf("ULFT IngestGCF: require q>0, got q=%d", q)
+	}
+	if err := t.Validate(); err != nil {
+		return ULFT{}, err
+	}
+
+	P := big.NewInt(p)
+	Q := big.NewInt(q)
+
+	// A' = A*p + B
+	Ap := new(big.Int).Mul(t.A, P)
+	A2 := new(big.Int).Add(Ap, t.B)
+
+	// B' = A*q
+	B2 := new(big.Int).Mul(t.A, Q)
+
+	// C' = C*p + D
+	Cp := new(big.Int).Mul(t.C, P)
+	C2 := new(big.Int).Add(Cp, t.D)
+
+	// D' = C*q
+	D2 := new(big.Int).Mul(t.C, Q)
+
+	out := NewULFT(A2, B2, C2, D2)
+	if err := out.Validate(); err != nil {
+		return ULFT{}, err
+	}
+	return out, nil
+}
+
+// lft.go v4
