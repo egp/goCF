@@ -139,3 +139,62 @@ func TestRefineMetricCmp_InsideVsOutside(t *testing.T) {
 		t.Fatalf("expected outside to compare larger than inside, got %d", got)
 	}
 }
+
+func TestRationalDiv_Positive(t *testing.T) {
+	got, err := mustRat(3, 4).Div(mustRat(2, 5))
+	if err != nil {
+		t.Fatalf("Div failed: %v", err)
+	}
+
+	want := mustRat(15, 8)
+	if got.Cmp(want) != 0 {
+		t.Fatalf("got %v want %v", got, want)
+	}
+}
+
+func TestRationalDiv_Negative(t *testing.T) {
+	got, err := mustRat(-3, 4).Div(mustRat(2, 5))
+	if err != nil {
+		t.Fatalf("Div failed: %v", err)
+	}
+
+	want := mustRat(-15, 8)
+	if got.Cmp(want) != 0 {
+		t.Fatalf("got %v want %v", got, want)
+	}
+}
+
+func TestRationalDiv_BothNegative(t *testing.T) {
+	got, err := mustRat(-3, 4).Div(mustRat(-2, 5))
+	if err != nil {
+		t.Fatalf("Div failed: %v", err)
+	}
+
+	want := mustRat(15, 8)
+	if got.Cmp(want) != 0 {
+		t.Fatalf("got %v want %v", got, want)
+	}
+}
+
+func TestRationalDiv_ReducesResult(t *testing.T) {
+	// (2/3) / (4/9) = (2/3)*(9/4) = 18/12 = 3/2
+	got, err := mustRat(2, 3).Div(mustRat(4, 9))
+	if err != nil {
+		t.Fatalf("Div failed: %v", err)
+	}
+
+	want := mustRat(3, 2)
+	if got.Cmp(want) != 0 {
+		t.Fatalf("got %v want %v", got, want)
+	}
+	if got.String() != "3/2" {
+		t.Fatalf("expected reduced form 3/2, got %q", got.String())
+	}
+}
+
+func TestRationalDiv_ByZeroIsError(t *testing.T) {
+	_, err := mustRat(1, 2).Div(mustRat(0, 1))
+	if err == nil {
+		t.Fatalf("expected non-nil error")
+	}
+}
