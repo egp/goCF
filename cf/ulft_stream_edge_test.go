@@ -314,4 +314,44 @@ func TestULFTStreamNext_ExactInputPoleIsError(t *testing.T) {
 	}
 }
 
+func TestULFTStream_ExactInputPoleIsError(t *testing.T) {
+	// T(x) = x/(x-1), and x = 1 exactly, so T(1) is undefined.
+	tform := NewULFT(big.NewInt(1), big.NewInt(0), big.NewInt(1), big.NewInt(-1))
+
+	s := NewULFTStream(tform, NewSliceCF(1), ULFTStreamOptions{})
+
+	_, ok := s.Next()
+	if ok {
+		t.Fatalf("expected failure, not a digit")
+	}
+	if err := s.Err(); err == nil {
+		t.Fatalf("expected non-nil error")
+	}
+}
+
+func TestULFTStream_ExactRemainderPoleAfterEmitTerminatesCleanly(t *testing.T) {
+	// T(x) = (x+1)/2, and x = 1 exactly, so T(x) = 1 => CF [1].
+	// After emitting 1, the remainder ULFT has a pole at the exact point x=1.
+	x := mustRat(1, 1)
+	tform := NewULFT(big.NewInt(-1), big.NewInt(-1), big.NewInt(0), big.NewInt(-2))
+
+	s := NewULFTStream(tform, NewRationalCF(x), ULFTStreamOptions{})
+
+	d, ok := s.Next()
+	if !ok {
+		t.Fatalf("expected first digit, err=%v", s.Err())
+	}
+	if d != 1 {
+		t.Fatalf("got %d want 1", d)
+	}
+
+	_, ok = s.Next()
+	if ok {
+		t.Fatalf("expected clean termination")
+	}
+	if err := s.Err(); err != nil {
+		t.Fatalf("expected nil err, got %v", err)
+	}
+}
+
 // ulft_stream_edge_test.go v1

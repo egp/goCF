@@ -242,4 +242,53 @@ func TestBLFTStream_RefinesInsteadOfFailingOnTransientRectanglePole(t *testing.T
 	}
 }
 
+func TestBLFTStream_ExactInputPoleIsError(t *testing.T) {
+	// z = 1/(y-1), evaluated at x=0, y=1, is undefined at the exact point.
+	bl := NewBLFT(0, 0, 0, 1, 0, 0, 1, -1)
+
+	s := NewBLFTStream(
+		bl,
+		NewRationalCF(mustRat(0, 1)),
+		NewRationalCF(mustRat(1, 1)),
+		BLFTStreamOptions{},
+	)
+
+	_, ok := s.Next()
+	if ok {
+		t.Fatalf("expected failure, not a digit")
+	}
+	if err := s.Err(); err == nil {
+		t.Fatalf("expected non-nil error")
+	}
+}
+
+func TestBLFTStream_ExactRemainderPoleAfterEmitTerminatesCleanly(t *testing.T) {
+	// z = 1/(-y), evaluated at x=0, y=1, is exactly -1 => CF [-1].
+	// After emitting -1, the remainder BLFT has denominator zero at the exact point.
+	bl := NewBLFT(0, 0, 0, 1, 0, 0, -1, 0)
+
+	s := NewBLFTStream(
+		bl,
+		NewRationalCF(mustRat(0, 1)),
+		NewRationalCF(mustRat(1, 1)),
+		BLFTStreamOptions{},
+	)
+
+	d, ok := s.Next()
+	if !ok {
+		t.Fatalf("expected first digit, err=%v", s.Err())
+	}
+	if d != -1 {
+		t.Fatalf("got %d want -1", d)
+	}
+
+	_, ok = s.Next()
+	if ok {
+		t.Fatalf("expected clean termination")
+	}
+	if err := s.Err(); err != nil {
+		t.Fatalf("expected nil err, got %v", err)
+	}
+}
+
 // blft_stream_edge_test.go v1
