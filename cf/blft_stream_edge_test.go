@@ -210,4 +210,36 @@ func TestBLFTStreamNext_CycleDetectionPath(t *testing.T) {
 	}
 }
 
+func TestBLFTStream_RefinesInsteadOfFailingOnTransientRectanglePole(t *testing.T) {
+	// z = 0 / (y - 1), evaluated at x=0, y=0, is exactly 0.
+	//
+	// Early prefix rectangles for y include 1, so the denominator may cross zero
+	// on the current rectangle, but the exact point is valid. The stream must
+	// refine instead of failing early.
+	bl := NewBLFT(0, 0, 0, 0, 0, 0, 1, -1)
+
+	s := NewBLFTStream(
+		bl,
+		NewRationalCF(mustRat(0, 1)),
+		NewRationalCF(mustRat(0, 1)),
+		BLFTStreamOptions{},
+	)
+
+	d, ok := s.Next()
+	if !ok {
+		t.Fatalf("expected first digit, err=%v", s.Err())
+	}
+	if d != 0 {
+		t.Fatalf("got %d want 0", d)
+	}
+
+	_, ok = s.Next()
+	if ok {
+		t.Fatalf("expected clean termination after exact [0]")
+	}
+	if err := s.Err(); err != nil {
+		t.Fatalf("expected nil err, got %v", err)
+	}
+}
+
 // blft_stream_edge_test.go v1

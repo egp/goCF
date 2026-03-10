@@ -1,4 +1,4 @@
-// blft_stream.go v11
+// blft_stream.go v12
 package cf
 
 import "fmt"
@@ -211,6 +211,8 @@ func (s *BLFTStream) Next() (int64, bool) {
 			}
 		}
 
+		needRefine := false
+
 		img, err := s.t.ApplyBLFTRange(xr, yr)
 		if err != nil {
 			// If denom guard trips and finalization is enabled, try finalizing now.
@@ -227,38 +229,50 @@ func (s *BLFTStream) Next() (int64, bool) {
 					return a, true
 				}
 			}
-			s.setErr(annotateErrBLFT(err, s.t, xr, yr))
-			return 0, false
-		}
 
-		lo, hi, err := img.FloorBounds()
-		if err != nil {
-			s.setErr(annotateErrBLFT(err, s.t, xr, yr))
-			return 0, false
-		}
-
-		if lo == hi {
-			d := lo
-
-			// v10: integer termination short-circuit
-			//
-			// If the image interval has collapsed to an exact integer d, then the CF is exactly [d]
-			// at this point and we MUST NOT apply emitDigitBLFT (which would compute 1/(d-d)).
-			if img.Lo.Cmp(img.Hi) == 0 && img.Lo.Cmp(intRat(d)) == 0 {
-				s.done = true
-				return d, true
+			// If either source is still uncertain, refine before treating the
+			// range-level failure as fatal. The exact point may still be valid even
+			// if the current rectangle may cross a pole.
+			if !(s.xDone && s.yDone) {
+				needRefine = true
+			} else {
+				// Both sources are exact and the rectangle still fails => real error.
+				s.setErr(annotateErrBLFT(err, s.t, xr, yr))
+				return 0, false
 			}
+		}
 
-			tp, err := s.emitDigitBLFT(d)
+		if !needRefine {
+			lo, hi, err := img.FloorBounds()
 			if err != nil {
 				s.setErr(annotateErrBLFT(err, s.t, xr, yr))
 				return 0, false
 			}
-			s.t = tp
-			return d, true
+
+			if lo == hi {
+				d := lo
+
+				// Integer termination short-circuit.
+				//
+				// If the image interval has collapsed to an exact integer d, then the CF
+				// is exactly [d] at this point and we MUST NOT apply emitDigitBLFT
+				// (which would compute 1/(d-d)).
+				if img.Lo.Cmp(img.Hi) == 0 && img.Lo.Cmp(intRat(d)) == 0 {
+					s.done = true
+					return d, true
+				}
+
+				tp, err := s.emitDigitBLFT(d)
+				if err != nil {
+					s.setErr(annotateErrBLFT(err, s.t, xr, yr))
+					return 0, false
+				}
+				s.t = tp
+				return d, true
+			}
 		}
 
-		// No safe digit: refine.
+		// No safe digit or current rectangle is too coarse: refine.
 		if s.xDone && s.yDone {
 			s.setErr(annotateErrBLFT(
 				fmt.Errorf("BLFTStream: cannot refine further (both sources finished) and digit not safe"),
@@ -471,4 +485,4 @@ func (s *BLFTStream) emitDigitBLFT(d int64) (BLFT, error) {
 	return NewBLFT(A2, B2, C2, D2, E2, F2, G2, H2), nil
 }
 
-// EOF blft_stream.go v11
+// blft_stream.go v12

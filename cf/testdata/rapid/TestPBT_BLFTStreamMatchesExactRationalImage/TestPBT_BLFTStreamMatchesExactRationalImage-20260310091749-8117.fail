@@ -1,0 +1,42 @@
+# 2026/03/10 09:17:49.759863 [TestPBT_BLFTStreamMatchesExactRationalImage] [rapid] draw x: cf.Rational{r:big.Rat{a:big.Int{neg:false, abs:big.nat(nil)}, b:big.Int{neg:false, abs:big.nat{0x1}}}}
+# 2026/03/10 09:17:49.759887 [TestPBT_BLFTStreamMatchesExactRationalImage] [rapid] draw y: cf.Rational{r:big.Rat{a:big.Int{neg:false, abs:big.nat{0x1}}, b:big.Int{neg:false, abs:big.nat{0x1}}}}
+# 2026/03/10 09:17:49.759893 [TestPBT_BLFTStreamMatchesExactRationalImage] [rapid] draw bl: cf.BLFT{A:0, B:0, C:0, D:1, E:0, F:0, G:-1, H:0}
+# 2026/03/10 09:17:49.759972 [TestPBT_BLFTStreamMatchesExactRationalImage] BLFTStream error: BLFT denominator may cross 0 for rx=[0,0] ry=[1,1] (den in [0,0]) | BLFT[A=0 B=0 C=1 D=0 E=0 F=0 G=1 H=-1] x=[0,0]{incLo=true,incHi=true,inside} y=[1,1]{incLo=true,incHi=true,inside}
+# 
+v0.4.8#5857688315666655086
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x1
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x1
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x10000000000000
+0x0
+0x0
+0x0
+0x0
+0x0
