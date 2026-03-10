@@ -91,4 +91,102 @@ func TestBLFTDenomMayHitZero_DefinitelyNonZero(t *testing.T) {
 	}
 }
 
+func TestBLFTDenomAt_ConstantDenominator(t *testing.T) {
+	// Denominator = 5
+	bl := NewBLFT(0, 0, 0, 0, 0, 0, 0, 5)
+
+	got, err := bl.denomAt(mustRat(2, 3), mustRat(-7, 5))
+	if err != nil {
+		t.Fatalf("denomAt failed: %v", err)
+	}
+
+	want := mustRat(5, 1)
+	if got.Cmp(want) != 0 {
+		t.Fatalf("got %v want %v", got, want)
+	}
+}
+
+func TestBLFTDenomAt_GeneralCase(t *testing.T) {
+	// Denominator = 2xy + 3x + 5y + 7
+	bl := NewBLFT(0, 0, 0, 0, 2, 3, 5, 7)
+
+	x := mustRat(1, 2)
+	y := mustRat(2, 3)
+
+	got, err := bl.denomAt(x, y)
+	if err != nil {
+		t.Fatalf("denomAt failed: %v", err)
+	}
+
+	// 2*(1/2)*(2/3) + 3*(1/2) + 5*(2/3) + 7
+	// = 2/3 + 3/2 + 10/3 + 7 = 25/2
+	want := mustRat(25, 2)
+	if got.Cmp(want) != 0 {
+		t.Fatalf("got %v want %v", got, want)
+	}
+}
+
+func TestBLFTDenomMayHitZero_FalseForStrictlyPositiveConstant(t *testing.T) {
+	bl := NewBLFT(0, 0, 0, 0, 0, 0, 0, 3)
+
+	rx := NewRange(mustRat(-2, 1), mustRat(5, 1), true, true)
+	ry := NewRange(mustRat(-7, 1), mustRat(4, 1), true, true)
+
+	got, err := bl.DenomMayHitZero(rx, ry)
+	if err != nil {
+		t.Fatalf("DenomMayHitZero failed: %v", err)
+	}
+	if got {
+		t.Fatalf("expected false")
+	}
+}
+
+func TestBLFTDenomMayHitZero_TrueWhenCornerRangeIncludesZero(t *testing.T) {
+	// Denominator = y - 1
+	bl := NewBLFT(0, 0, 0, 0, 0, 0, 1, -1)
+
+	rx := NewRange(mustRat(0, 1), mustRat(0, 1), true, true)
+	ry := NewRange(mustRat(0, 1), mustRat(2, 1), true, true)
+
+	got, err := bl.DenomMayHitZero(rx, ry)
+	if err != nil {
+		t.Fatalf("DenomMayHitZero failed: %v", err)
+	}
+	if !got {
+		t.Fatalf("expected true")
+	}
+}
+
+func TestBLFTDenomMayHitZero_TrueAtExactPointZero(t *testing.T) {
+	// Denominator = x + y - 1
+	bl := NewBLFT(0, 0, 0, 0, 0, 1, 1, -1)
+
+	rx := NewRange(mustRat(1, 2), mustRat(1, 2), true, true)
+	ry := NewRange(mustRat(1, 2), mustRat(1, 2), true, true)
+
+	got, err := bl.DenomMayHitZero(rx, ry)
+	if err != nil {
+		t.Fatalf("DenomMayHitZero failed: %v", err)
+	}
+	if !got {
+		t.Fatalf("expected true")
+	}
+}
+
+func TestBLFTDenomMayHitZero_FalseOnSeparatedPositiveRange(t *testing.T) {
+	// Denominator = x + y + 1, clearly positive on the chosen rectangle.
+	bl := NewBLFT(0, 0, 0, 0, 0, 1, 1, 1)
+
+	rx := NewRange(mustRat(0, 1), mustRat(2, 1), true, true)
+	ry := NewRange(mustRat(0, 1), mustRat(3, 1), true, true)
+
+	got, err := bl.DenomMayHitZero(rx, ry)
+	if err != nil {
+		t.Fatalf("DenomMayHitZero failed: %v", err)
+	}
+	if got {
+		t.Fatalf("expected false")
+	}
+}
+
 // blft_denom_test.go v1

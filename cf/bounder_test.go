@@ -109,4 +109,112 @@ func TestBounder_FinishCollapsesToExactRational(t *testing.T) {
 	}
 }
 
+func TestBounderConvergent_NoValueIsError(t *testing.T) {
+	b := NewBounder()
+
+	_, err := b.Convergent()
+	if err == nil {
+		t.Fatalf("expected non-nil error")
+	}
+}
+
+func TestBounderRange_NoValue(t *testing.T) {
+	b := NewBounder()
+
+	r, ok, err := b.Range()
+	if err != nil {
+		t.Fatalf("Range failed: %v", err)
+	}
+	if ok {
+		t.Fatalf("expected ok=false, got range %v", r)
+	}
+}
+
+func TestBounderRange_FinishedIsExactPoint(t *testing.T) {
+	// [1;2] = 3/2
+	b := NewBounder()
+	if err := b.Ingest(1); err != nil {
+		t.Fatalf("Ingest failed: %v", err)
+	}
+	if err := b.Ingest(2); err != nil {
+		t.Fatalf("Ingest failed: %v", err)
+	}
+	b.Finish()
+
+	r, ok, err := b.Range()
+	if err != nil {
+		t.Fatalf("Range failed: %v", err)
+	}
+	if !ok {
+		t.Fatalf("expected ok=true")
+	}
+
+	want := mustRat(3, 2)
+	if r.Lo.Cmp(want) != 0 || r.Hi.Cmp(want) != 0 {
+		t.Fatalf("got [%v,%v] want exact [%v,%v]", r.Lo, r.Hi, want, want)
+	}
+}
+
+func TestBounderRange_MediantOrdering_FirstTerm(t *testing.T) {
+	// After ingesting [1], convergent is 1 and mediant endpoint is 2,
+	// so range should be [1,2].
+	b := NewBounder()
+	if err := b.Ingest(1); err != nil {
+		t.Fatalf("Ingest failed: %v", err)
+	}
+
+	r, ok, err := b.Range()
+	if err != nil {
+		t.Fatalf("Range failed: %v", err)
+	}
+	if !ok {
+		t.Fatalf("expected ok=true")
+	}
+
+	wantLo := mustRat(1, 1)
+	wantHi := mustRat(2, 1)
+	if r.Lo.Cmp(wantLo) != 0 || r.Hi.Cmp(wantHi) != 0 {
+		t.Fatalf("got [%v,%v] want [%v,%v]", r.Lo, r.Hi, wantLo, wantHi)
+	}
+}
+
+func TestBounderRange_MediantOrdering_SwappedCase(t *testing.T) {
+	// After ingesting [0;2] = 1/2, the mediant endpoint is 1/3.
+	// This exercises the branch where the mediant is below the convergent.
+
+	b := NewBounder()
+	if err := b.Ingest(0); err != nil {
+		t.Fatalf("Ingest failed: %v", err)
+	}
+	if err := b.Ingest(2); err != nil {
+		t.Fatalf("Ingest failed: %v", err)
+	}
+
+	r, ok, err := b.Range()
+	if err != nil {
+		t.Fatalf("Range failed: %v", err)
+	}
+	if !ok {
+		t.Fatalf("expected ok=true")
+	}
+
+	wantLo := mustRat(1, 3)
+	wantHi := mustRat(1, 2)
+	if r.Lo.Cmp(wantLo) != 0 || r.Hi.Cmp(wantHi) != 0 {
+		t.Fatalf("got [%v,%v] want [%v,%v]", r.Lo, r.Hi, wantLo, wantHi)
+	}
+}
+
+func TestBounderIngest_AfterFinishIsError(t *testing.T) {
+	b := NewBounder()
+	if err := b.Ingest(1); err != nil {
+		t.Fatalf("Ingest failed: %v", err)
+	}
+	b.Finish()
+
+	if err := b.Ingest(2); err == nil {
+		t.Fatalf("expected non-nil error")
+	}
+}
+
 // bounder_test.go v1
