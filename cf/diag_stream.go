@@ -153,13 +153,13 @@ func (s *DiagBLFTStream) Next() (int64, bool) {
 				return 0, false
 			}
 		}
+
 		needRefine := false
 
 		img, err := s.t.ApplyRange(xr)
 		if err != nil {
 			// If the current range is still uncertain, refine before treating
-			// range-level transform failure as fatal. The exact point may still
-			// be valid even if the current interval is too coarse for ApplyRange.
+			// range-level transform failure as fatal.
 			if !s.srcDone {
 				needRefine = true
 			} else {
@@ -201,15 +201,14 @@ func (s *DiagBLFTStream) Next() (int64, bool) {
 			return 0, false
 		}
 
-		s.refinesThisDigit++
-		s.refinesTotal++
-
-		if s.maxRefinesPerDigit >= 0 && s.refinesThisDigit > s.maxRefinesPerDigit {
-			s.setErr(fmt.Errorf("DiagBLFTStream: exceeded MaxRefinesPerDigit=%d", s.maxRefinesPerDigit))
-			return 0, false
-		}
-		if s.maxTotalRefines >= 0 && s.refinesTotal > s.maxTotalRefines {
-			s.setErr(fmt.Errorf("DiagBLFTStream: exceeded MaxTotalRefines=%d", s.maxTotalRefines))
+		if err := consumeRefineBudget(
+			"DiagBLFTStream:",
+			&s.refinesThisDigit,
+			&s.refinesTotal,
+			s.maxRefinesPerDigit,
+			s.maxTotalRefines,
+		); err != nil {
+			s.setErr(err)
 			return 0, false
 		}
 

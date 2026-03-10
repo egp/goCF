@@ -169,6 +169,7 @@ func (s *ULFTStream) Next() (int64, bool) {
 				return 0, false
 			}
 		}
+
 		if s.detectCycles {
 			// Primary: human-readable fingerprint + ring-buffer history.
 			fp, ferr := FingerprintULFT(s.t, xRange)
@@ -205,21 +206,14 @@ func (s *ULFTStream) Next() (int64, bool) {
 			// If the current range is still uncertain, try refining the source
 			// before treating range-level transform failure as fatal.
 			if !s.srcDone {
-				s.refinesThisDigit++
-				s.refinesTotal++
-
-				if s.maxRefinesPerDigit >= 0 && s.refinesThisDigit > s.maxRefinesPerDigit {
-					s.setErr(annotateErrULFT(
-						fmt.Errorf("ULFTStream: exceeded MaxRefinesPerDigit=%d", s.maxRefinesPerDigit),
-						s.t, xRange,
-					))
-					return 0, false
-				}
-				if s.maxTotalRefines >= 0 && s.refinesTotal > s.maxTotalRefines {
-					s.setErr(annotateErrULFT(
-						fmt.Errorf("ULFTStream: exceeded MaxTotalRefines=%d", s.maxTotalRefines),
-						s.t, xRange,
-					))
+				if err := consumeRefineBudget(
+					"ULFTStream:",
+					&s.refinesThisDigit,
+					&s.refinesTotal,
+					s.maxRefinesPerDigit,
+					s.maxTotalRefines,
+				); err != nil {
+					s.setErr(annotateErrULFT(err, s.t, xRange))
 					return 0, false
 				}
 
@@ -243,10 +237,6 @@ func (s *ULFTStream) Next() (int64, bool) {
 
 		if okDigit {
 			// Exact-integer termination short-circuit.
-			//
-			// If the image of the current range has collapsed to the exact integer d,
-			// then the CF is exactly [d] at this point and we must not apply
-			// EmitDigit, because that would compute 1/(d-d).
 			img, err := xRange.ApplyULFT(s.t)
 			if err != nil {
 				// Exact-point pole after the final emitted digit is clean exhaustion,
@@ -267,13 +257,12 @@ func (s *ULFTStream) Next() (int64, bool) {
 				return d, true
 			}
 
-			// IMPORTANT termination case for rationals:
-			// If x is exact and T(x) is exact integer d, then emitting d ends the CF.
-			// Do NOT apply EmitDigit, because it would compute 1/(d-d).
+			// Exact rational integer case.
 			if s.srcDone && xRange.Lo.Cmp(xRange.Hi) == 0 {
 				y, err := s.t.ApplyRat(xRange.Lo)
 				if err == nil && y.Cmp(intRat(d)) == 0 {
 					s.done = true
+					s.emittedAny = true
 					return d, true
 				}
 			}
@@ -297,21 +286,14 @@ func (s *ULFTStream) Next() (int64, bool) {
 			return 0, false
 		}
 
-		// Progress guards (strict semantics)
-		s.refinesThisDigit++
-		s.refinesTotal++
-		if s.maxRefinesPerDigit >= 0 && s.refinesThisDigit > s.maxRefinesPerDigit {
-			s.setErr(annotateErrULFT(
-				fmt.Errorf("ULFTStream: exceeded MaxRefinesPerDigit=%d", s.maxRefinesPerDigit),
-				s.t, xRange,
-			))
-			return 0, false
-		}
-		if s.maxTotalRefines >= 0 && s.refinesTotal > s.maxTotalRefines {
-			s.setErr(annotateErrULFT(
-				fmt.Errorf("ULFTStream: exceeded MaxTotalRefines=%d", s.maxTotalRefines),
-				s.t, xRange,
-			))
+		if err := consumeRefineBudget(
+			"ULFTStream:",
+			&s.refinesThisDigit,
+			&s.refinesTotal,
+			s.maxRefinesPerDigit,
+			s.maxTotalRefines,
+		); err != nil {
+			s.setErr(annotateErrULFT(err, s.t, xRange))
 			return 0, false
 		}
 
@@ -326,7 +308,6 @@ func (s *ULFTStream) Next() (int64, bool) {
 
 		// Source exhausted => rational.
 		s.srcDone = true
-		// Loop again; bounder will Finish() and we’ll retry with exact xRange.
 	}
 }
 

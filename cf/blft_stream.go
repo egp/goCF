@@ -217,6 +217,7 @@ func (s *BLFTStream) Next() (int64, bool) {
 				return 0, false
 			}
 		}
+
 		// Cycle detection guard (best-effort diagnostic).
 		if s.detectCycles && s.history != nil {
 			fp, ferr := FingerprintBLFT(s.t, xr, yr)
@@ -254,12 +255,10 @@ func (s *BLFTStream) Next() (int64, bool) {
 			}
 
 			// If either source is still uncertain, refine before treating the
-			// range-level failure as fatal. The exact point may still be valid even
-			// if the current rectangle may cross a pole.
+			// range-level failure as fatal.
 			if !(s.xDone && s.yDone) {
 				needRefine = true
 			} else {
-				// Both sources are exact and the rectangle still fails => real error.
 				s.setErr(annotateErrBLFT(err, s.t, xr, yr))
 				return 0, false
 			}
@@ -276,10 +275,6 @@ func (s *BLFTStream) Next() (int64, bool) {
 				d := lo
 
 				// Integer termination short-circuit.
-				//
-				// If the image interval has collapsed to an exact integer d, then the CF
-				// is exactly [d] at this point and we MUST NOT apply emitDigitBLFT
-				// (which would compute 1/(d-d)).
 				if img.Lo.Cmp(img.Hi) == 0 && img.Lo.Cmp(intRat(d)) == 0 {
 					s.done = true
 					s.emittedAny = true
@@ -330,7 +325,6 @@ func (s *BLFTStream) Next() (int64, bool) {
 			} else if c < 0 {
 				refineY = true
 			} else {
-				// Tie-breaker: alternate.
 				if s.alt {
 					refineX = true
 				} else {
@@ -340,21 +334,14 @@ func (s *BLFTStream) Next() (int64, bool) {
 			}
 		}
 
-		// Progress guards: each attempted refinement consumes one refine budget.
-		s.refinesThisDigit++
-		s.refinesTotal++
-		if s.maxRefinesPerDigit >= 0 && s.refinesThisDigit > s.maxRefinesPerDigit {
-			s.setErr(annotateErrBLFT(
-				fmt.Errorf("BLFTStream: exceeded MaxRefinesPerDigit=%d", s.maxRefinesPerDigit),
-				s.t, xr, yr,
-			))
-			return 0, false
-		}
-		if s.maxTotalRefines >= 0 && s.refinesTotal > s.maxTotalRefines {
-			s.setErr(annotateErrBLFT(
-				fmt.Errorf("BLFTStream: exceeded MaxTotalRefines=%d", s.maxTotalRefines),
-				s.t, xr, yr,
-			))
+		if err := consumeRefineBudget(
+			"BLFTStream:",
+			&s.refinesThisDigit,
+			&s.refinesTotal,
+			s.maxRefinesPerDigit,
+			s.maxTotalRefines,
+		); err != nil {
+			s.setErr(annotateErrBLFT(err, s.t, xr, yr))
 			return 0, false
 		}
 
