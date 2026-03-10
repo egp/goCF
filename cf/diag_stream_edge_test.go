@@ -126,8 +126,12 @@ func TestDiagBLFTStreamNext_FiniteSourceCollapsesToExactPoint(t *testing.T) {
 	}
 }
 
-func TestDiagBLFTStreamNext_ApplyRangeErrorPath(t *testing.T) {
-	// Non-constant denominator is not supported by ApplyRange for non-point ranges.
+func TestDiagBLFTStreamNext_RefinesPastUnsupportedNonPointRangeForExactRational(t *testing.T) {
+	// ApplyRange does not support non-constant denominators on non-point ranges,
+	// but for an exact rational source the stream should refine to the exact point
+	// and continue if the exact value is valid.
+	//
+	// T(x) = x^2 / (x + 1), x = 1 => 1/2 => CF [0; 2]
 	tform := NewDiagBLFT(
 		big.NewInt(1), big.NewInt(0), big.NewInt(0),
 		big.NewInt(0), big.NewInt(1), big.NewInt(1), // denominator x + 1
@@ -135,15 +139,28 @@ func TestDiagBLFTStreamNext_ApplyRangeErrorPath(t *testing.T) {
 
 	s := NewDiagBLFTStream(tform, NewSliceCF(1), DiagBLFTStreamOptions{})
 
-	_, ok := s.Next()
+	d, ok := s.Next()
+	if !ok {
+		t.Fatalf("expected first digit, err=%v", s.Err())
+	}
+	if d != 0 {
+		t.Fatalf("got first digit %d want 0", d)
+	}
+
+	d, ok = s.Next()
+	if !ok {
+		t.Fatalf("expected second digit, err=%v", s.Err())
+	}
+	if d != 2 {
+		t.Fatalf("got second digit %d want 2", d)
+	}
+
+	_, ok = s.Next()
 	if ok {
 		t.Fatalf("expected termination")
 	}
-	if s.Err() == nil {
-		t.Fatalf("expected non-nil error")
-	}
-	if !strings.Contains(s.Err().Error(), "non-constant denominator not yet supported") {
-		t.Fatalf("unexpected error: %v", s.Err())
+	if err := s.Err(); err != nil {
+		t.Fatalf("expected clean termination, got err=%v", err)
 	}
 }
 

@@ -16,6 +16,8 @@ type BLFTStream struct {
 	done bool
 	err  error
 
+	emittedAny bool
+
 	alt  bool
 	opts BLFTStreamOptions
 
@@ -194,6 +196,33 @@ func (s *BLFTStream) Next() (int64, bool) {
 			return 0, false
 		}
 
+		// Exact-point remainder-pole termination check.
+		//
+		// After emitting the final CF digit of an exact rational image, the
+		// transformed remainder BLFT may have denominator zero at the exact input
+		// point. That is clean exhaustion, not an error.
+		//
+		// But if this happens before any digit has been emitted, the original
+		// transform is undefined at the exact point and it is a real error.
+		if s.xDone && s.yDone && xr.Lo.Cmp(xr.Hi) == 0 && yr.Lo.Cmp(yr.Hi) == 0 {
+			den, err := s.t.denomAt(xr.Lo, yr.Lo)
+			if err != nil {
+				s.setErr(annotateErrBLFT(err, s.t, xr, yr))
+				return 0, false
+			}
+			if den.Cmp(intRat(0)) == 0 {
+				if s.emittedAny {
+					s.done = true
+					return 0, false
+				}
+				s.setErr(annotateErrBLFT(
+					fmt.Errorf("BLFT denominator is zero at exact point x=%v y=%v", xr.Lo, yr.Lo),
+					s.t, xr, yr,
+				))
+				return 0, false
+			}
+		}
+
 		// Cycle detection guard (best-effort diagnostic).
 		if s.detectCycles && s.history != nil {
 			fp, ferr := FingerprintBLFT(s.t, xr, yr)
@@ -259,6 +288,7 @@ func (s *BLFTStream) Next() (int64, bool) {
 				// (which would compute 1/(d-d)).
 				if img.Lo.Cmp(img.Hi) == 0 && img.Lo.Cmp(intRat(d)) == 0 {
 					s.done = true
+					s.emittedAny = true
 					return d, true
 				}
 
@@ -268,6 +298,7 @@ func (s *BLFTStream) Next() (int64, bool) {
 					return 0, false
 				}
 				s.t = tp
+				s.emittedAny = true
 				return d, true
 			}
 		}

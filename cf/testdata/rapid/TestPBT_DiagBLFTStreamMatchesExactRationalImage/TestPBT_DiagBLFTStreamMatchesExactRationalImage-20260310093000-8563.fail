@@ -1,0 +1,29 @@
+# 2026/03/10 09:30:00.120200 [TestPBT_DiagBLFTStreamMatchesExactRationalImage] [rapid] draw x: cf.Rational{r:big.Rat{a:big.Int{neg:false, abs:big.nat(nil)}, b:big.Int{neg:false, abs:big.nat{0x1}}}}
+# 2026/03/10 09:30:00.120210 [TestPBT_DiagBLFTStreamMatchesExactRationalImage] [rapid] draw u: cf.DiagBLFT{A:0, B:0, C:0, D:0, E:1, F:1}
+# 2026/03/10 09:30:00.120219 [TestPBT_DiagBLFTStreamMatchesExactRationalImage] DiagBLFTStream error: DiagBLFT ApplyRange: non-constant denominator not yet supported
+# 
+v0.4.8#2329453493028218948
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x1
+0x0
+0x0
+0x1

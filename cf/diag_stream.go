@@ -1,4 +1,4 @@
-// diag_stream.go v4
+// diag_stream.go v5
 package cf
 
 import (
@@ -14,6 +14,8 @@ type DiagBLFTStream struct {
 	srcDone bool
 	done    bool
 	err     error
+
+	emittedAny bool
 
 	maxRefinesPerDigit int
 	maxTotalRefines    int
@@ -97,6 +99,7 @@ func (s *DiagBLFTStream) Next() (int64, bool) {
 	// if src is sqrt(n) and transform is x^2 + k, emit [n+k] exactly.
 	if n, ok := s.exactIntFromQuadraticRadical(); ok {
 		s.done = true
+		s.emittedAny = true
 		return n, true
 	}
 
@@ -129,34 +132,71 @@ func (s *DiagBLFTStream) Next() (int64, bool) {
 			return 0, false
 		}
 
-		img, err := s.t.ApplyRange(xr)
-		if err != nil {
-			s.setErr(err)
-			return 0, false
-		}
-
-		lo, hi, err := img.FloorBounds()
-		if err != nil {
-			s.setErr(err)
-			return 0, false
-		}
-
-		if lo == hi {
-			d := lo
-
-			// Exact integer termination short-circuit.
-			if img.Lo.Cmp(img.Hi) == 0 && img.Lo.Cmp(intRat(d)) == 0 {
-				s.done = true
-				return d, true
-			}
-
-			tp, err := s.t.emitDigitDiag(d)
+		// Exact-point remainder-pole termination check.
+		//
+		// After emitting the final CF digit of an exact rational image, the
+		// transformed remainder DiagBLFT may have denominator zero at the exact
+		// input point. That is clean exhaustion, not an error.
+		//
+		// But if this happens before any digit has been emitted, the original
+		// transform is undefined at the exact point and it is a real error.
+		if s.srcDone && xr.Lo.Cmp(xr.Hi) == 0 {
+			zero, err := diagDenomZeroAt(s.t, xr.Lo)
 			if err != nil {
 				s.setErr(err)
 				return 0, false
 			}
-			s.t = tp
-			return d, true
+			if zero {
+				if s.emittedAny {
+					s.done = true
+					return 0, false
+				}
+				s.setErr(fmt.Errorf("DiagBLFT denominator is zero at exact point x=%v", xr.Lo))
+				return 0, false
+			}
+		}
+
+		needRefine := false
+
+		img, err := s.t.ApplyRange(xr)
+		if err != nil {
+			// If the current range is still uncertain, refine before treating
+			// range-level transform failure as fatal. The exact point may still
+			// be valid even if the current interval is too coarse for ApplyRange.
+			if !s.srcDone {
+				needRefine = true
+			} else {
+				s.setErr(err)
+				return 0, false
+			}
+		}
+
+		if !needRefine {
+			lo, hi, err := img.FloorBounds()
+			if err != nil {
+				s.setErr(err)
+				return 0, false
+			}
+
+			if lo == hi {
+				d := lo
+
+				// Exact integer termination short-circuit.
+				if img.Lo.Cmp(img.Hi) == 0 && img.Lo.Cmp(intRat(d)) == 0 {
+					s.done = true
+					s.emittedAny = true
+					return d, true
+				}
+
+				tp, err := s.t.emitDigitDiag(d)
+				if err != nil {
+					s.setErr(err)
+					return 0, false
+				}
+				s.t = tp
+				s.emittedAny = true
+				return d, true
+			}
 		}
 
 		if s.srcDone {
@@ -196,4 +236,22 @@ func (s *DiagBLFTStream) setErr(err error) {
 	s.done = true
 }
 
-// diag_stream.go v4
+func diagDenomZeroAt(t DiagBLFT, x Rational) (bool, error) {
+	var x2 big.Rat
+	x2.Mul(&x.r, &x.r)
+
+	var den, term big.Rat
+	den.SetInt64(0)
+
+	term.Mul(ratFromBigInt(t.D), &x2)
+	den.Add(&den, &term)
+
+	term.Mul(ratFromBigInt(t.E), &x.r)
+	den.Add(&den, &term)
+
+	den.Add(&den, ratFromBigInt(t.F))
+
+	return den.Sign() == 0, nil
+}
+
+// diag_stream.go v5
