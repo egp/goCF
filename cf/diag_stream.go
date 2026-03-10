@@ -133,13 +133,6 @@ func (s *DiagBLFTStream) Next() (int64, bool) {
 		}
 
 		// Exact-point remainder-pole termination check.
-		//
-		// After emitting the final CF digit of an exact rational image, the
-		// transformed remainder DiagBLFT may have denominator zero at the exact
-		// input point. That is clean exhaustion, not an error.
-		//
-		// But if this happens before any digit has been emitted, the original
-		// transform is undefined at the exact point and it is a real error.
 		if s.srcDone && xr.Lo.Cmp(xr.Hi) == 0 {
 			zero, err := diagDenomZeroAt(s.t, xr.Lo)
 			if err != nil {
@@ -147,15 +140,19 @@ func (s *DiagBLFTStream) Next() (int64, bool) {
 				return 0, false
 			}
 			if zero {
-				if s.emittedAny {
+				done, terr := exactPointTermination(
+					"DiagBLFTStream:",
+					s.emittedAny,
+					fmt.Sprintf("denominator is zero at exact point x=%v", xr.Lo),
+				)
+				if done {
 					s.done = true
 					return 0, false
 				}
-				s.setErr(fmt.Errorf("DiagBLFT denominator is zero at exact point x=%v", xr.Lo))
+				s.setErr(terr)
 				return 0, false
 			}
 		}
-
 		needRefine := false
 
 		img, err := s.t.ApplyRange(xr)

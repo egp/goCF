@@ -148,24 +148,27 @@ func (s *ULFTStream) Next() (int64, bool) {
 			return 0, false
 		}
 
-		// Exact-point termination check.
-		//
-		// After emitting the final CF digit of an exact rational image, the
-		// transformed remainder ULFT may have denominator zero at the exact input
-		// point. That is not an error; it means the stream is finished.
-		if s.emittedAny && s.srcDone && xRange.Lo.Cmp(xRange.Hi) == 0 {
+		// Exact-point remainder-pole termination check.
+		if s.srcDone && xRange.Lo.Cmp(xRange.Hi) == 0 {
 			den, err := evalLinearOnRat(s.t.C, s.t.D, xRange.Lo)
 			if err != nil {
 				s.setErr(annotateErrULFT(err, s.t, xRange))
 				return 0, false
 			}
 			if den.Cmp(intRat(0)) == 0 {
-				s.done = true
-				s.emittedAny = true
+				done, terr := exactPointTermination(
+					"ULFTStream:",
+					s.emittedAny,
+					fmt.Sprintf("denominator is zero at exact point x=%v", xRange.Lo),
+				)
+				if done {
+					s.done = true
+					return 0, false
+				}
+				s.setErr(annotateErrULFT(terr, s.t, xRange))
 				return 0, false
 			}
 		}
-
 		if s.detectCycles {
 			// Primary: human-readable fingerprint + ring-buffer history.
 			fp, ferr := FingerprintULFT(s.t, xRange)
