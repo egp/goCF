@@ -1,7 +1,10 @@
 // gcf_approx.go v5
 package cf
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 // GCFApprox bundles the exact convergent implied by a finite GCF prefix.
 // If Range is non-nil, it is a conservative enclosure for that prefix under the
@@ -13,30 +16,9 @@ type GCFApprox struct {
 	PrefixTerms int
 }
 
-// GCFApproxFromPrefix ingests up to prefixTerms terms from src and returns a bundled GCFApprox.
-//
-// Behavior:
-//   - prefixTerms < 0 => error
-//   - prefixTerms == 0 => error
-//   - if src terminates early, the returned convergent is exact for the whole finite source
-//   - otherwise the returned convergent is exact for the finite prefix only
-//
-// If a conservative enclosure is available from GCFBounder.Range(), it is stored in Range.
-// Otherwise Range is nil.
-func GCFApproxFromPrefix(src GCFSource, prefixTerms int) (GCFApprox, error) {
-	if prefixTerms < 0 {
-		return GCFApprox{}, fmt.Errorf("GCFApproxFromPrefix: negative prefixTerms %d", prefixTerms)
-	}
-	if prefixTerms == 0 {
-		return GCFApprox{}, fmt.Errorf("GCFApproxFromPrefix: prefixTerms must be > 0")
-	}
-
-	b, err := IngestGCFPrefix(src, prefixTerms)
-	if err != nil {
-		return GCFApprox{}, err
-	}
+func gcfApproxFromBounder(b *GCFBounder, prefixTerms int, emptyMsg string) (GCFApprox, error) {
 	if !b.HasValue() {
-		return GCFApprox{}, fmt.Errorf("GCFApproxFromPrefix: empty source")
+		return GCFApprox{}, errors.New(emptyMsg)
 	}
 
 	conv, err := b.Convergent()
@@ -57,6 +39,22 @@ func GCFApproxFromPrefix(src GCFSource, prefixTerms int) (GCFApprox, error) {
 		Range:       rp,
 		PrefixTerms: prefixTerms,
 	}, nil
+}
+
+func GCFApproxFromPrefix(src GCFSource, prefixTerms int) (GCFApprox, error) {
+	if prefixTerms < 0 {
+		return GCFApprox{}, fmt.Errorf("GCFApproxFromPrefix: negative prefixTerms %d", prefixTerms)
+	}
+	if prefixTerms == 0 {
+		return GCFApprox{}, fmt.Errorf("GCFApproxFromPrefix: prefixTerms must be > 0")
+	}
+
+	b, err := IngestGCFPrefix(src, prefixTerms)
+	if err != nil {
+		return GCFApprox{}, err
+	}
+
+	return gcfApproxFromBounder(b, prefixTerms, "GCFApproxFromPrefix: empty source")
 }
 
 // GCFApproxCF returns a regular continued-fraction source for the exact rational

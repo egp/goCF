@@ -3,13 +3,6 @@ package cf
 
 import "fmt"
 
-// specializedGCFApproxFromPrefix is a shared helper for named GCF families that
-// want prefix-aware enclosure logic tighter than the generic source-level path.
-//
-// The caller provides:
-//   - a fresh source constructor
-//   - a prefix-aware optional tail-range function
-//   - a prefix-aware tail-lower-bound function
 func specializedGCFApproxFromPrefix(
 	prefixTerms int,
 	newSrc func() GCFSource,
@@ -49,28 +42,7 @@ func specializedGCFApproxFromPrefix(
 		}
 	}
 
-	if !b.HasValue() {
-		return GCFApprox{}, fmt.Errorf("specializedGCFApproxFromPrefix: empty source")
-	}
-
-	conv, err := b.Convergent()
-	if err != nil {
-		return GCFApprox{}, err
-	}
-
-	var rp *Range
-	if r, ok, err := b.Range(); err != nil {
-		return GCFApprox{}, err
-	} else if ok {
-		rr := r
-		rp = &rr
-	}
-
-	return GCFApprox{
-		Convergent:  conv,
-		Range:       rp,
-		PrefixTerms: prefixTerms,
-	}, nil
+	return gcfApproxFromBounder(b, prefixTerms, "specializedGCFApproxFromPrefix: empty source")
 }
 
 // gcf_specialized_prefix.go v1
