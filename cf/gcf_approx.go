@@ -16,6 +16,17 @@ type GCFApprox struct {
 	PrefixTerms int
 }
 
+func gcfApproxFromSource(src GCFSource, prefixTerms int, who string) (GCFApprox, error) {
+	if err := requirePositivePrefixTerms(who, prefixTerms); err != nil {
+		return GCFApprox{}, err
+	}
+	b, err := IngestGCFPrefix(src, prefixTerms)
+	if err != nil {
+		return GCFApprox{}, err
+	}
+	return gcfApproxFromBounder(b, prefixTerms, who+" empty source")
+}
+
 func requirePositivePrefixTerms(who string, prefixTerms int) error {
 	if prefixTerms < 0 {
 		return fmt.Errorf("%s negative prefixTerms %d", who, prefixTerms)
@@ -68,16 +79,7 @@ func gcfInspectFromApprox(a GCFApprox, digits int, who string) (GCFInspect, erro
 }
 
 func GCFApproxFromPrefix(src GCFSource, prefixTerms int) (GCFApprox, error) {
-	if err := requirePositivePrefixTerms("GCFApproxFromPrefix:", prefixTerms); err != nil {
-		return GCFApprox{}, err
-	}
-
-	b, err := IngestGCFPrefix(src, prefixTerms)
-	if err != nil {
-		return GCFApprox{}, err
-	}
-
-	return gcfApproxFromBounder(b, prefixTerms, "GCFApproxFromPrefix: empty source")
+	return gcfApproxFromSource(src, prefixTerms, "GCFApproxFromPrefix:")
 }
 
 // GCFApproxCF returns a regular continued-fraction source for the exact rational
@@ -98,11 +100,7 @@ func GCFApproxTerms(a GCFApprox, digits int) ([]int64, error) {
 // GCFSourceTerms ingests up to prefixTerms terms from src, forms a GCFApprox,
 // and returns up to digits regular CF terms for the exact rational convergent.
 func GCFSourceTerms(src GCFSource, prefixTerms int, digits int) ([]int64, error) {
-	if digits < 0 {
-		return nil, fmt.Errorf("GCFSourceTerms: negative digits %d", digits)
-	}
-
-	a, err := GCFApproxFromPrefix(src, prefixTerms)
+	a, err := gcfApproxFromSource(src, prefixTerms, "GCFSourceTerms:")
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +110,7 @@ func GCFSourceTerms(src GCFSource, prefixTerms int, digits int) ([]int64, error)
 // GCFSourceConvergent ingests up to prefixTerms terms from src and returns the
 // exact rational convergent of that bounded GCF prefix.
 func GCFSourceConvergent(src GCFSource, prefixTerms int) (Rational, error) {
-	a, err := GCFApproxFromPrefix(src, prefixTerms)
+	a, err := gcfApproxFromSource(src, prefixTerms, "GCFSourceConvergent:")
 	if err != nil {
 		return Rational{}, err
 	}
@@ -153,7 +151,7 @@ type GCFInspect struct {
 // and returns that snapshot together with up to digits regular CF terms of the
 // exact rational convergent.
 func InspectGCFSource(src GCFSource, prefixTerms int, digits int) (GCFInspect, error) {
-	a, err := GCFApproxFromPrefix(src, prefixTerms)
+	a, err := gcfApproxFromSource(src, prefixTerms, "InspectGCFSource:")
 	if err != nil {
 		return GCFInspect{}, err
 	}
