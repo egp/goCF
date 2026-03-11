@@ -16,6 +16,16 @@ type GCFApprox struct {
 	PrefixTerms int
 }
 
+func requirePositivePrefixTerms(who string, prefixTerms int) error {
+	if prefixTerms < 0 {
+		return fmt.Errorf("%s negative prefixTerms %d", who, prefixTerms)
+	}
+	if prefixTerms == 0 {
+		return fmt.Errorf("%s prefixTerms must be > 0", who)
+	}
+	return nil
+}
+
 func gcfApproxFromBounder(b *GCFBounder, prefixTerms int, emptyMsg string) (GCFApprox, error) {
 	if !b.HasValue() {
 		return GCFApprox{}, errors.New(emptyMsg)
@@ -58,11 +68,8 @@ func gcfInspectFromApprox(a GCFApprox, digits int, who string) (GCFInspect, erro
 }
 
 func GCFApproxFromPrefix(src GCFSource, prefixTerms int) (GCFApprox, error) {
-	if prefixTerms < 0 {
-		return GCFApprox{}, fmt.Errorf("GCFApproxFromPrefix: negative prefixTerms %d", prefixTerms)
-	}
-	if prefixTerms == 0 {
-		return GCFApprox{}, fmt.Errorf("GCFApproxFromPrefix: prefixTerms must be > 0")
+	if err := requirePositivePrefixTerms("GCFApproxFromPrefix:", prefixTerms); err != nil {
+		return GCFApprox{}, err
 	}
 
 	b, err := IngestGCFPrefix(src, prefixTerms)
