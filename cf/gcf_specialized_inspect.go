@@ -1,8 +1,6 @@
 // gcf_specialized_inspect.go v1
 package cf
 
-import "fmt"
-
 // specializedInspectGCFSource is the inspection analogue of
 // specializedGCFApproxFromPrefix. It forms a specialized bounded-prefix GCF
 // snapshot and returns that snapshot together with up to digits regular CF terms
@@ -12,24 +10,11 @@ func specializedInspectGCFSource(
 	digits int,
 	approxFn func(prefixTerms int) (GCFApprox, error),
 ) (GCFInspect, error) {
-	if digits < 0 {
-		return GCFInspect{}, fmt.Errorf("specializedInspectGCFSource: negative digits %d", digits)
-	}
-
 	a, err := approxFn(prefixTerms)
 	if err != nil {
 		return GCFInspect{}, err
 	}
-
-	terms, err := GCFApproxTerms(a, digits)
-	if err != nil {
-		return GCFInspect{}, err
-	}
-
-	return GCFInspect{
-		Approx: a,
-		Terms:  terms,
-	}, nil
+	return gcfInspectFromApprox(a, digits, "specializedInspectGCFSource:")
 }
 
 // InspectLambertPiOver4Prefix returns a specialized bounded-prefix Lambert pi/4

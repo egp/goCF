@@ -41,6 +41,22 @@ func gcfApproxFromBounder(b *GCFBounder, prefixTerms int, emptyMsg string) (GCFA
 	}, nil
 }
 
+func gcfInspectFromApprox(a GCFApprox, digits int, who string) (GCFInspect, error) {
+	if digits < 0 {
+		return GCFInspect{}, fmt.Errorf("%s negative digits %d", who, digits)
+	}
+
+	terms, err := GCFApproxTerms(a, digits)
+	if err != nil {
+		return GCFInspect{}, err
+	}
+
+	return GCFInspect{
+		Approx: a,
+		Terms:  terms,
+	}, nil
+}
+
 func GCFApproxFromPrefix(src GCFSource, prefixTerms int) (GCFApprox, error) {
 	if prefixTerms < 0 {
 		return GCFApprox{}, fmt.Errorf("GCFApproxFromPrefix: negative prefixTerms %d", prefixTerms)
@@ -130,24 +146,11 @@ type GCFInspect struct {
 // and returns that snapshot together with up to digits regular CF terms of the
 // exact rational convergent.
 func InspectGCFSource(src GCFSource, prefixTerms int, digits int) (GCFInspect, error) {
-	if digits < 0 {
-		return GCFInspect{}, fmt.Errorf("InspectGCFSource: negative digits %d", digits)
-	}
-
 	a, err := GCFApproxFromPrefix(src, prefixTerms)
 	if err != nil {
 		return GCFInspect{}, err
 	}
-
-	terms, err := GCFApproxTerms(a, digits)
-	if err != nil {
-		return GCFInspect{}, err
-	}
-
-	return GCFInspect{
-		Approx: a,
-		Terms:  terms,
-	}, nil
+	return gcfInspectFromApprox(a, digits, "InspectGCFSource:")
 }
 
 // gcf_approx.go v5
