@@ -32,5 +32,9 @@ print -P "%F{cyan}==> coverage summary%f"
 mkdir -p ./tmp
 go test -count=1 -cover ./cf > ./tmp/cover.out
 
+#### don't run this normally ######
+#go test -run '^$' -fuzz FuzzULFTStreamMatchesExactRationalImage -fuzztime 30s ./cf
+###################################
+
 print -P "%F{green}OK%f"
 #eof

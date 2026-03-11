@@ -107,6 +107,207 @@ func annotateErrULFT(err error, t ULFT, r Range) error {
 	return fmt.Errorf("%w | %s", err, fp)
 }
 
+func (s *ULFTStream) ensureInitialValue() bool {
+	if s.b.HasValue() || s.srcDone {
+		return true
+	}
+
+	a, ok := s.src.Next()
+	if !ok {
+		s.setErr(fmt.Errorf("ULFTStream: empty source CF"))
+		return false
+	}
+	if err := s.b.Ingest(a); err != nil {
+		s.setErr(err)
+		return false
+	}
+	return true
+}
+
+func (s *ULFTStream) currentRange() (Range, bool) {
+	if s.srcDone {
+		s.b.Finish()
+	}
+
+	xRange, ok, err := s.b.Range()
+	if err != nil {
+		s.setErr(err)
+		return Range{}, false
+	}
+	if !ok {
+		s.setErr(fmt.Errorf("ULFTStream: internal: no range despite HasValue"))
+		return Range{}, false
+	}
+	return xRange, true
+}
+
+func (s *ULFTStream) maybeTerminateExactPoint(xRange Range) (done bool) {
+	if !s.srcDone || xRange.Lo.Cmp(xRange.Hi) != 0 {
+		return false
+	}
+
+	den, err := evalLinearOnRat(s.t.C, s.t.D, xRange.Lo)
+	if err != nil {
+		s.setErr(annotateErrULFT(err, s.t, xRange))
+		return true
+	}
+	if den.Cmp(intRat(0)) != 0 {
+		return false
+	}
+
+	done, terr := exactPointTermination(
+		"ULFTStream:",
+		s.emittedAny,
+		fmt.Sprintf("denominator is zero at exact point x=%v", xRange.Lo),
+	)
+	if done {
+		s.done = true
+		return true
+	}
+
+	s.setErr(annotateErrULFT(terr, s.t, xRange))
+	return true
+}
+
+func (s *ULFTStream) checkCycle(xRange Range) bool {
+	if !s.detectCycles {
+		return true
+	}
+
+	fp, ferr := FingerprintULFT(s.t, xRange)
+	if ferr != nil {
+		s.setErr(ferr)
+		return false
+	}
+
+	if s.history != nil {
+		s.history.Add(fp)
+		if s.history.Count(fp) > s.maxRepeats {
+			s.setErr(fmt.Errorf(
+				"ULFTStream: cycle detected (repeats>%d): %s\nrecent:\n%s",
+				s.maxRepeats, fp, s.history.Dump(),
+			))
+			return false
+		}
+		return true
+	}
+
+	key, kerr := ulftFingerprint(s.t, xRange)
+	if kerr != nil {
+		s.setErr(kerr)
+		return false
+	}
+	s.seen[key]++
+	if s.seen[key] > s.maxRepeats {
+		s.setErr(fmt.Errorf("ULFTStream: cycle detected (repeats>%d): %v", s.maxRepeats, key))
+		return false
+	}
+	return true
+}
+
+func (s *ULFTStream) refineForCurrentDigit(xRange Range) bool {
+	if s.srcDone {
+		s.setErr(annotateErrULFT(
+			fmt.Errorf("ULFTStream: cannot refine further (source finished) and digit not safe"),
+			s.t, xRange,
+		))
+		return false
+	}
+
+	if err := consumeRefineBudget(
+		"ULFTStream:",
+		&s.refinesThisDigit,
+		&s.refinesTotal,
+		s.maxRefinesPerDigit,
+		s.maxTotalRefines,
+	); err != nil {
+		s.setErr(annotateErrULFT(err, s.t, xRange))
+		return false
+	}
+
+	a, okSrc := s.src.Next()
+	if okSrc {
+		if err := s.b.Ingest(a); err != nil {
+			s.setErr(err)
+			return false
+		}
+		return true
+	}
+
+	s.srcDone = true
+	return true
+}
+
+func (s *ULFTStream) refineAfterSafeDigitError(xRange Range) bool {
+	if s.srcDone {
+		return false
+	}
+
+	if err := consumeRefineBudget(
+		"ULFTStream:",
+		&s.refinesThisDigit,
+		&s.refinesTotal,
+		s.maxRefinesPerDigit,
+		s.maxTotalRefines,
+	); err != nil {
+		s.setErr(annotateErrULFT(err, s.t, xRange))
+		return false
+	}
+
+	a, okSrc := s.src.Next()
+	if okSrc {
+		if err := s.b.Ingest(a); err != nil {
+			s.setErr(err)
+			return false
+		}
+		return true
+	}
+
+	s.srcDone = true
+	return true
+}
+
+func (s *ULFTStream) emitSafeDigit(d int64, xRange Range) (int64, bool) {
+	img, err := xRange.ApplyULFT(s.t)
+	if err != nil {
+		// Exact-point pole after the final emitted digit is clean exhaustion,
+		// not an error.
+		if s.srcDone && xRange.Lo.Cmp(xRange.Hi) == 0 {
+			den, derr := evalLinearOnRat(s.t.C, s.t.D, xRange.Lo)
+			if derr == nil && den.Cmp(intRat(0)) == 0 {
+				s.done = true
+				return 0, false
+			}
+		}
+		s.setErr(annotateErrULFT(err, s.t, xRange))
+		return 0, false
+	}
+
+	if img.Lo.Cmp(img.Hi) == 0 && img.Lo.Cmp(intRat(d)) == 0 {
+		s.done = true
+		s.emittedAny = true
+		return d, true
+	}
+
+	if s.srcDone && xRange.Lo.Cmp(xRange.Hi) == 0 {
+		y, err := s.t.ApplyRat(xRange.Lo)
+		if err == nil && y.Cmp(intRat(d)) == 0 {
+			s.done = true
+			s.emittedAny = true
+			return d, true
+		}
+	}
+
+	tp, err := EmitDigit(s.t, d)
+	if err != nil {
+		s.setErr(annotateErrULFT(err, s.t, xRange))
+		return 0, false
+	}
+	s.t = tp
+	s.emittedAny = true
+	return d, true
+}
+
 func (s *ULFTStream) Next() (int64, bool) {
 	if s.done {
 		return 0, false
@@ -118,196 +319,40 @@ func (s *ULFTStream) Next() (int64, bool) {
 
 	s.refinesThisDigit = 0
 
-	// The core “emit vs refine” loop.
 	for {
-		// Ensure we have at least one ingested term to define a range.
-		if !s.b.HasValue() && !s.srcDone {
-			a, ok := s.src.Next()
-			if !ok {
-				s.setErr(fmt.Errorf("ULFTStream: empty source CF"))
-				return 0, false
-			}
-			if err := s.b.Ingest(a); err != nil {
-				s.setErr(err)
-				return 0, false
-			}
-		}
-
-		// If the source is done (rational termination), collapse bounds.
-		if s.srcDone {
-			s.b.Finish()
-		}
-
-		xRange, ok, err := s.b.Range()
-		if err != nil {
-			s.setErr(err)
+		if !s.ensureInitialValue() {
 			return 0, false
 		}
+
+		xRange, ok := s.currentRange()
 		if !ok {
-			s.setErr(fmt.Errorf("ULFTStream: internal: no range despite HasValue"))
 			return 0, false
 		}
 
-		// Exact-point remainder-pole termination check.
-		if s.srcDone && xRange.Lo.Cmp(xRange.Hi) == 0 {
-			den, err := evalLinearOnRat(s.t.C, s.t.D, xRange.Lo)
-			if err != nil {
-				s.setErr(annotateErrULFT(err, s.t, xRange))
-				return 0, false
-			}
-			if den.Cmp(intRat(0)) == 0 {
-				done, terr := exactPointTermination(
-					"ULFTStream:",
-					s.emittedAny,
-					fmt.Sprintf("denominator is zero at exact point x=%v", xRange.Lo),
-				)
-				if done {
-					s.done = true
-					return 0, false
-				}
-				s.setErr(annotateErrULFT(terr, s.t, xRange))
-				return 0, false
-			}
+		if s.maybeTerminateExactPoint(xRange) {
+			return 0, false
 		}
 
-		if s.detectCycles {
-			// Primary: human-readable fingerprint + ring-buffer history.
-			fp, ferr := FingerprintULFT(s.t, xRange)
-			if ferr != nil {
-				s.setErr(ferr)
-				return 0, false
-			}
-			if s.history != nil {
-				s.history.Add(fp)
-				if s.history.Count(fp) > s.maxRepeats {
-					s.setErr(fmt.Errorf(
-						"ULFTStream: cycle detected (repeats>%d): %s\nrecent:\n%s",
-						s.maxRepeats, fp, s.history.Dump(),
-					))
-					return 0, false
-				}
-			} else {
-				// Fallback (should not happen, but keep behavior safe).
-				key, kerr := ulftFingerprint(s.t, xRange)
-				if kerr != nil {
-					s.setErr(kerr)
-					return 0, false
-				}
-				s.seen[key]++
-				if s.seen[key] > s.maxRepeats {
-					s.setErr(fmt.Errorf("ULFTStream: cycle detected (repeats>%d): %v", s.maxRepeats, key))
-					return 0, false
-				}
-			}
+		if !s.checkCycle(xRange) {
+			return 0, false
 		}
 
 		d, okDigit, err := SafeDigit(s.t, xRange)
 		if err != nil {
-			// If the current range is still uncertain, try refining the source
-			// before treating range-level transform failure as fatal.
-			if !s.srcDone {
-				if err := consumeRefineBudget(
-					"ULFTStream:",
-					&s.refinesThisDigit,
-					&s.refinesTotal,
-					s.maxRefinesPerDigit,
-					s.maxTotalRefines,
-				); err != nil {
-					s.setErr(annotateErrULFT(err, s.t, xRange))
-					return 0, false
-				}
-
-				a, okSrc := s.src.Next()
-				if okSrc {
-					if err := s.b.Ingest(a); err != nil {
-						s.setErr(err)
-						return 0, false
-					}
-					continue
-				}
-
-				// Source exhausted: collapse to an exact point and retry.
-				s.srcDone = true
+			if s.refineAfterSafeDigitError(xRange) {
 				continue
 			}
-
 			s.setErr(annotateErrULFT(err, s.t, xRange))
 			return 0, false
 		}
 
 		if okDigit {
-			// Exact-integer termination short-circuit.
-			img, err := xRange.ApplyULFT(s.t)
-			if err != nil {
-				// Exact-point pole after the final emitted digit is clean exhaustion,
-				// not an error.
-				if s.srcDone && xRange.Lo.Cmp(xRange.Hi) == 0 {
-					den, derr := evalLinearOnRat(s.t.C, s.t.D, xRange.Lo)
-					if derr == nil && den.Cmp(intRat(0)) == 0 {
-						s.done = true
-						return 0, false
-					}
-				}
-				s.setErr(annotateErrULFT(err, s.t, xRange))
-				return 0, false
-			}
-			if img.Lo.Cmp(img.Hi) == 0 && img.Lo.Cmp(intRat(d)) == 0 {
-				s.done = true
-				s.emittedAny = true
-				return d, true
-			}
-
-			// Exact rational integer case.
-			if s.srcDone && xRange.Lo.Cmp(xRange.Hi) == 0 {
-				y, err := s.t.ApplyRat(xRange.Lo)
-				if err == nil && y.Cmp(intRat(d)) == 0 {
-					s.done = true
-					s.emittedAny = true
-					return d, true
-				}
-			}
-
-			tp, err := EmitDigit(s.t, d)
-			if err != nil {
-				s.setErr(annotateErrULFT(err, s.t, xRange))
-				return 0, false
-			}
-			s.t = tp
-			s.emittedAny = true
-			return d, true
+			return s.emitSafeDigit(d, xRange)
 		}
 
-		// Not safe: refine the input by ingesting another term (or finish if exhausted).
-		if s.srcDone {
-			s.setErr(annotateErrULFT(
-				fmt.Errorf("ULFTStream: cannot refine further (source finished) and digit not safe"),
-				s.t, xRange,
-			))
+		if !s.refineForCurrentDigit(xRange) {
 			return 0, false
 		}
-
-		if err := consumeRefineBudget(
-			"ULFTStream:",
-			&s.refinesThisDigit,
-			&s.refinesTotal,
-			s.maxRefinesPerDigit,
-			s.maxTotalRefines,
-		); err != nil {
-			s.setErr(annotateErrULFT(err, s.t, xRange))
-			return 0, false
-		}
-
-		a, okSrc := s.src.Next()
-		if okSrc {
-			if err := s.b.Ingest(a); err != nil {
-				s.setErr(err)
-				return 0, false
-			}
-			continue
-		}
-
-		// Source exhausted => rational.
-		s.srcDone = true
 	}
 }
 
