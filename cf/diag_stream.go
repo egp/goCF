@@ -86,6 +86,115 @@ func (s *DiagBLFTStream) exactIntFromQuadraticRadical() (int64, bool) {
 	return z, true
 }
 
+func (s *DiagBLFTStream) ensureInitialValue() bool {
+	if s.b.HasValue() || s.srcDone {
+		return true
+	}
+
+	a, ok := s.src.Next()
+	if !ok {
+		s.setErr(fmt.Errorf("DiagBLFTStream: empty source CF"))
+		return false
+	}
+	if err := s.b.Ingest(a); err != nil {
+		s.setErr(err)
+		return false
+	}
+	return true
+}
+
+func (s *DiagBLFTStream) currentRange() (Range, bool) {
+	if s.srcDone {
+		s.b.Finish()
+	}
+
+	xr, ok, err := s.b.Range()
+	if err != nil {
+		s.setErr(err)
+		return Range{}, false
+	}
+	if !ok {
+		s.setErr(fmt.Errorf("DiagBLFTStream: internal: no xRange"))
+		return Range{}, false
+	}
+	return xr, true
+}
+
+func (s *DiagBLFTStream) maybeTerminateExactPoint(xr Range) bool {
+	if !s.srcDone || xr.Lo.Cmp(xr.Hi) != 0 {
+		return false
+	}
+
+	zero, err := diagDenomZeroAt(s.t, xr.Lo)
+	if err != nil {
+		s.setErr(err)
+		return true
+	}
+	if !zero {
+		return false
+	}
+
+	done, terr := exactPointTermination(
+		"DiagBLFTStream:",
+		s.emittedAny,
+		fmt.Sprintf("denominator is zero at exact point x=%v", xr.Lo),
+	)
+	if done {
+		s.done = true
+		return true
+	}
+
+	s.setErr(terr)
+	return true
+}
+
+func (s *DiagBLFTStream) refineForCurrentDigit() bool {
+	if s.srcDone {
+		s.setErr(fmt.Errorf("DiagBLFTStream: cannot refine further (source finished) and digit not safe"))
+		return false
+	}
+
+	if err := consumeRefineBudget(
+		"DiagBLFTStream:",
+		&s.refinesThisDigit,
+		&s.refinesTotal,
+		s.maxRefinesPerDigit,
+		s.maxTotalRefines,
+	); err != nil {
+		s.setErr(err)
+		return false
+	}
+
+	a, ok := s.src.Next()
+	if ok {
+		if err := s.b.Ingest(a); err != nil {
+			s.setErr(err)
+			return false
+		}
+		return true
+	}
+
+	s.srcDone = true
+	return true
+}
+
+func (s *DiagBLFTStream) emitSafeDigit(d int64, img Range) (int64, bool) {
+	if img.Lo.Cmp(img.Hi) == 0 && img.Lo.Cmp(intRat(d)) == 0 {
+		s.done = true
+		s.emittedAny = true
+		return d, true
+	}
+
+	tp, err := s.t.emitDigitDiag(d)
+	if err != nil {
+		s.setErr(err)
+		return 0, false
+	}
+	s.t = tp
+	s.emittedAny = true
+	return d, true
+}
+
 func (s *DiagBLFTStream) Next() (int64, bool) {
 	if s.done {
 		return 0, false
@@ -95,8 +204,6 @@ func (s *DiagBLFTStream) Next() (int64, bool) {
 		return 0, false
 	}
 
-	// Narrow exact algebraic shortcut:
-	// if src is sqrt(n) and transform is x^2 + k, emit [n+k] exactly.
 	if n, ok := s.exactIntFromQuadraticRadical(); ok {
 		s.done = true
 		s.emittedAny = true
@@ -106,60 +213,23 @@ func (s *DiagBLFTStream) Next() (int64, bool) {
 	s.refinesThisDigit = 0
 
 	for {
-		if !s.b.HasValue() && !s.srcDone {
-			a, ok := s.src.Next()
-			if !ok {
-				s.setErr(fmt.Errorf("DiagBLFTStream: empty source CF"))
-				return 0, false
-			}
-			if err := s.b.Ingest(a); err != nil {
-				s.setErr(err)
-				return 0, false
-			}
-		}
-
-		if s.srcDone {
-			s.b.Finish()
-		}
-
-		xr, ok, err := s.b.Range()
-		if err != nil {
-			s.setErr(err)
+		if !s.ensureInitialValue() {
 			return 0, false
 		}
+
+		xr, ok := s.currentRange()
 		if !ok {
-			s.setErr(fmt.Errorf("DiagBLFTStream: internal: no xRange"))
 			return 0, false
 		}
 
-		// Exact-point remainder-pole termination check.
-		if s.srcDone && xr.Lo.Cmp(xr.Hi) == 0 {
-			zero, err := diagDenomZeroAt(s.t, xr.Lo)
-			if err != nil {
-				s.setErr(err)
-				return 0, false
-			}
-			if zero {
-				done, terr := exactPointTermination(
-					"DiagBLFTStream:",
-					s.emittedAny,
-					fmt.Sprintf("denominator is zero at exact point x=%v", xr.Lo),
-				)
-				if done {
-					s.done = true
-					return 0, false
-				}
-				s.setErr(terr)
-				return 0, false
-			}
+		if s.maybeTerminateExactPoint(xr) {
+			return 0, false
 		}
 
 		needRefine := false
 
 		img, err := s.t.ApplyRange(xr)
 		if err != nil {
-			// If the current range is still uncertain, refine before treating
-			// range-level transform failure as fatal.
 			if !s.srcDone {
 				needRefine = true
 			} else {
@@ -176,52 +246,13 @@ func (s *DiagBLFTStream) Next() (int64, bool) {
 			}
 
 			if lo == hi {
-				d := lo
-
-				// Exact integer termination short-circuit.
-				if img.Lo.Cmp(img.Hi) == 0 && img.Lo.Cmp(intRat(d)) == 0 {
-					s.done = true
-					s.emittedAny = true
-					return d, true
-				}
-
-				tp, err := s.t.emitDigitDiag(d)
-				if err != nil {
-					s.setErr(err)
-					return 0, false
-				}
-				s.t = tp
-				s.emittedAny = true
-				return d, true
+				return s.emitSafeDigit(lo, img)
 			}
 		}
 
-		if s.srcDone {
-			s.setErr(fmt.Errorf("DiagBLFTStream: cannot refine further (source finished) and digit not safe"))
+		if !s.refineForCurrentDigit() {
 			return 0, false
 		}
-
-		if err := consumeRefineBudget(
-			"DiagBLFTStream:",
-			&s.refinesThisDigit,
-			&s.refinesTotal,
-			s.maxRefinesPerDigit,
-			s.maxTotalRefines,
-		); err != nil {
-			s.setErr(err)
-			return 0, false
-		}
-
-		a, ok := s.src.Next()
-		if ok {
-			if err := s.b.Ingest(a); err != nil {
-				s.setErr(err)
-				return 0, false
-			}
-			continue
-		}
-
-		s.srcDone = true
 	}
 }
 
