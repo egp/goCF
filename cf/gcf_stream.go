@@ -1,4 +1,4 @@
-// gcf_stream.go v3
+// gcf_stream.go v4
 package cf
 
 import (
@@ -12,14 +12,17 @@ type GCFStream struct {
 	src GCFSource
 	t   ULFT
 
-	tail    ContinuedFraction
-	srcDone bool
-	done    bool
-	err     error
+	lower *Rational // optional stable positive lower bound for unfinished tail
+	tail  ContinuedFraction
+
+	ingestedAny bool
+	srcDone     bool
+	done        bool
+	err         error
 }
 
 func NewGCFStream(src GCFSource, opts GCFStreamOptions) *GCFStream {
-	return &GCFStream{
+	s := &GCFStream{
 		src: src,
 		t: NewULFT(
 			big.NewInt(1),
@@ -28,6 +31,13 @@ func NewGCFStream(src GCFSource, opts GCFStreamOptions) *GCFStream {
 			big.NewInt(1),
 		),
 	}
+
+	if bounded, ok := src.(PositiveTailLowerBoundedGCFSource); ok {
+		lb := bounded.TailLowerBound()
+		s.lower = &lb
+	}
+
+	return s
 }
 
 func (s *GCFStream) Err() error { return s.err }
@@ -41,64 +51,78 @@ func (s *GCFStream) Next() (int64, bool) {
 		return 0, false
 	}
 
-	if s.tail == nil {
-		if err := s.finishFiniteSourceToTail(); err != nil {
+	// Once finite-source exhaustion has been converted to an exact rational tail,
+	// just delegate to that tail stream.
+	if s.tail != nil {
+		d, ok := s.tail.Next()
+		if !ok {
+			s.done = true
+			return 0, false
+		}
+		return d, true
+	}
+
+	for {
+		// Finite source exhausted: exact remaining value is T(∞).
+		if s.srcDone {
+			if !s.ingestedAny {
+				s.err = fmt.Errorf("GCFStream: empty source")
+				s.done = true
+				return 0, false
+			}
+
+			y, err := applyULFTAtInfinity(s.t)
+			if err != nil {
+				s.err = err
+				s.done = true
+				return 0, false
+			}
+
+			s.tail = NewRationalCF(y)
+
+			d, ok := s.tail.Next()
+			if !ok {
+				s.done = true
+				return 0, false
+			}
+			return d, true
+		}
+
+		// If we have a stable lower bound for the unfinished tail, try to emit.
+		if s.lower != nil && s.ingestedAny {
+			r, err := ApplyULFTToTailRay(s.t, *s.lower)
+			if err == nil {
+				lo, hi, err := r.FloorBounds()
+				if err == nil && lo == hi {
+					d := lo
+					nextT, err := EmitDigit(s.t, d)
+					if err != nil {
+						s.err = err
+						s.done = true
+						return 0, false
+					}
+					s.t = nextT
+					return d, true
+				}
+			}
+		}
+
+		// Need more GCF input.
+		p, q, ok := s.src.NextPQ()
+		if !ok {
+			s.srcDone = true
+			continue
+		}
+
+		nextT, err := s.t.IngestGCF(p, q)
+		if err != nil {
 			s.err = err
 			s.done = true
 			return 0, false
 		}
-	}
-
-	if s.tail == nil {
-		s.err = fmt.Errorf("GCFStream: no tail")
-		s.done = true
-		return 0, false
-	}
-
-	d, ok := s.tail.Next()
-	if !ok {
-		s.done = true
-		return 0, false
-	}
-	return d, true
-}
-
-func (s *GCFStream) finishFiniteSourceToTail() error {
-	if s.srcDone {
-		return nil
-	}
-
-	ingestedAny := false
-
-	for {
-		p, q, ok := s.src.NextPQ()
-		if !ok {
-			break
-		}
-		ingestedAny = true
-
-		nextT, err := s.t.IngestGCF(p, q)
-		if err != nil {
-			return err
-		}
 		s.t = nextT
+		s.ingestedAny = true
 	}
-
-	if !ingestedAny {
-		return fmt.Errorf("GCFStream: empty source")
-	}
-
-	// Finite-tail GCF semantics:
-	// after ingesting all terms into the composed ULFT T, the last term contributes
-	// just p_last, which corresponds to evaluating the remaining tail at infinity.
-	y, err := applyULFTAtInfinity(s.t)
-	if err != nil {
-		return err
-	}
-
-	s.tail = NewRationalCF(y)
-	s.srcDone = true
-	return nil
 }
 
 func applyULFTAtInfinity(t ULFT) (Rational, error) {
@@ -114,4 +138,4 @@ func applyULFTAtInfinity(t ULFT) (Rational, error) {
 	return newRationalBig(new(big.Int).Set(t.A), new(big.Int).Set(t.C))
 }
 
-// gcf_stream.go v3
+// gcf_stream.go v4

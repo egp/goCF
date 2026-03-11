@@ -125,4 +125,51 @@ func TestGCFStream_FiniteIngestMatchesEvaluateFiniteGCF_OnSeveralFixtures(t *tes
 	}
 }
 
+func TestGCFStream_AdaptedRegularCFInfinitePrefixCanEmitEarly(t *testing.T) {
+	s := NewGCFStream(AdaptCFToGCF(NewSliceCF(1, 2, 3)), GCFStreamOptions{})
+
+	got := collectTerms(s, 32)
+	want := []int64{1, 2, 3}
+
+	if len(got) != len(want) {
+		t.Fatalf("len mismatch: got=%v want=%v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("digit %d: got=%v want=%v", i, got, want)
+		}
+	}
+	if err := s.Err(); err != nil {
+		t.Fatalf("unexpected stream err: %v", err)
+	}
+}
+
+func TestGCFStream_LambertCanEmitAtLeastOneDigit(t *testing.T) {
+	s := NewGCFStream(NewLambertPiOver4GCFSource(), GCFStreamOptions{})
+
+	d, ok := s.Next()
+	if !ok {
+		t.Fatalf("expected at least one digit, err=%v", s.Err())
+	}
+
+	// pi/4 is in (0,1), so first ordinary CF digit should be 0.
+	if d != 0 {
+		t.Fatalf("got %d want 0", d)
+	}
+}
+
+func TestGCFStream_BrounckerCanEmitAtLeastOneDigit(t *testing.T) {
+	s := NewGCFStream(NewBrouncker4OverPiGCFSource(), GCFStreamOptions{})
+
+	d, ok := s.Next()
+	if !ok {
+		t.Fatalf("expected at least one digit, err=%v", s.Err())
+	}
+
+	// 4/pi is > 1, so first ordinary CF digit should be 1.
+	if d != 1 {
+		t.Fatalf("got %d want 1", d)
+	}
+}
+
 // gcf_stream_test.go v1
