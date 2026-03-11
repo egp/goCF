@@ -24,6 +24,20 @@ func IngestAllGCF(src GCFSource) (*GCFBounder, error) {
 	return b, nil
 }
 
+func ingestPrefixTermsIntoBounder(b *GCFBounder, src GCFSource, prefixTerms int) error {
+	for i := 0; i < prefixTerms; i++ {
+		p, q, ok := src.NextPQ()
+		if !ok {
+			b.Finish()
+			return nil
+		}
+		if err := b.IngestPQ(p, q); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // IngestGCFPrefix ingests up to prefixTerms terms from a GCFSource into a new
 // GCFBounder.
 //
@@ -59,15 +73,8 @@ func IngestGCFPrefix(src GCFSource, prefixTerms int) (*GCFBounder, error) {
 		return b, nil
 	}
 
-	for i := 0; i < prefixTerms; i++ {
-		p, q, ok := src.NextPQ()
-		if !ok {
-			b.Finish()
-			return b, nil
-		}
-		if err := b.IngestPQ(p, q); err != nil {
-			return nil, err
-		}
+	if err := ingestPrefixTermsIntoBounder(b, src, prefixTerms); err != nil {
+		return nil, err
 	}
 
 	return b, nil

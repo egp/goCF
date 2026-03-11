@@ -26,15 +26,8 @@ func specializedGCFApproxFromPrefix(
 		}
 	}
 
-	for i := 0; i < prefixTerms; i++ {
-		p, q, ok := src.NextPQ()
-		if !ok {
-			b.Finish()
-			break
-		}
-		if err := b.IngestPQ(p, q); err != nil {
-			return GCFApprox{}, err
-		}
+	if err := ingestPrefixTermsIntoBounder(b, src, prefixTerms); err != nil {
+		return GCFApprox{}, err
 	}
 
 	return gcfApproxFromBounder(b, prefixTerms, "specializedGCFApproxFromPrefix: empty source")
