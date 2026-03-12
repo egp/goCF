@@ -1,4 +1,4 @@
-// gcf_named_enclosure_test.go v1
+// gcf_named_enclosure_test.go v2
 package cf
 
 import "testing"
@@ -65,13 +65,14 @@ func TestBrouncker4OverPiGCFSource_Prefix2And3ConcreteRanges(t *testing.T) {
 		wantLo Rational
 		wantHi Rational
 	}{
-		// Prefix 2: x = 1 + 1/(2 + 1/tail), tail >= 1
-		// Range = [4/3, 3/2]
-		{2, mustRat(4, 3), mustRat(3, 2)},
+		// Corrected Brouncker source:
+		// Prefix 2: x = 1 + 1/(2 + 9/tail), tail >= 1
+		// Range = [12/11, 3/2]
+		{2, mustRat(12, 11), mustRat(3, 2)},
 
-		// Prefix 3: x = 1 + 1/(2 + 1/(2 + 9/tail)), tail >= 1
-		// tail=1 => 19/14, tail=∞ => 7/5
-		{3, mustRat(7, 5), mustRat(34, 23)},
+		// Prefix 3 conservative range from current lower-bound-only metadata:
+		// contains convergent 15/13 and upper endpoint 10/7.
+		{3, mustRat(15, 13), mustRat(10, 7)},
 	}
 
 	for _, tc := range tests {
@@ -104,8 +105,7 @@ func TestLambertPiOver4GCFSource_Prefix2And3ConcreteRanges(t *testing.T) {
 		// Range = [1/2, 1]
 		{2, mustRat(1, 2), mustRat(1, 1)},
 
-		// Prefix 3: x = 0 + 1/(1 + 1/(3 + 4/tail)), tail >= 1
-		// tail=1 => 4/5, tail=∞ => 3/4, so range [3/4, 4/5]
+		// Prefix 3 current conservative range:
 		{3, mustRat(3, 4), mustRat(7, 8)},
 	}
 
@@ -162,4 +162,4 @@ func TestNamedGCFEnclosures_AreBoundedAndPositive_ForSeveralPrefixes(t *testing.
 	}
 }
 
-// gcf_named_enclosure_test.go v1
+// gcf_named_enclosure_test.go v2

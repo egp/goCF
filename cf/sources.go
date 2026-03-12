@@ -286,7 +286,15 @@ func (s *Brouncker4OverPiGCFSource) NextPQ() (int64, int64, bool) {
 		return 1, 1, true
 	}
 
-	odd := int64(2*s.i - 1) // 1,3,5,7,... for i=1,2,3,4,...
+	// After the leading 1 + 1/(...), Brouncker's 4/pi GCF is:
+	//
+	//   1 + 1 / (2 + 3^2 / (2 + 5^2 / (2 + 7^2 / ... )))
+	//
+	// So the emitted (p,q) terms are:
+	//   (1,1), (2,9), (2,25), (2,49), ...
+	//
+	// with odd values 3,5,7,... after the initial leading term.
+	odd := int64(2*s.i + 1) // 3,5,7,... for i=1,2,3,...
 	q := odd * odd
 	s.i++
 	return 2, q, true

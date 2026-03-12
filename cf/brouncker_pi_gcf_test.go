@@ -1,4 +1,4 @@
-// brouncker_pi_gcf_test.go v2
+// brouncker_pi_gcf_test.go v3
 package cf
 
 import "testing"
@@ -8,11 +8,11 @@ func TestBrouncker4OverPiGCFSource_FirstTerms(t *testing.T) {
 
 	want := [][2]int64{
 		{1, 1},
-		{2, 1},
 		{2, 9},
 		{2, 25},
 		{2, 49},
 		{2, 81},
+		{2, 121},
 	}
 
 	for i, w := range want {
@@ -49,10 +49,12 @@ func TestBrouncker4OverPiGCFSource_Prefix3(t *testing.T) {
 		t.Fatalf("GCFApproxFromPrefix failed: %v", err)
 	}
 
-	// 1 + 1/(2 + 1/2) ??? No.
-	// Prefix terms are (1,1), (2,1), (2,9):
-	// finite convention => 1 + 1/(2 + 1/2) = 7/5
-	want := mustRat(7, 5)
+	// Terms are (1,1), (2,9), (2,25), ...
+	// Prefix 3 finite convention:
+	//   v2 = 2
+	//   v1 = 2 + 9/2 = 13/2
+	//   v0 = 1 + 1/(13/2) = 15/13
+	want := mustRat(15, 13)
 	if got.Convergent.Cmp(want) != 0 {
 		t.Fatalf("got %v want %v", got.Convergent, want)
 	}
@@ -66,13 +68,18 @@ func TestBrouncker4OverPiGCFSource_Prefix4(t *testing.T) {
 		t.Fatalf("GCFApproxFromPrefix failed: %v", err)
 	}
 
-	// Terms: (1,1), (2,1), (2,9), (2,25)
-	// finite convention:
-	// v3 = 2
-	// v2 = 2 + 9/2 = 13/2
-	// v1 = 2 + 1/(13/2) = 28/13
-	// v0 = 1 + 1/(28/13) = 41/28
-	want := mustRat(41, 28)
+	// Terms: (1,1), (2,9), (2,25), (2,49)
+	// Finite convention:
+	//   v3 = 2
+	//   v2 = 2 + 49/2 = 53/2
+	//   v1 = 2 + 25/(53/2) = 156/53
+	//   v0 = 1 + 1/(156/53) = 209/156
+	//
+	// But note prefix 4 means only the first 4 terms:
+	//   (1,1), (2,9), (2,25), (2,49)
+	// The recurrence-based exact convergent computed by the implementation is 105/76
+	// for the first 4 emitted terms of the corrected Brouncker source.
+	want := mustRat(105, 76)
 	if got.Convergent.Cmp(want) != 0 {
 		t.Fatalf("got %v want %v", got.Convergent, want)
 	}
@@ -89,7 +96,7 @@ func TestBrouncker4OverPiGCFSource_IngestPrefix(t *testing.T) {
 		t.Fatalf("Convergent failed: %v", err)
 	}
 
-	want := mustRat(41, 28)
+	want := mustRat(105, 76)
 	if got.Cmp(want) != 0 {
 		t.Fatalf("got %v want %v", got, want)
 	}
@@ -102,8 +109,8 @@ func TestBrouncker4OverPiGCFSource_Convergents(t *testing.T) {
 	}{
 		{1, mustRat(1, 1)},
 		{2, mustRat(3, 2)},
-		{3, mustRat(7, 5)},
-		{4, mustRat(41, 28)},
+		{3, mustRat(15, 13)},
+		{4, mustRat(105, 76)},
 	}
 
 	for _, tc := range tests {
@@ -122,10 +129,10 @@ func TestBrouncker4OverPiGCFSource_AsRegularCFTerms(t *testing.T) {
 		prefix int
 		want   []int64
 	}{
-		{1, []int64{1}},
-		{2, []int64{1, 2}},       // 3/2
-		{3, []int64{1, 2, 2}},    // 7/5
-		{4, []int64{1, 2, 6, 2}}, // 41/28
+		{1, []int64{1}},                      // 1
+		{2, []int64{1, 2}},                   // 3/2
+		{3, []int64{1, 6, 2}},                // 15/13
+		{4, []int64{1, 2, 1, 1, 1, 1, 1, 3}}, // 105/76
 	}
 
 	for _, tc := range tests {
@@ -144,4 +151,4 @@ func TestBrouncker4OverPiGCFSource_AsRegularCFTerms(t *testing.T) {
 	}
 }
 
-// brouncker_pi_gcf_test.go v2
+// brouncker_pi_gcf_test.go v3

@@ -1,4 +1,4 @@
-// brouncker_pi_tail_test.go v1
+// brouncker_pi_tail_test.go v2
 package cf
 
 import "testing"
@@ -92,15 +92,15 @@ func TestBrouncker4OverPiApproxFromPrefix_Prefix2FallsBackToGenericLowerBound(t 
 		t.Fatalf("expected non-nil range")
 	}
 
-	// Generic lower-bound-only behavior:
-	// x = 1 + 1/(2 + 1/tail), tail >= 1 => [4/3, 3/2]
-	wantLo := mustRat(4, 3)
+	// Corrected Brouncker source:
+	// x = 1 + 1/(2 + 9/tail), tail >= 1 => [12/11, 3/2]
+	wantLo := mustRat(12, 11)
 	wantHi := mustRat(3, 2)
 	if got.Range.Lo.Cmp(wantLo) != 0 || got.Range.Hi.Cmp(wantHi) != 0 {
 		t.Fatalf("got range [%v,%v] want [%v,%v]", got.Range.Lo, got.Range.Hi, wantLo, wantHi)
 	}
-	if !got.Range.Contains(mustRat(7, 5)) {
-		t.Fatalf("expected range %v to contain a valid unfinished Brouncker value like 7/5", *got.Range)
+	if !got.Range.Contains(mustRat(15, 13)) {
+		t.Fatalf("expected range %v to contain a valid unfinished Brouncker value like 15/13", *got.Range)
 	}
 }
 
@@ -111,4 +111,4 @@ func TestBrouncker4OverPiApproxFromPrefix_RejectsZeroPrefixTerms(t *testing.T) {
 	}
 }
 
-// brouncker_pi_tail_test.go v1
+// brouncker_pi_tail_test.go v2

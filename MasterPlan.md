@@ -53,6 +53,7 @@ Stretch goal: make Gosper smile.
   - Brouncker 4/pi source
   - algorithmic/unit-pattern GCF sources
 - Note: many juicy future GCF sources remain, including pi and other constants.
+  - https://en.wikipedia.org/wiki/Physical_constant
 
 ### Testing and quality
 - Coverage is now above 81%.

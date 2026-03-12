@@ -1,4 +1,4 @@
-// gcf_specialized_inspect_test.go v1
+// gcf_specialized_inspect_test.go v2
 package cf
 
 import "testing"
@@ -34,7 +34,6 @@ func TestInspectLambertPiOver4Prefix(t *testing.T) {
 		t.Fatalf("expected non-nil range")
 	}
 
-	// Generic lower-bound fallback at prefix 2 => [1/2, 1]
 	wantLo := mustRat(1, 2)
 	wantHi := mustRat(1, 1)
 	if got.Approx.Range.Lo.Cmp(wantLo) != 0 || got.Approx.Range.Hi.Cmp(wantHi) != 0 {
@@ -66,8 +65,7 @@ func TestInspectBrouncker4OverPiPrefix(t *testing.T) {
 		t.Fatalf("expected non-nil range")
 	}
 
-	// Generic lower-bound fallback at prefix 2 => [4/3, 3/2]
-	wantLo := mustRat(4, 3)
+	wantLo := mustRat(12, 11)
 	wantHi := mustRat(3, 2)
 	if got.Approx.Range.Lo.Cmp(wantLo) != 0 || got.Approx.Range.Hi.Cmp(wantHi) != 0 {
 		t.Fatalf("got range [%v,%v] want [%v,%v]", got.Approx.Range.Lo, got.Approx.Range.Hi, wantLo, wantHi)
@@ -84,4 +82,4 @@ func TestInspectBrouncker4OverPiPrefix(t *testing.T) {
 	}
 }
 
-// gcf_specialized_inspect_test.go v1
+// gcf_specialized_inspect_test.go v2

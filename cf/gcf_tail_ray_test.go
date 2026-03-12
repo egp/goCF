@@ -1,4 +1,4 @@
-// gcf_tail_ray_test.go v1
+// gcf_tail_ray_test.go v2
 package cf
 
 import (
@@ -161,9 +161,10 @@ func TestIngestGCFPrefix_UsesPositiveTailLowerBoundMetadata_Brouncker(t *testing
 		t.Fatalf("expected ok=true")
 	}
 
-	// Prefix (1,1),(2,1) => x = 1 + 1/(2 + 1/tail), tail >= 1
-	// so range is [4/3, 3/2].
-	wantLo := mustRat(4, 3)
+	// Corrected Brouncker source:
+	// Prefix (1,1),(2,9) => x = 1 + 1/(2 + 9/tail), tail >= 1
+	// so range is [12/11, 3/2].
+	wantLo := mustRat(12, 11)
 	wantHi := mustRat(3, 2)
 	if r.Lo.Cmp(wantLo) != 0 || r.Hi.Cmp(wantHi) != 0 {
 		t.Fatalf("got [%v,%v] want [%v,%v]", r.Lo, r.Hi, wantLo, wantHi)
@@ -193,4 +194,4 @@ func TestIngestGCFPrefix_UsesPositiveTailLowerBoundMetadata_Lambert(t *testing.T
 	}
 }
 
-// gcf_tail_ray_test.go v1
+// gcf_tail_ray_test.go v2

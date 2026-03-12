@@ -1,4 +1,4 @@
-// gcf_approx_test.go v1
+// gcf_approx_test.go v2
 package cf
 
 import "testing"
@@ -168,8 +168,8 @@ func TestGCFApproxFromPrefix_BrounckerCarriesConservativeRange(t *testing.T) {
 		t.Fatalf("expected non-nil Range")
 	}
 
-	wantLo := mustRat(7, 5)
-	wantHi := mustRat(34, 23)
+	wantLo := mustRat(15, 13)
+	wantHi := mustRat(10, 7)
 	if got.Range.Lo.Cmp(wantLo) != 0 || got.Range.Hi.Cmp(wantHi) != 0 {
 		t.Fatalf("got range [%v,%v] want [%v,%v]", got.Range.Lo, got.Range.Hi, wantLo, wantHi)
 	}
@@ -280,7 +280,7 @@ func TestInspectGCFSource_Brouncker(t *testing.T) {
 		t.Fatalf("InspectGCFSource failed: %v", err)
 	}
 
-	wantConv := mustRat(41, 28)
+	wantConv := mustRat(105, 76)
 	if got.Approx.Convergent.Cmp(wantConv) != 0 {
 		t.Fatalf("got convergent %v want %v", got.Approx.Convergent, wantConv)
 	}
@@ -291,7 +291,7 @@ func TestInspectGCFSource_Brouncker(t *testing.T) {
 		t.Fatalf("expected range to contain convergent")
 	}
 
-	wantTerms := []int64{1, 2, 6, 2}
+	wantTerms := []int64{1, 2, 1, 1, 1, 1, 1, 3}
 	if len(got.Terms) != len(wantTerms) {
 		t.Fatalf("len(got)=%d want=%d got=%v", len(got.Terms), len(wantTerms), got.Terms)
 	}
@@ -309,4 +309,4 @@ func TestInspectGCFSource_RejectsNegativeDigits(t *testing.T) {
 	}
 }
 
-// gcf_approx_test.go v1
+// gcf_approx_test.go v2

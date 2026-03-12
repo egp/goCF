@@ -171,5 +171,100 @@ func TestGCFStream_BrounckerCanEmitAtLeastOneDigit(t *testing.T) {
 		t.Fatalf("got %d want 1", d)
 	}
 }
+func TestGCFStream_LambertFirstTwoDigits(t *testing.T) {
+	s := NewGCFStream(NewLambertPiOver4GCFSource(), GCFStreamOptions{})
+
+	d, ok := s.Next()
+	if !ok {
+		t.Fatalf("expected first digit, err=%v", s.Err())
+	}
+	if d != 0 {
+		t.Fatalf("got first digit %d want 0", d)
+	}
+
+	d, ok = s.Next()
+	if !ok {
+		t.Fatalf("expected second digit, err=%v", s.Err())
+	}
+
+	// pi/4 ≈ 0.785..., so ordinary CF begins [0;1,...]
+	if d != 1 {
+		t.Fatalf("got second digit %d want 1", d)
+	}
+
+	if err := s.Err(); err != nil {
+		t.Fatalf("unexpected stream err: %v", err)
+	}
+}
+
+func TestGCFStream_BrounckerFirstTwoDigits(t *testing.T) {
+	s := NewGCFStream(NewBrouncker4OverPiGCFSource(), GCFStreamOptions{})
+
+	d, ok := s.Next()
+	if !ok {
+		t.Fatalf("expected first digit, err=%v", s.Err())
+	}
+	if d != 1 {
+		t.Fatalf("got first digit %d want 1", d)
+	}
+
+	d, ok = s.Next()
+	if !ok {
+		t.Fatalf("expected second digit, err=%v", s.Err())
+	}
+
+	// 4/pi ≈ 1.273..., so ordinary CF begins [1;3,...]
+	if d != 3 {
+		t.Fatalf("got second digit %d want 3", d)
+	}
+
+	if err := s.Err(); err != nil {
+		t.Fatalf("unexpected stream err: %v", err)
+	}
+}
+
+func TestGCFStream_FiniteSourceStaysExhausted(t *testing.T) {
+	s := NewGCFStream(NewSliceGCF([2]int64{3, 1}), GCFStreamOptions{})
+
+	d, ok := s.Next()
+	if !ok {
+		t.Fatalf("expected first digit, err=%v", s.Err())
+	}
+	if d != 3 {
+		t.Fatalf("got %d want 3", d)
+	}
+
+	_, ok = s.Next()
+	if ok {
+		t.Fatalf("expected first exhaustion")
+	}
+	_, ok = s.Next()
+	if ok {
+		t.Fatalf("expected repeated exhaustion to stay false")
+	}
+	if err := s.Err(); err != nil {
+		t.Fatalf("expected clean termination, got %v", err)
+	}
+}
+
+func TestGCFStream_BrounckerDoesNotEmitWrongSecondDigit(t *testing.T) {
+	s := NewGCFStream(NewBrouncker4OverPiGCFSource(), GCFStreamOptions{})
+
+	d, ok := s.Next()
+	if !ok {
+		t.Fatalf("expected first digit, err=%v", s.Err())
+	}
+	if d != 1 {
+		t.Fatalf("got first digit %d want 1", d)
+	}
+
+	d, ok = s.Next()
+	if !ok {
+		t.Fatalf("expected second digit, err=%v", s.Err())
+	}
+	if d == 2 {
+		t.Fatalf("unsound second digit 2 for Brouncker 4/pi")
+	}
+}
 
 // gcf_stream_test.go v1

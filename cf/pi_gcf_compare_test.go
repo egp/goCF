@@ -1,4 +1,4 @@
-// pi_gcf_compare_test.go v1
+// pi_gcf_compare_test.go v2
 package cf
 
 import "testing"
@@ -9,8 +9,8 @@ func TestPiGCF_BrounckerAndLambert_BoundedPrefixConvergents(t *testing.T) {
 		want   Rational
 	}{
 		{2, mustRat(3, 2)},
-		{3, mustRat(7, 5)},
-		{4, mustRat(41, 28)},
+		{3, mustRat(15, 13)},
+		{4, mustRat(105, 76)},
 	}
 
 	for _, tc := range bTests {
@@ -56,13 +56,13 @@ func TestPiGCF_BrounckerAndLambert_AsRegularCFTerms(t *testing.T) {
 			name:   "Brouncker prefix 4",
 			src:    NewBrouncker4OverPiGCFSource(),
 			prefix: 4,
-			want:   []int64{1, 2, 6, 2}, // 41/28
+			want:   []int64{1, 2, 1, 1, 1, 1, 1, 3}, // 105/76
 		},
 		{
 			name:   "Lambert prefix 4",
 			src:    NewLambertPiOver4GCFSource(),
 			prefix: 4,
-			want:   []int64{0, 1, 3, 1, 4}, // 15/19
+			want:   []int64{0, 1, 3, 1, 4}, // 19/24
 		},
 	}
 
@@ -97,4 +97,4 @@ func TestPiGCF_BrounckerVsLambert_DifferentObjects(t *testing.T) {
 	}
 }
 
-// pi_gcf_compare_test.go v1
+// pi_gcf_compare_test.go v2
