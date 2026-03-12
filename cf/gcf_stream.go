@@ -13,6 +13,7 @@ type GCFStream struct {
 	t   ULFT
 
 	lower               *Rational // optional stable positive lower bound for unfinished tail
+	tailRange           *Range    // optional stable explicit unfinished-tail range
 	tail                ContinuedFraction
 	ingestedAny         bool
 	prefixTerms         int
@@ -39,6 +40,12 @@ func NewGCFStream(src GCFSource, opts GCFStreamOptions) *GCFStream {
 		s.lower = &lb
 	}
 
+	// Generic stable explicit tail range, if the source can provide one.
+	if ranged, ok := src.(interface{ TailRange() Range }); ok {
+		r := ranged.TailRange()
+		s.tailRange = &r
+	}
+
 	return s
 }
 
@@ -49,16 +56,28 @@ func (s *GCFStream) canEmitFromCurrentPrefixEvidence() bool {
 }
 
 func (s *GCFStream) currentTailImageRange() (Range, bool, error) {
-	// Prefer stronger named-source prefix-aware ranges when available.
-	if r, ok, err := s.specializedTailRange(); err != nil {
-		return Range{}, false, err
-	} else if ok {
-		img, err := r.ApplyULFT(s.t)
+	// First preference: generic stable explicit unfinished-tail range.
+	if s.tailRange != nil {
+		img, err := s.tailRange.ApplyULFT(s.t)
 		if err != nil {
 			return Range{}, false, err
 		}
 		return img, true, nil
 	}
+
+	// Named-source prefix-aware helpers were useful during exploration.
+	// Keep them here for now, but commented out while the engine moves toward
+	// generic ingestion semantics.
+	//
+	// if r, ok, err := s.specializedTailRange(); err != nil {
+	// 	return Range{}, false, err
+	// } else if ok {
+	// 	img, err := r.ApplyULFT(s.t)
+	// 	if err != nil {
+	// 		return Range{}, false, err
+	// 	}
+	// 	return img, true, nil
+	// }
 
 	// Fallback: generic positive lower-bound ray, but only when we trust it
 	// enough for the current source/prefix depth.

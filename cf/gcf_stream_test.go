@@ -267,4 +267,74 @@ func TestGCFStream_BrounckerDoesNotEmitWrongSecondDigit(t *testing.T) {
 	}
 }
 
+type countingStableTailRangeGCFSource struct {
+	i     int
+	calls int
+}
+
+func (s *countingStableTailRangeGCFSource) NextPQ() (int64, int64, bool) {
+	s.calls++
+
+	// Emit (1,1), (1,1), then continue repeating (1,1).
+	// With an explicit stable tail range [1,2], after two ingested terms:
+	//
+	//   x = 1 + 1/(1 + 1/tail)
+	//
+	// and tail in [1,2] implies x in [3/2, 5/3], so the first regular CF digit
+	// is safely 1.
+	//
+	// With only the weaker lower-bound ray tail >= 1, the image is [3/2, 2],
+	// which is not yet digit-safe, so a generic lower-bound-only engine would
+	// need to ingest at least one more term.
+	s.i++
+	return 1, 1, true
+}
+
+func (s *countingStableTailRangeGCFSource) TailLowerBound() Rational {
+	return mustRat(1, 1)
+}
+
+func (s *countingStableTailRangeGCFSource) TailRange() Range {
+	return NewRange(mustRat(1, 1), mustRat(2, 1), true, true)
+}
+
+func TestGCFStream_UsesGenericStableTailRangeForEarlierEmission(t *testing.T) {
+	src := &countingStableTailRangeGCFSource{}
+	s := NewGCFStream(src, GCFStreamOptions{})
+
+	d, ok := s.Next()
+	if !ok {
+		t.Fatalf("expected first digit, err=%v", s.Err())
+	}
+	if d != 1 {
+		t.Fatalf("got first digit %d want 1", d)
+	}
+
+	// This is the real test: with a generic stable TailRange() contract, the
+	// stream should be able to emit after exactly two ingested GCF terms.
+	if src.calls != 2 {
+		t.Fatalf("expected first digit after exactly 2 ingested GCF terms, got %d", src.calls)
+	}
+
+	if err := s.Err(); err != nil {
+		t.Fatalf("unexpected stream err: %v", err)
+	}
+}
+
+func TestGCFStream_StableTailRangeBeatsLowerBoundRay(t *testing.T) {
+	src := &countingStableTailRangeGCFSource{}
+	s := NewGCFStream(src, GCFStreamOptions{})
+
+	_, ok := s.Next()
+	if !ok {
+		t.Fatalf("expected first digit, err=%v", s.Err())
+	}
+
+	// Lower-bound-only logic would need more than two ingested terms here.
+	// Stable TailRange() should make the stronger generic proof available.
+	if src.calls > 2 {
+		t.Fatalf("expected TailRange-driven early emission, but stream needed %d ingested terms", src.calls)
+	}
+}
+
 // gcf_stream_test.go v1
