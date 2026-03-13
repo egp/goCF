@@ -455,4 +455,74 @@ func TestGCFStream_UsesCurrentPrefixSensitiveTailRange(t *testing.T) {
 	}
 }
 
+type weakTailRangeGCFSource struct {
+	calls int
+}
+
+func (s *weakTailRangeGCFSource) NextPQ() (int64, int64, bool) {
+	s.calls++
+	return 1, 1, true
+}
+
+func (s *weakTailRangeGCFSource) TailLowerBound() Rational {
+	return mustRat(1, 1)
+}
+
+func (s *weakTailRangeGCFSource) TailRange() Range {
+	// Wider than [1,2], so it should not prove the first digit as early.
+	return NewRange(mustRat(1, 1), mustRat(3, 1), true, true)
+}
+
+type strongTailRangeGCFSource struct {
+	calls int
+}
+
+func (s *strongTailRangeGCFSource) NextPQ() (int64, int64, bool) {
+	s.calls++
+	return 1, 1, true
+}
+
+func (s *strongTailRangeGCFSource) TailLowerBound() Rational {
+	return mustRat(1, 1)
+}
+
+func (s *strongTailRangeGCFSource) TailRange() Range {
+	return NewRange(mustRat(1, 1), mustRat(2, 1), true, true)
+}
+
+func TestGCFStream_StrongerTailRangeEmitsNoLaterThanWeakerTailRange(t *testing.T) {
+	strongSrc := &strongTailRangeGCFSource{}
+	weakSrc := &weakTailRangeGCFSource{}
+
+	strong := NewGCFStream(strongSrc, GCFStreamOptions{})
+	weak := NewGCFStream(weakSrc, GCFStreamOptions{})
+
+	dStrong, ok := strong.Next()
+	if !ok {
+		t.Fatalf("strong source: expected first digit, err=%v", strong.Err())
+	}
+	if dStrong != 1 {
+		t.Fatalf("strong source: got first digit %d want 1", dStrong)
+	}
+
+	dWeak, ok := weak.Next()
+	if !ok {
+		t.Fatalf("weak source: expected first digit, err=%v", weak.Err())
+	}
+	if dWeak != 1 {
+		t.Fatalf("weak source: got first digit %d want 1", dWeak)
+	}
+
+	if strongSrc.calls > weakSrc.calls {
+		t.Fatalf("expected stronger TailRange to emit no later than weaker one, strong=%d weak=%d", strongSrc.calls, weakSrc.calls)
+	}
+
+	if err := strong.Err(); err != nil {
+		t.Fatalf("strong source: unexpected stream err: %v", err)
+	}
+	if err := weak.Err(); err != nil {
+		t.Fatalf("weak source: unexpected stream err: %v", err)
+	}
+}
+
 // gcf_stream_test.go v1
