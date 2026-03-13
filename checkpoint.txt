@@ -1,0 +1,16 @@
+GCFStream status checkpoint
+
+- finite-first GCFStream is implemented and green
+- dynamic TailRange() lookup replaced stale constructor caching
+- current tests cover:
+  - finite SliceGCF equivalence vs exact evaluation
+  - adapted regular CF round-trip
+  - empty-source error
+  - clean finite termination
+  - stable TailRange() earlier emission
+  - prefix-sensitive dynamic TailRange() behavior
+  - stronger TailRange() emits no later than weaker TailRange()
+- likely next work:
+  - clarify/strengthen lower-bound-ray fallback semantics
+  - add Lambert/Brouncker fixture tests for finite prefixes
+  - then consider a small internal refactor of GCFStream tail-evidence selection
