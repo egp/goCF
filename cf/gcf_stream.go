@@ -1,4 +1,4 @@
-// gcf_stream.go v16
+// gcf_stream.go v17
 package cf
 
 import (
@@ -6,12 +6,17 @@ import (
 	"math/big"
 )
 
-type GCFStreamOptions struct{}
+const defaultGCFStreamMaxRefinementSteps = 8
+
+type GCFStreamOptions struct {
+	MaxRefinementSteps int
+}
 
 type GCFStream struct {
 	src GCFSource
 	t   ULFT
 
+	maxRefinementSteps   int
 	lower                *Rational
 	tailEvidenceOverride *GCFTailEvidence
 	tailEvidenceFresh    bool
@@ -25,15 +30,21 @@ type GCFStream struct {
 }
 
 func NewGCFStream(src GCFSource, opts GCFStreamOptions) *GCFStream {
+	maxRefinementSteps := opts.MaxRefinementSteps
+	if maxRefinementSteps == 0 {
+		maxRefinementSteps = defaultGCFStreamMaxRefinementSteps
+	}
+
 	s := &GCFStream{
-		src: src,
-		t: NewULFT(
-			big.NewInt(1),
-			big.NewInt(0),
-			big.NewInt(0),
-			big.NewInt(1),
-		),
+		src:                 src,
+		t:                   NewULFT(big.NewInt(1), big.NewInt(0), big.NewInt(0), big.NewInt(1)),
+		maxRefinementSteps:  maxRefinementSteps,
 		lastEmitPrefixTerms: -1,
+	}
+
+	if maxRefinementSteps < 0 {
+		s.err = fmt.Errorf("GCFStream: negative MaxRefinementSteps %d", maxRefinementSteps)
+		return s
 	}
 
 	if evSrc, ok := src.(TailEvidenceGCFSource); ok {
@@ -223,4 +234,4 @@ func applyULFTAtInfinity(t ULFT) (Rational, error) {
 	return newRationalBig(new(big.Int).Set(t.A), new(big.Int).Set(t.C))
 }
 
-// gcf_stream.go v16
+// gcf_stream.go v17

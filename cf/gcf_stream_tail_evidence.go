@@ -236,7 +236,7 @@ func (s *GCFStream) currentCertifiedTailDigit() (int64, bool, error) {
 			return certifiedFloorDigit(r)
 		}
 		if !reusable && !s.canEmitFromCurrentPrefixEvidence() {
-			if d, ok, err := s.tryRefinementsUntilCertified(8); err != nil {
+			if d, ok, err := s.tryRefinementsUntilCertified(s.maxRefinementSteps); err != nil {
 				return 0, false, err
 			} else if ok {
 				return d, true, nil
@@ -246,7 +246,7 @@ func (s *GCFStream) currentCertifiedTailDigit() (int64, bool, error) {
 		return certifiedFloorDigit(r)
 	}
 
-	if d, ok, err := s.tryRefinementsUntilCertified(8); err != nil {
+	if d, ok, err := s.tryRefinementsUntilCertified(s.maxRefinementSteps); err != nil {
 		return 0, false, err
 	} else if ok {
 		return d, true, nil
