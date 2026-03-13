@@ -525,4 +525,47 @@ func TestGCFStream_StrongerTailRangeEmitsNoLaterThanWeakerTailRange(t *testing.T
 	}
 }
 
+type competingTailEvidenceGCFSource struct {
+	calls int
+}
+
+func (s *competingTailEvidenceGCFSource) NextPQ() (int64, int64, bool) {
+	s.calls++
+	return 1, 1, true
+}
+
+func (s *competingTailEvidenceGCFSource) TailLowerBound() Rational {
+	return mustRat(1, 1)
+}
+
+func (s *competingTailEvidenceGCFSource) TailRange() Range {
+	// Stronger explicit enclosure.
+	return NewRange(mustRat(1, 1), mustRat(2, 1), true, true)
+}
+
+func TestGCFStream_PrefersExplicitTailRangeOverLowerBoundRay(t *testing.T) {
+	src := &competingTailEvidenceGCFSource{}
+	s := NewGCFStream(src, GCFStreamOptions{})
+
+	d, ok := s.Next()
+	if !ok {
+		t.Fatalf("expected first digit, err=%v", s.Err())
+	}
+	if d != 1 {
+		t.Fatalf("got first digit %d want 1", d)
+	}
+
+	// With the explicit TailRange() contract, the stream should emit after
+	// exactly two ingested terms for this source family. If it were behaving
+	// like a weaker lower-bound-ray-only source, it would need at least as
+	// much evidence and possibly more.
+	if src.calls != 2 {
+		t.Fatalf("expected TailRange-driven emission after exactly 2 ingested terms, got %d", src.calls)
+	}
+
+	if err := s.Err(); err != nil {
+		t.Fatalf("unexpected stream err: %v", err)
+	}
+}
+
 // gcf_stream_test.go v1
