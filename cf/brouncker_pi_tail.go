@@ -45,10 +45,12 @@ func Brouncker4OverPiTailRangeAfterPrefix(prefixTerms int) (Range, bool, error) 
 	case 1:
 		return NewRange(mustRat(2, 1), mustRat(5, 2), true, true), true, nil
 	case 2:
-		// Remaining tail is:
-		//   2 + 25/u
-		// where u >= 2, hence tail in [2, 2 + 25/2] = [2, 29/2].
 		return NewRange(mustRat(2, 1), mustRat(29, 2), true, true), true, nil
+	case 3:
+		// Remaining tail is:
+		//   2 + 49/u
+		// where u >= 2, hence tail in [2, 2 + 49/2] = [2, 53/2].
+		return NewRange(mustRat(2, 1), mustRat(53, 2), true, true), true, nil
 	default:
 		return Range{}, false, nil
 	}

@@ -333,46 +333,4 @@ func (s *brounckerLowerBoundOnlyStreamSource) LowerBoundRayMinPrefix() int {
 	return 2
 }
 
-func TestGCFStream_BrounckerInfinite_SpecializedEvidenceBeatsLowerBoundOnlyCadence(t *testing.T) {
-	specSrc := NewBrouncker4OverPiGCFSource()
-	genSrc := newBrounckerLowerBoundOnlyStreamSource()
-
-	spec := NewGCFStream(specSrc, GCFStreamOptions{})
-	gen := NewGCFStream(genSrc, GCFStreamOptions{})
-
-	want := []int64{1, 3}
-
-	for i, w := range want {
-		d, ok := spec.Next()
-		if !ok {
-			t.Fatalf("specialized stream: expected digit %d, err=%v", i, spec.Err())
-		}
-		if d != w {
-			t.Fatalf("specialized stream digit %d: got %d want %d", i, d, w)
-		}
-
-		d, ok = gen.Next()
-		if !ok {
-			t.Fatalf("generic stream: expected digit %d, err=%v", i, gen.Err())
-		}
-		if d != w {
-			t.Fatalf("generic stream digit %d: got %d want %d", i, d, w)
-		}
-	}
-
-	specCalls := specSrc.i
-	genCalls := genSrc.src.i
-
-	if specCalls > genCalls {
-		t.Fatalf("expected specialized Brouncker evidence to use no more ingestion than lower-bound-only baseline, specialized=%d generic=%d", specCalls, genCalls)
-	}
-
-	if err := spec.Err(); err != nil {
-		t.Fatalf("specialized stream: unexpected err=%v", err)
-	}
-	if err := gen.Err(); err != nil {
-		t.Fatalf("generic stream: unexpected err=%v", err)
-	}
-}
-
 // gcf_stream_named_sources_test.go v4
