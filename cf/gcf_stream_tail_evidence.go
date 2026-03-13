@@ -1,4 +1,4 @@
-// gcf_stream_tail_evidence.go v2
+// gcf_stream_tail_evidence.go v3
 package cf
 
 import "fmt"
@@ -32,6 +32,10 @@ type PostEmitTailEvidenceGCFSource interface {
 
 type RefinedTailEvidenceGCFSource interface {
 	RefinedTailEvidence() (GCFTailEvidence, bool)
+}
+
+type CandidateTailEvidenceGCFSource interface {
+	CandidateTailEvidence() []GCFTailEvidence
 }
 
 func validateTailEvidence(owner string, ev GCFTailEvidence) error {
@@ -169,6 +173,44 @@ func certifiedFloorDigit(r Range) (int64, bool, error) {
 	return lo, true, nil
 }
 
+func (s *GCFStream) tryCandidateTailEvidence() (int64, bool, error) {
+	src, ok := s.src.(CandidateTailEvidenceGCFSource)
+	if !ok {
+		return 0, false, nil
+	}
+
+	candidates := src.CandidateTailEvidence()
+	for i, ev := range candidates {
+		if err := validateTailEvidence(fmt.Sprintf("GCFStream candidate evidence %d from source %T", i, s.src), ev); err != nil {
+			return 0, false, err
+		}
+		if ev.Range == nil {
+			continue
+		}
+
+		img, applyErr := ev.Range.ApplyULFT(s.t)
+		usable, fatalErr := classifyExplicitTailRangeFailure(*ev.Range, applyErr)
+		if fatalErr != nil {
+			return 0, false, fatalErr
+		}
+		if !usable {
+			s.traceEvent("tail-evidence/candidate-pole-fallback")
+			continue
+		}
+
+		d, certified, err := certifiedFloorDigit(img)
+		if err != nil {
+			return 0, false, err
+		}
+		if certified {
+			s.traceEvent("tail-evidence/candidate")
+			return d, true, nil
+		}
+	}
+
+	return 0, false, nil
+}
+
 func (s *GCFStream) tryRefinedTailEvidence() (used bool, err error) {
 	refiner, ok := s.src.(RefinedTailEvidenceGCFSource)
 	if !ok {
@@ -240,6 +282,11 @@ func (s *GCFStream) currentCertifiedTailDigit() (int64, bool, error) {
 			return certifiedFloorDigit(r)
 		}
 		if !reusable && !s.canEmitFromCurrentPrefixEvidence() {
+			if d, ok, err := s.tryCandidateTailEvidence(); err != nil {
+				return 0, false, err
+			} else if ok {
+				return d, true, nil
+			}
 			if d, ok, err := s.tryRefinementsUntilCertified(s.maxRefinementSteps); err != nil {
 				return 0, false, err
 			} else if ok {
@@ -249,6 +296,12 @@ func (s *GCFStream) currentCertifiedTailDigit() (int64, bool, error) {
 		}
 		s.traceEvent("tail-evidence/base")
 		return certifiedFloorDigit(r)
+	}
+
+	if d, ok, err := s.tryCandidateTailEvidence(); err != nil {
+		return 0, false, err
+	} else if ok {
+		return d, true, nil
 	}
 
 	if d, ok, err := s.tryRefinementsUntilCertified(s.maxRefinementSteps); err != nil {
@@ -270,4 +323,4 @@ func (s *GCFStream) currentCertifiedTailDigit() (int64, bool, error) {
 	return 0, false, nil
 }
 
-// gcf_stream_tail_evidence.go v2
+// gcf_stream_tail_evidence.go v3

@@ -177,4 +177,84 @@ func TestGCFStream_MultipleRefinementsCanAvoidExtraIngestion(t *testing.T) {
 	}
 }
 
+type candidateTailEvidenceGCFSource struct {
+	calls int
+}
+
+func (s *candidateTailEvidenceGCFSource) NextPQ() (int64, int64, bool) {
+	s.calls++
+	return 2, 1, true
+}
+
+func (s *candidateTailEvidenceGCFSource) TailEvidence() GCFTailEvidence {
+	// Base evidence is intentionally too coarse for the second digit.
+	r := NewRange(mustRat(2, 1), mustRat(3, 1), true, true)
+	return GCFTailEvidence{
+		Range:         &r,
+		RangeReusable: false,
+	}
+}
+
+func (s *candidateTailEvidenceGCFSource) CandidateTailEvidence() []GCFTailEvidence {
+	// First candidate is still too coarse.
+	r1 := NewRange(mustRat(2, 1), mustRat(3, 1), true, true)
+
+	// Second candidate is tight enough to certify second digit 2
+	// without another ingest.
+	r2 := NewRange(mustRat(2, 1), mustRat(5, 2), true, true)
+
+	return []GCFTailEvidence{
+		{Range: &r1, RangeReusable: false},
+		{Range: &r2, RangeReusable: false},
+	}
+}
+
+func TestGCFStream_CandidateTailEvidenceCanAvoidExtraIngestion(t *testing.T) {
+	factory := func() GCFSource { return &plainTwoOneGCFSource{} }
+
+	want6 := exactDigitsFromFinitePrefix(t, factory, 6, 2)
+	want8 := exactDigitsFromFinitePrefix(t, factory, 8, 2)
+
+	if len(want6) != len(want8) {
+		t.Fatalf("stabilization len mismatch: want6=%v want8=%v", want6, want8)
+	}
+	for i := range want6 {
+		if want6[i] != want8[i] {
+			t.Fatalf("oracle fixture not stabilized at digit %d: p6=%v p8=%v", i, want6, want8)
+		}
+	}
+
+	src := &candidateTailEvidenceGCFSource{}
+	s := NewGCFStream(src, GCFStreamOptions{})
+
+	d, ok := s.Next()
+	if !ok {
+		t.Fatalf("expected first digit, err=%v", s.Err())
+	}
+	if d != want8[0] {
+		t.Fatalf("got first digit %d want %d", d, want8[0])
+	}
+	callsAfterFirst := src.calls
+
+	d, ok = s.Next()
+	if !ok {
+		t.Fatalf("expected second digit, err=%v", s.Err())
+	}
+	if d != want8[1] {
+		t.Fatalf("got second digit %d want %d", d, want8[1])
+	}
+
+	if src.calls != callsAfterFirst {
+		t.Fatalf(
+			"expected second digit via candidate tail evidence without additional ingestion, first calls=%d second calls=%d",
+			callsAfterFirst,
+			src.calls,
+		)
+	}
+
+	if err := s.Err(); err != nil {
+		t.Fatalf("unexpected stream err: %v", err)
+	}
+}
+
 // gcf_stream_tail_range_refinement_test.go v2
