@@ -1,4 +1,4 @@
-// gcf_stream.go v5
+// gcf_stream.go v6
 package cf
 
 import (
@@ -52,25 +52,30 @@ func (s *GCFStream) canEmitFromCurrentPrefixEvidence() bool {
 	return s.prefixTerms > s.lastEmitPrefixTerms
 }
 
-func (s *GCFStream) currentTailImageRange() (Range, bool, error) {
-	if ranged, ok := s.src.(interface{ TailRange() Range }); ok {
-		r := ranged.TailRange()
-		img, err := r.ApplyULFT(s.t)
-		if err != nil {
-			return Range{}, false, err
-		}
-		return img, true, nil
+func (s *GCFStream) explicitTailImageRange() (Range, bool, error) {
+	ranged, ok := s.src.(interface{ TailRange() Range })
+	if !ok {
+		return Range{}, false, nil
 	}
 
-	if s.canUseGenericLowerBoundEmission() {
-		img, err := ApplyULFTToTailRay(s.t, *s.lower)
-		if err != nil {
-			return Range{}, false, err
-		}
-		return img, true, nil
+	r := ranged.TailRange()
+	img, err := r.ApplyULFT(s.t)
+	if err != nil {
+		return Range{}, false, err
+	}
+	return img, true, nil
+}
+
+func (s *GCFStream) lowerBoundRayImageRange() (Range, bool, error) {
+	if !s.canUseGenericLowerBoundEmission() {
+		return Range{}, false, nil
 	}
 
-	return Range{}, false, nil
+	img, err := ApplyULFTToTailRay(s.t, *s.lower)
+	if err != nil {
+		return Range{}, false, err
+	}
+	return img, true, nil
 }
 
 func (s *GCFStream) canUseGenericLowerBoundEmission() bool {
@@ -84,19 +89,8 @@ func (s *GCFStream) canUseGenericLowerBoundEmission() bool {
 	}
 	return s.prefixTerms >= minPrefix
 }
-func (s *GCFStream) currentCertifiedTailDigit() (int64, bool, error) {
-	if !s.ingestedAny {
-		return 0, false, nil
-	}
-	if !s.canEmitFromCurrentPrefixEvidence() {
-		return 0, false, nil
-	}
 
-	r, ok, err := s.currentTailImageRange()
-	if err != nil || !ok {
-		return 0, false, err
-	}
-
+func certifiedFloorDigit(r Range) (int64, bool, error) {
 	lo, hi, err := r.FloorBounds()
 	if err != nil {
 		return 0, false, err
@@ -104,8 +98,35 @@ func (s *GCFStream) currentCertifiedTailDigit() (int64, bool, error) {
 	if lo != hi {
 		return 0, false, nil
 	}
-
 	return lo, true, nil
+}
+
+func (s *GCFStream) currentCertifiedTailDigit() (int64, bool, error) {
+	if !s.ingestedAny {
+		return 0, false, nil
+	}
+
+	// Strong explicit tail-range evidence may be reusable across multiple
+	// consecutive emissions from the same ingested prefix.
+	if r, ok, err := s.explicitTailImageRange(); err != nil {
+		return 0, false, err
+	} else if ok {
+		return certifiedFloorDigit(r)
+	}
+
+	// Weaker lower-bound-ray evidence remains conservative: at most one
+	// metadata-driven emission per newly ingested GCF prefix.
+	if !s.canEmitFromCurrentPrefixEvidence() {
+		return 0, false, nil
+	}
+
+	if r, ok, err := s.lowerBoundRayImageRange(); err != nil {
+		return 0, false, err
+	} else if ok {
+		return certifiedFloorDigit(r)
+	}
+
+	return 0, false, nil
 }
 
 func (s *GCFStream) emitCertifiedDigit(d int64) (int64, bool, bool) {
@@ -166,8 +187,6 @@ func (s *GCFStream) Next() (int64, bool) {
 		return 0, false
 	}
 
-	// Once finite-source exhaustion has been converted to an exact rational tail,
-	// just delegate to that tail stream.
 	if s.tail != nil {
 		d, ok := s.tail.Next()
 		if !ok {
@@ -178,18 +197,14 @@ func (s *GCFStream) Next() (int64, bool) {
 	}
 
 	for {
-		// Finite source exhausted: exact remaining value is T(∞).
 		if s.srcDone {
 			return s.finalizeFiniteTail()
 		}
 
-		// Prefer strong prefix-aware tail metadata when available; otherwise use
-		// the generic lower-bound ray fallback.
 		if d, ok, handled := s.maybeEmitFromTailMetadata(); handled {
 			return d, ok
 		}
 
-		// Need more GCF input.
 		p, q, ok := s.src.NextPQ()
 		if !ok {
 			s.srcDone = true
@@ -221,4 +236,4 @@ func applyULFTAtInfinity(t ULFT) (Rational, error) {
 	return newRationalBig(new(big.Int).Set(t.A), new(big.Int).Set(t.C))
 }
 
-// gcf_stream.go v5
+// gcf_stream.go v6

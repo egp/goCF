@@ -1,4 +1,4 @@
-// gcf_stream_tail_evidence_test.go v1
+// gcf_stream_tail_evidence_test.go v2
 package cf
 
 import "testing"
@@ -341,4 +341,4 @@ func TestGCFStream_LowerBoundOnlySourceCanStillEmit(t *testing.T) {
 	}
 }
 
-// gcf_stream_tail_evidence_test.go v1
+// gcf_stream_tail_evidence_test.go v2
