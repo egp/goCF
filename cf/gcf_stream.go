@@ -1,4 +1,4 @@
-// gcf_stream.go v8
+// gcf_stream.go v9
 package cf
 
 import (
@@ -18,6 +18,17 @@ type TailRangedGCFSource interface {
 
 type ReusableTailRangeGCFSource interface {
 	TailRangeReusable() bool
+}
+
+type GCFTailEvidence struct {
+	LowerBound          *Rational
+	Range               *Range
+	RangeReusable       bool
+	LowerBoundMinPrefix int
+}
+
+type TailEvidenceGCFSource interface {
+	TailEvidence() GCFTailEvidence
 }
 
 type GCFStream struct {
@@ -46,7 +57,13 @@ func NewGCFStream(src GCFSource, opts GCFStreamOptions) *GCFStream {
 		lastEmitPrefixTerms: -1, // no emissions yet
 	}
 
-	if bounded, ok := src.(PositiveTailLowerBoundedGCFSource); ok {
+	if evSrc, ok := src.(TailEvidenceGCFSource); ok {
+		ev := evSrc.TailEvidence()
+		if ev.LowerBound != nil {
+			lb := *ev.LowerBound
+			s.lower = &lb
+		}
+	} else if bounded, ok := src.(PositiveTailLowerBoundedGCFSource); ok {
 		lb := bounded.TailLowerBound()
 		s.lower = &lb
 	}
@@ -60,32 +77,76 @@ func (s *GCFStream) canEmitFromCurrentPrefixEvidence() bool {
 	return s.prefixTerms > s.lastEmitPrefixTerms
 }
 
-func (s *GCFStream) explicitTailImageRange() (Range, bool, bool, error) {
-	ranged, hasRange := s.src.(TailRangedGCFSource)
-	reusablePolicy, hasReusablePolicy := s.src.(ReusableTailRangeGCFSource)
-
-	if hasReusablePolicy && !hasRange {
-		return Range{}, false, false, fmt.Errorf(
-			"GCFStream: source %T provides TailRangeReusable without TailRange",
-			s.src,
-		)
+func (s *GCFStream) tailEvidence() (GCFTailEvidence, bool, error) {
+	if evSrc, ok := s.src.(TailEvidenceGCFSource); ok {
+		ev := evSrc.TailEvidence()
+		if ev.RangeReusable && ev.Range == nil {
+			return GCFTailEvidence{}, false, fmt.Errorf(
+				"GCFStream: source %T provides reusable tail-range policy without a tail range",
+				s.src,
+			)
+		}
+		if ev.LowerBoundMinPrefix < 0 {
+			return GCFTailEvidence{}, false, fmt.Errorf(
+				"GCFStream: source %T provides negative LowerBoundMinPrefix=%d",
+				s.src,
+				ev.LowerBoundMinPrefix,
+			)
+		}
+		return ev, true, nil
 	}
-	if !hasRange {
+
+	var ev GCFTailEvidence
+
+	if ranged, ok := s.src.(TailRangedGCFSource); ok {
+		r := ranged.TailRange()
+		ev.Range = &r
+	}
+	if reusable, ok := s.src.(ReusableTailRangeGCFSource); ok {
+		ev.RangeReusable = reusable.TailRangeReusable()
+		if ev.Range == nil && ev.RangeReusable {
+			return GCFTailEvidence{}, false, fmt.Errorf(
+				"GCFStream: source %T provides TailRangeReusable without TailRange",
+				s.src,
+			)
+		}
+	}
+	if bounded, ok := s.src.(PositiveTailLowerBoundedGCFSource); ok {
+		lb := bounded.TailLowerBound()
+		ev.LowerBound = &lb
+	}
+	if delayed, ok := s.src.(LowerBoundRayMinPrefixGCFSource); ok {
+		ev.LowerBoundMinPrefix = delayed.LowerBoundRayMinPrefix()
+		if ev.LowerBoundMinPrefix < 0 {
+			return GCFTailEvidence{}, false, fmt.Errorf(
+				"GCFStream: source %T provides negative LowerBoundRayMinPrefix=%d",
+				s.src,
+				ev.LowerBoundMinPrefix,
+			)
+		}
+	}
+
+	if ev.Range == nil && ev.LowerBound == nil {
+		return GCFTailEvidence{}, false, nil
+	}
+	return ev, true, nil
+}
+
+func (s *GCFStream) explicitTailImageRange() (Range, bool, bool, error) {
+	ev, ok, err := s.tailEvidence()
+	if err != nil {
+		return Range{}, false, false, err
+	}
+	if !ok || ev.Range == nil {
 		return Range{}, false, false, nil
 	}
 
-	r := ranged.TailRange()
-	img, err := r.ApplyULFT(s.t)
+	img, err := ev.Range.ApplyULFT(s.t)
 	if err != nil {
 		return Range{}, false, false, err
 	}
 
-	reusable := false
-	if hasReusablePolicy {
-		reusable = reusablePolicy.TailRangeReusable()
-	}
-
-	return img, true, reusable, nil
+	return img, true, ev.RangeReusable, nil
 }
 
 func (s *GCFStream) lowerBoundRayImageRange() (Range, bool, error) {
@@ -106,8 +167,8 @@ func (s *GCFStream) canUseGenericLowerBoundEmission() bool {
 	}
 
 	minPrefix := 0
-	if delayed, ok := s.src.(LowerBoundRayMinPrefixGCFSource); ok {
-		minPrefix = delayed.LowerBoundRayMinPrefix()
+	if ev, ok, err := s.tailEvidence(); err == nil && ok {
+		minPrefix = ev.LowerBoundMinPrefix
 	}
 	return s.prefixTerms >= minPrefix
 }
@@ -128,8 +189,6 @@ func (s *GCFStream) currentCertifiedTailDigit() (int64, bool, error) {
 		return 0, false, nil
 	}
 
-	// Explicit tail-range evidence may exist even when lower-bound-ray fallback
-	// is unavailable. Reusability is an explicit source contract.
 	if r, ok, reusable, err := s.explicitTailImageRange(); err != nil {
 		return 0, false, err
 	} else if ok {
@@ -139,8 +198,6 @@ func (s *GCFStream) currentCertifiedTailDigit() (int64, bool, error) {
 		return certifiedFloorDigit(r)
 	}
 
-	// Weaker lower-bound-ray evidence remains conservative: at most one
-	// metadata-driven emission per newly ingested GCF prefix.
 	if !s.canEmitFromCurrentPrefixEvidence() {
 		return 0, false, nil
 	}
@@ -275,7 +332,6 @@ func applyULFTAtInfinity(t ULFT) (Rational, error) {
 		return Rational{}, err
 	}
 
-	// For T(x) = (A x + B) / (C x + D), the value at infinity is A/C.
 	if t.C.Sign() == 0 {
 		return Rational{}, fmt.Errorf("applyULFTAtInfinity: undefined for C=0 in %v", t)
 	}
@@ -283,4 +339,4 @@ func applyULFTAtInfinity(t ULFT) (Rational, error) {
 	return newRationalBig(new(big.Int).Set(t.A), new(big.Int).Set(t.C))
 }
 
-// gcf_stream.go v8
+// gcf_stream.go v9

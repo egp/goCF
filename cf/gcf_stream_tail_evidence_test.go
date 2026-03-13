@@ -469,4 +469,52 @@ func TestGCFStream_ReusableTailRangePolicyBeatsNonReusablePolicy_OnOracleBackedF
 	}
 }
 
+type unifiedTailEvidenceGCFSource struct {
+	calls int
+}
+
+func (s *unifiedTailEvidenceGCFSource) NextPQ() (int64, int64, bool) {
+	s.calls++
+	return 2, 1, true
+}
+
+func (s *unifiedTailEvidenceGCFSource) TailEvidence() GCFTailEvidence {
+	r := NewRange(mustRat(2, 1), mustRat(5, 2), true, true)
+	return GCFTailEvidence{
+		Range:         &r,
+		RangeReusable: true,
+	}
+}
+
+func TestGCFStream_UnifiedTailEvidenceMatchesReusableSplitContracts(t *testing.T) {
+	unifiedSrc := &unifiedTailEvidenceGCFSource{}
+	splitSrc := &reusableOracleTailRangeGCFSource{}
+
+	unified := NewGCFStream(unifiedSrc, GCFStreamOptions{})
+	split := NewGCFStream(splitSrc, GCFStreamOptions{})
+
+	gotUnified := collectTerms(unified, 2)
+	gotSplit := collectTerms(split, 2)
+
+	if len(gotUnified) != len(gotSplit) {
+		t.Fatalf("len mismatch: unified=%v split=%v", gotUnified, gotSplit)
+	}
+	for i := range gotSplit {
+		if gotUnified[i] != gotSplit[i] {
+			t.Fatalf("digit %d: unified=%v split=%v", i, gotUnified, gotSplit)
+		}
+	}
+
+	if unifiedSrc.calls != splitSrc.calls {
+		t.Fatalf("expected matching ingest cadence, unified=%d split=%d", unifiedSrc.calls, splitSrc.calls)
+	}
+
+	if err := unified.Err(); err != nil {
+		t.Fatalf("unified source: unexpected stream err: %v", err)
+	}
+	if err := split.Err(); err != nil {
+		t.Fatalf("split source: unexpected stream err: %v", err)
+	}
+}
+
 // gcf_stream_tail_evidence_test.go v3
