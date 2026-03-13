@@ -84,40 +84,31 @@ func (s *GCFStream) canUseGenericLowerBoundEmission() bool {
 	}
 	return s.prefixTerms >= minPrefix
 }
-
-func (s *GCFStream) maybeEmitFromTailMetadata() (int64, bool, bool) {
+func (s *GCFStream) currentCertifiedTailDigit() (int64, bool, error) {
 	if !s.ingestedAny {
-		return 0, false, false
+		return 0, false, nil
 	}
-
-	// Do not emit multiple ordinary CF digits from the same GCF prefix evidence.
-	// After each metadata-based emission, require at least one more ingested GCF
-	// term before trying to emit again.
 	if !s.canEmitFromCurrentPrefixEvidence() {
-		return 0, false, false
+		return 0, false, nil
 	}
 
 	r, ok, err := s.currentTailImageRange()
-	if err != nil {
-		s.err = err
-		s.done = true
-		return 0, false, true
-	}
-	if !ok {
-		return 0, false, false
+	if err != nil || !ok {
+		return 0, false, err
 	}
 
 	lo, hi, err := r.FloorBounds()
 	if err != nil {
-		s.err = err
-		s.done = true
-		return 0, false, true
+		return 0, false, err
 	}
 	if lo != hi {
-		return 0, false, false
+		return 0, false, nil
 	}
 
-	d := lo
+	return lo, true, nil
+}
+
+func (s *GCFStream) emitCertifiedDigit(d int64) (int64, bool, bool) {
 	nextT, err := EmitDigit(s.t, d)
 	if err != nil {
 		s.err = err
@@ -127,6 +118,19 @@ func (s *GCFStream) maybeEmitFromTailMetadata() (int64, bool, bool) {
 	s.t = nextT
 	s.lastEmitPrefixTerms = s.prefixTerms
 	return d, true, true
+}
+
+func (s *GCFStream) maybeEmitFromTailMetadata() (int64, bool, bool) {
+	d, ok, err := s.currentCertifiedTailDigit()
+	if err != nil {
+		s.err = err
+		s.done = true
+		return 0, false, true
+	}
+	if !ok {
+		return 0, false, false
+	}
+	return s.emitCertifiedDigit(d)
 }
 
 func (s *GCFStream) finalizeFiniteTail() (int64, bool) {

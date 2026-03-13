@@ -730,4 +730,25 @@ func TestGCFStream_UsesGenericLowerBoundRayMinPrefixPolicy(t *testing.T) {
 	}
 }
 
+func TestGCFStream_LowerBoundOnlySourceCanStillEmit(t *testing.T) {
+	src := &delayedLowerBoundRayGCFSource{}
+	s := NewGCFStream(src, GCFStreamOptions{})
+
+	d, ok := s.Next()
+	if !ok {
+		t.Fatalf("expected first digit, err=%v", s.Err())
+	}
+	if d != 1 {
+		t.Fatalf("got first digit %d want 1", d)
+	}
+
+	if src.calls < 2 {
+		t.Fatalf("expected at least 2 ingested terms before first digit, got %d", src.calls)
+	}
+
+	if err := s.Err(); err != nil {
+		t.Fatalf("unexpected stream err: %v", err)
+	}
+}
+
 // gcf_stream_test.go v1
