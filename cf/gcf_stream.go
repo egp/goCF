@@ -1,4 +1,4 @@
-// gcf_stream.go v9
+// gcf_stream.go v10
 package cf
 
 import (
@@ -132,6 +132,10 @@ func (s *GCFStream) tailEvidence() (GCFTailEvidence, bool, error) {
 	return ev, true, nil
 }
 
+func isExactPointRange(r Range) bool {
+	return r.Lo.Cmp(r.Hi) == 0
+}
+
 func (s *GCFStream) explicitTailImageRange() (Range, bool, bool, error) {
 	ev, ok, err := s.tailEvidence()
 	if err != nil {
@@ -143,6 +147,12 @@ func (s *GCFStream) explicitTailImageRange() (Range, bool, bool, error) {
 
 	img, err := ev.Range.ApplyULFT(s.t)
 	if err != nil {
+		// A non-point reusable/explicit tail range crossing a pole means this
+		// evidence is not currently usable for certification. It is not an
+		// immediate hard stream error; callers may fall back or ingest more.
+		if !isExactPointRange(*ev.Range) {
+			return Range{}, false, ev.RangeReusable, nil
+		}
 		return Range{}, false, false, err
 	}
 
@@ -339,4 +349,4 @@ func applyULFTAtInfinity(t ULFT) (Rational, error) {
 	return newRationalBig(new(big.Int).Set(t.A), new(big.Int).Set(t.C))
 }
 
-// gcf_stream.go v9
+// gcf_stream.go v10

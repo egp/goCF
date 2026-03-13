@@ -534,7 +534,7 @@ func TestGCFStream_InvalidUnifiedTailEvidence_IsError(t *testing.T) {
 		t.Fatalf("expected non-nil error")
 	}
 }
-func TestGCFStream_ReusableTailRangePolicy_StopsAtPoleBoundary_OnOracleBackedFixture(t *testing.T) {
+func TestGCFStream_ReusableTailRangePoleBoundaryFallsThroughToFurtherIngestion(t *testing.T) {
 	src := &reusableOracleTailRangeGCFSource{}
 	s := NewGCFStream(src, GCFStreamOptions{})
 
@@ -545,6 +545,7 @@ func TestGCFStream_ReusableTailRangePolicy_StopsAtPoleBoundary_OnOracleBackedFix
 	if d != 2 {
 		t.Fatalf("got first digit %d want 2", d)
 	}
+	callsAfterFirst := src.calls
 
 	d, ok = s.Next()
 	if !ok {
@@ -553,15 +554,49 @@ func TestGCFStream_ReusableTailRangePolicy_StopsAtPoleBoundary_OnOracleBackedFix
 	if d != 2 {
 		t.Fatalf("got second digit %d want 2", d)
 	}
+	callsAfterSecond := src.calls
 
-	_, ok = s.Next()
-	if ok {
-		t.Fatalf("expected third digit to be unavailable at current pole boundary")
+	d, ok = s.Next()
+	if !ok {
+		t.Fatalf("expected third digit after pole-boundary fallback, err=%v", s.Err())
 	}
 
-	err := s.Err()
-	if err == nil {
-		t.Fatalf("expected non-nil error at pole boundary")
+	if src.calls <= callsAfterSecond {
+		t.Fatalf(
+			"expected additional ingestion after reusable tail-range pole boundary, second calls=%d third calls=%d",
+			callsAfterSecond,
+			src.calls,
+		)
+	}
+
+	if err := s.Err(); err != nil {
+		t.Fatalf("expected no hard error after pole-boundary fallback, got %v", err)
+	}
+
+	t.Logf("digits so far: 2, 2, %d; calls after first=%d second=%d third=%d",
+		d, callsAfterFirst, callsAfterSecond, src.calls)
+}
+
+func TestGCFStream_ReusableTailRangePoleBoundaryIsNotImmediateHardError(t *testing.T) {
+	src := &reusableOracleTailRangeGCFSource{}
+	s := NewGCFStream(src, GCFStreamOptions{})
+
+	d, ok := s.Next()
+	if !ok || d != 2 {
+		t.Fatalf("expected first digit 2, got ok=%v d=%d err=%v", ok, d, s.Err())
+	}
+
+	d, ok = s.Next()
+	if !ok || d != 2 {
+		t.Fatalf("expected second digit 2, got ok=%v d=%d err=%v", ok, d, s.Err())
+	}
+
+	// Third digit may or may not be certifiable yet, but hitting a pole boundary
+	// in reusable explicit tail evidence should not be treated as an immediate
+	// hard stream error.
+	_, _ = s.Next()
+	if err := s.Err(); err != nil {
+		t.Fatalf("expected no hard error after reusable tail-range pole boundary, got %v", err)
 	}
 }
 
