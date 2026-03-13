@@ -1,4 +1,4 @@
-// gcf_stream.go v10
+// gcf_stream.go v11
 package cf
 
 import (
@@ -136,6 +136,16 @@ func isExactPointRange(r Range) bool {
 	return r.Lo.Cmp(r.Hi) == 0
 }
 
+func classifyExplicitTailRangeFailure(r Range, err error) (usable bool, fatal error) {
+	if err == nil {
+		return true, nil
+	}
+	if !isExactPointRange(r) {
+		return false, nil
+	}
+	return false, err
+}
+
 func (s *GCFStream) explicitTailImageRange() (Range, bool, bool, error) {
 	ev, ok, err := s.tailEvidence()
 	if err != nil {
@@ -145,15 +155,13 @@ func (s *GCFStream) explicitTailImageRange() (Range, bool, bool, error) {
 		return Range{}, false, false, nil
 	}
 
-	img, err := ev.Range.ApplyULFT(s.t)
-	if err != nil {
-		// A non-point reusable/explicit tail range crossing a pole means this
-		// evidence is not currently usable for certification. It is not an
-		// immediate hard stream error; callers may fall back or ingest more.
-		if !isExactPointRange(*ev.Range) {
-			return Range{}, false, ev.RangeReusable, nil
-		}
-		return Range{}, false, false, err
+	img, applyErr := ev.Range.ApplyULFT(s.t)
+	usable, fatalErr := classifyExplicitTailRangeFailure(*ev.Range, applyErr)
+	if fatalErr != nil {
+		return Range{}, false, false, fatalErr
+	}
+	if !usable {
+		return Range{}, false, ev.RangeReusable, nil
 	}
 
 	return img, true, ev.RangeReusable, nil
@@ -349,4 +357,4 @@ func applyULFTAtInfinity(t ULFT) (Rational, error) {
 	return newRationalBig(new(big.Int).Set(t.A), new(big.Int).Set(t.C))
 }
 
-// gcf_stream.go v10
+// gcf_stream.go v11
