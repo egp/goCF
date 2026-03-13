@@ -13,7 +13,6 @@ type GCFStream struct {
 	t   ULFT
 
 	lower               *Rational // optional stable positive lower bound for unfinished tail
-	tailRange           *Range    // optional stable explicit unfinished-tail range
 	tail                ContinuedFraction
 	ingestedAny         bool
 	prefixTerms         int
@@ -40,12 +39,6 @@ func NewGCFStream(src GCFSource, opts GCFStreamOptions) *GCFStream {
 		s.lower = &lb
 	}
 
-	// Generic stable explicit tail range, if the source can provide one.
-	if ranged, ok := src.(interface{ TailRange() Range }); ok {
-		r := ranged.TailRange()
-		s.tailRange = &r
-	}
-
 	return s
 }
 
@@ -54,33 +47,16 @@ func (s *GCFStream) Err() error { return s.err }
 func (s *GCFStream) canEmitFromCurrentPrefixEvidence() bool {
 	return s.prefixTerms > s.lastEmitPrefixTerms
 }
-
 func (s *GCFStream) currentTailImageRange() (Range, bool, error) {
-	// First preference: generic stable explicit unfinished-tail range.
-	if s.tailRange != nil {
-		img, err := s.tailRange.ApplyULFT(s.t)
+	if ranged, ok := s.src.(interface{ TailRange() Range }); ok {
+		r := ranged.TailRange()
+		img, err := r.ApplyULFT(s.t)
 		if err != nil {
 			return Range{}, false, err
 		}
 		return img, true, nil
 	}
 
-	// Named-source prefix-aware helpers were useful during exploration.
-	// Keep them here for now, but commented out while the engine moves toward
-	// generic ingestion semantics.
-	//
-	// if r, ok, err := s.specializedTailRange(); err != nil {
-	// 	return Range{}, false, err
-	// } else if ok {
-	// 	img, err := r.ApplyULFT(s.t)
-	// 	if err != nil {
-	// 		return Range{}, false, err
-	// 	}
-	// 	return img, true, nil
-	// }
-
-	// Fallback: generic positive lower-bound ray, but only when we trust it
-	// enough for the current source/prefix depth.
 	if s.canUseGenericLowerBoundEmission() {
 		img, err := ApplyULFTToTailRay(s.t, *s.lower)
 		if err != nil {
@@ -90,23 +66,6 @@ func (s *GCFStream) currentTailImageRange() (Range, bool, error) {
 	}
 
 	return Range{}, false, nil
-}
-
-func (s *GCFStream) specializedTailRange() (Range, bool, error) {
-	switch s.src.(type) {
-	case *LambertPiOver4GCFSource:
-		return LambertPiOver4TailRangeAfterPrefix(s.prefixTerms)
-	case *Brouncker4OverPiGCFSource:
-		// Not yet enabled here.
-		//
-		// The currently available Brouncker prefix-aware tail interval helpers are
-		// useful for bounded-prefix approximation work, but they are not yet
-		// strong/sound enough for early digit emission in GCFStream. Falling back
-		// to the generic lower-bound ray is conservative and avoids unsound digits.
-		return Range{}, false, nil
-	default:
-		return Range{}, false, nil
-	}
 }
 
 func (s *GCFStream) canUseGenericLowerBoundEmission() bool {
