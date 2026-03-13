@@ -32,6 +32,10 @@ func LambertPiOver4TailLowerBoundAfterPrefix(prefixTerms int) Rational {
 //   - prefixTerms == 3: remaining tail starts at 5 + 9/(7 + 16/(9 + ...)),
 //     conservatively in [5, 34/5]
 //   - prefixTerms >= 4: no tighter interval currently provided
+//
+// Lambert uses source-specific prefix evidence mainly to improve early-digit
+// cadence on the infinite source. Prefix-2 and prefix-3 specializations give
+// visibly tighter unfinished-value ranges than generic lower-bound-only fallback.
 func LambertPiOver4TailRangeAfterPrefix(prefixTerms int) (Range, bool, error) {
 	if prefixTerms < 0 {
 		return Range{}, false, fmt.Errorf("LambertPiOver4TailRangeAfterPrefix: negative prefixTerms %d", prefixTerms)

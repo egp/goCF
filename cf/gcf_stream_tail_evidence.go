@@ -15,6 +15,32 @@ type ReusableTailRangeGCFSource interface {
 	TailRangeReusable() bool
 }
 
+// GCFTailEvidence describes source-provided knowledge about the unfinished tail
+// of a generalized continued fraction at the source's current prefix state.
+//
+// Intended hierarchy:
+//
+//  1. TailEvidence()
+//     Base evidence for the current source state.
+//
+//  2. CandidateTailEvidence()
+//     A small finite family of alternate same-state evidences to try before
+//     giving up on the current prefix. Use this when a source can cheaply
+//     provide a few conservative alternate enclosures.
+//
+//  3. RefinedTailEvidence()
+//     Stronger same-state evidence produced incrementally on demand. Use this
+//     when a source can tighten bounds adaptively rather than enumerating a
+//     fixed candidate list up front.
+//
+//  4. PostEmitTailEvidence()
+//     Evidence for the remainder after a certified emitted digit. Use this when
+//     the source can describe the new remainder more directly than by waiting
+//     for additional ingestion.
+//
+// LowerBoundMinPrefix is a policy knob for the generic lower-bound-ray fallback.
+// Named sources may raise it, or effectively disable that fallback, when the
+// generic lower-bound ray is too weak to trust for sound later digits.
 type GCFTailEvidence struct {
 	LowerBound          *Rational
 	Range               *Range
@@ -22,20 +48,29 @@ type GCFTailEvidence struct {
 	LowerBoundMinPrefix int
 }
 
+// TailEvidenceGCFSource provides base tail evidence for the source's current
+// prefix state.
 type TailEvidenceGCFSource interface {
 	TailEvidence() GCFTailEvidence
 }
 
-type PostEmitTailEvidenceGCFSource interface {
-	PostEmitTailEvidence(emittedDigit int64) (GCFTailEvidence, bool)
+// CandidateTailEvidenceGCFSource provides a small ordered family of alternate
+// same-state evidences to try before refinement or further ingestion.
+type CandidateTailEvidenceGCFSource interface {
+	CandidateTailEvidence() []GCFTailEvidence
 }
 
+// RefinedTailEvidenceGCFSource provides stronger same-state evidence on demand.
+// Each successful call should reflect genuine refinement of the current source
+// state, not advancement to a later ingested prefix.
 type RefinedTailEvidenceGCFSource interface {
 	RefinedTailEvidence() (GCFTailEvidence, bool)
 }
 
-type CandidateTailEvidenceGCFSource interface {
-	CandidateTailEvidence() []GCFTailEvidence
+// PostEmitTailEvidenceGCFSource provides evidence for the new remainder after a
+// certified digit has just been emitted.
+type PostEmitTailEvidenceGCFSource interface {
+	PostEmitTailEvidence(emittedDigit int64) (GCFTailEvidence, bool)
 }
 
 func validateTailEvidence(owner string, ev GCFTailEvidence) error {

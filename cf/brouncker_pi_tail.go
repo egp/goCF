@@ -36,6 +36,11 @@ func (s *Brouncker4OverPiGCFSource) LowerBoundRayMinPrefix() int {
 //   - prefixTerms == 2: remaining tail starts at 2 + 25/(2 + 49/(2 + ...)),
 //     conservatively in [2, 29/2]
 //   - prefixTerms >= 3: no tighter interval currently provided
+//
+// Brouncker uses source-specific prefix evidence mainly to improve correctness
+// and avoid weak generic fallback paths. Current specializations help bound the
+// unfinished value safely, but later infinite digits may still require stronger
+// explicit evidence rather than generic lower-bound-ray reasoning.
 func Brouncker4OverPiTailRangeAfterPrefix(prefixTerms int) (Range, bool, error) {
 	if prefixTerms < 0 {
 		return Range{}, false, fmt.Errorf("Brouncker4OverPiTailRangeAfterPrefix: negative prefixTerms %d", prefixTerms)

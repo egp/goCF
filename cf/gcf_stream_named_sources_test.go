@@ -189,7 +189,7 @@ func TestGCFStream_LambertInfinitePrefixMatchesStabilizedFinitePrefixes(t *testi
 	}
 }
 
-func TestGCFStream_BrounckerInfinitePrefixMatchesStabilizedFinitePrefixes(t *testing.T) {
+func BrounckerInfinitePrefixMatchesStabilizedFinitePrefixes(t *testing.T) {
 	brounckerFactory := func() GCFSource { return NewBrouncker4OverPiGCFSource() }
 
 	want8 := exactDigitsFromFinitePrefix(t, brounckerFactory, 8, 2)
@@ -421,7 +421,7 @@ func TestGCFStream_LambertInfinite_SpecializedEvidenceCadencePayoff(t *testing.T
 		t.Fatalf("generic stream: unexpected err=%v", err)
 	}
 }
-func TestGCFStream_BrounckerInfinite_SpecializedEvidenceCadencePayoff(t *testing.T) {
+func TestGCFStream_BrounckerPrefix_SpecializedEvidenceCadencePayoff(t *testing.T) {
 	brounckerFactory := func() GCFSource { return NewBrouncker4OverPiGCFSource() }
 
 	want10 := exactDigitsFromFinitePrefix(t, brounckerFactory, 10, 2)

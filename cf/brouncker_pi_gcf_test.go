@@ -246,7 +246,7 @@ func TestBrouncker4OverPi_ThirdDigitStabilizationWindow(t *testing.T) {
 		firstStablePrefix, firstStablePrefix+2, stableDigits)
 }
 
-func TestGCFStream_BrounckerInfinite_ThirdDigitNotForcedByWeakFallback(t *testing.T) {
+func TestGCFStream_BrounckerPrefix_ThirdDigitNotForcedByWeakFallback(t *testing.T) {
 	var events []string
 
 	s := NewGCFStream(
@@ -303,7 +303,7 @@ func TestBrouncker4OverPi_PrefixWindowDiagnostic(t *testing.T) {
 	}
 }
 
-func TestGCFStream_BrounckerInfinite_ThirdDigitTrace(t *testing.T) {
+func TestGCFStream_BrounckerPrefix_FirstTwoDigitsTrace(t *testing.T) {
 	var events []string
 	s := NewGCFStream(
 		newFinitePrefixGCFSource(NewBrouncker4OverPiGCFSource(), 16),
