@@ -45,6 +45,9 @@ Stretch goal: make Gosper smile.
   - adapted regular CF round-trip through `AdaptCFToGCF`
   - bounded exact termination semantics
   - generic stable `TailRange()`-driven earlier emission
+  - prefix-sensitive dynamic `TailRange()` behavior
+  - explicit `TailRange()` strength ordering
+  - preference of explicit `TailRange()` evidence over weaker lower-bound-ray fallback when both are available
 - `GCFStream` now queries `TailRange()` dynamically from source state rather than caching it at construction time.
 
 ### Sources
@@ -78,6 +81,9 @@ Stretch goal: make Gosper smile.
   - Range floor/string/refinement behavior
   - Bounder semantics
   - `GCFStream` generic stable `TailRange()` cadence / early emission semantics
+  - `GCFStream` prefix-sensitive dynamic `TailRange()` semantics
+  - `GCFStream` explicit-tail-range strength ordering
+  - `GCFStream` preference of explicit `TailRange()` over lower-bound-ray fallback
 - First fuzz target added for `ULFTStream`.
 - Future note: expand fuzz coverage later, especially for BLFTStream, DiagBLFTStream, and other core arithmetic/streaming components.
 
@@ -112,6 +118,7 @@ Stretch goal: make Gosper smile.
 - Fixed DiagBLFT exact-point remainder-pole clean exhaustion semantics.
 - Fixed `GCFStream` to use current source-provided `TailRange()` evidence dynamically instead of stale constructor-cached range metadata.
 - Corrected a `GCFStream` stable-tail-range cadence test fixture to match the actual regular CF of the `(1,1)`-forever GCF source (golden-ratio behavior).
+- Added targeted tests for dynamic `TailRange()` lookup, explicit-tail-range strength ordering, and preference of explicit tail-range evidence over weaker lower-bound-ray fallback.
 
 ### Refactoring progress
 - Factored shared exact-point exhaustion policy.
@@ -153,12 +160,19 @@ Strengthen tests around current `GCFStream` behavior:
 - cadence rules for metadata-driven emission
 - finite exact fallback after source exhaustion
 - clean separation between reusable strong evidence and weaker conservative evidence
+- named-source finite-prefix fixture coverage for Lambert and Brouncker
 
 ### Phase 1b
 Review the public/client-facing `GCFStream` API:
 - confirm whether `Next() (int64, bool)` + `Err()` is the right long-term surface
 - compare ergonomics and semantics with the other stream engines
 - add small helper constructors or naming improvements if they materially improve clarity
+
+### Phase 1c
+Simplify internal `GCFStream` evidence-selection logic where it improves maintainability without weakening the mathematics:
+- separate “obtain best current tail evidence” from emission policy
+- reduce duplication between explicit-tail-range and lower-bound-ray handling
+- keep the stronger evidence path clearly preferred over weaker fallback logic
 
 ---
 
@@ -167,9 +181,10 @@ Review the public/client-facing `GCFStream` API:
 1. Harden finite `GCFStream` semantics with more targeted tests.
 2. Add additional adapted regular-CF round-trip and cadence tests.
 3. Add named finite-prefix fixtures for Lambert and Brouncker.
-4. Extend `GCFStream` from finite-only behavior toward unfinished-tail enclosure support.
-5. Reuse existing GCF tail metadata ideas where mathematically justified.
-6. Let named sources benefit automatically once unfinished-tail streaming works.
+4. Simplify `GCFStream` internal evidence-selection structure where that improves clarity.
+5. Extend `GCFStream` from finite-only behavior toward unfinished-tail enclosure support.
+6. Reuse existing GCF tail metadata ideas where mathematically justified.
+7. Let named sources benefit automatically once unfinished-tail streaming works.
 
 ---
 

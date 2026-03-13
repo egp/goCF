@@ -1,7 +1,10 @@
 // gcf_stream_test.go v1
 package cf
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 func TestGCFStream_FiniteSliceGCF_MatchesExactRational(t *testing.T) {
 	src := NewSliceGCF(
@@ -565,6 +568,95 @@ func TestGCFStream_PrefersExplicitTailRangeOverLowerBoundRay(t *testing.T) {
 
 	if err := s.Err(); err != nil {
 		t.Fatalf("unexpected stream err: %v", err)
+	}
+}
+
+type finitePrefixGCFSource struct {
+	src   GCFSource
+	limit int
+	n     int
+}
+
+func newFinitePrefixGCFSource(src GCFSource, limit int) *finitePrefixGCFSource {
+	return &finitePrefixGCFSource{
+		src:   src,
+		limit: limit,
+	}
+}
+
+func (s *finitePrefixGCFSource) NextPQ() (int64, int64, bool) {
+	if s.n >= s.limit {
+		return 0, 0, false
+	}
+	p, q, ok := s.src.NextPQ()
+	if !ok {
+		return 0, 0, false
+	}
+	s.n++
+	return p, q, true
+}
+
+func collectFinitePrefixTerms(src GCFSource, n int) [][2]int64 {
+	var out [][2]int64
+	for i := 0; i < n; i++ {
+		p, q, ok := src.NextPQ()
+		if !ok {
+			break
+		}
+		out = append(out, [2]int64{p, q})
+	}
+	return out
+}
+
+func TestGCFStream_FiniteLambertPrefixMatchesEvaluateFiniteGCF(t *testing.T) {
+	for _, prefixLen := range []int{1, 2, 3, 4, 5, 6} {
+		t.Run(fmt.Sprintf("prefix_%d", prefixLen), func(t *testing.T) {
+			streamSrc := newFinitePrefixGCFSource(NewLambertPiOver4GCFSource(), prefixLen)
+			evalTerms := collectFinitePrefixTerms(NewLambertPiOver4GCFSource(), prefixLen)
+
+			got := collectTerms(NewGCFStream(streamSrc, GCFStreamOptions{}), 64)
+
+			wantRat, err := EvaluateFiniteGCF(NewSliceGCF(evalTerms...))
+			if err != nil {
+				t.Fatalf("EvaluateFiniteGCF failed: %v", err)
+			}
+			want := collectTerms(NewRationalCF(wantRat), 64)
+
+			if len(got) != len(want) {
+				t.Fatalf("len mismatch: got=%v want=%v", got, want)
+			}
+			for i := range want {
+				if got[i] != want[i] {
+					t.Fatalf("digit %d: got=%v want=%v", i, got, want)
+				}
+			}
+		})
+	}
+}
+
+func TestGCFStream_FiniteBrounckerPrefixMatchesEvaluateFiniteGCF(t *testing.T) {
+	for _, prefixLen := range []int{1, 2, 3, 4, 5, 6} {
+		t.Run(fmt.Sprintf("prefix_%d", prefixLen), func(t *testing.T) {
+			streamSrc := newFinitePrefixGCFSource(NewBrouncker4OverPiGCFSource(), prefixLen)
+			evalTerms := collectFinitePrefixTerms(NewBrouncker4OverPiGCFSource(), prefixLen)
+
+			got := collectTerms(NewGCFStream(streamSrc, GCFStreamOptions{}), 64)
+
+			wantRat, err := EvaluateFiniteGCF(NewSliceGCF(evalTerms...))
+			if err != nil {
+				t.Fatalf("EvaluateFiniteGCF failed: %v", err)
+			}
+			want := collectTerms(NewRationalCF(wantRat), 64)
+
+			if len(got) != len(want) {
+				t.Fatalf("len mismatch: got=%v want=%v", got, want)
+			}
+			for i := range want {
+				if got[i] != want[i] {
+					t.Fatalf("digit %d: got=%v want=%v", i, got, want)
+				}
+			}
+		})
 	}
 }
 
