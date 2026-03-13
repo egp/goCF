@@ -1,4 +1,4 @@
-// gcf_stream.go v6
+// gcf_stream.go v7
 package cf
 
 import (
@@ -178,24 +178,40 @@ func (s *GCFStream) finalizeFiniteTail() (int64, bool) {
 	return d, true
 }
 
-func (s *GCFStream) Next() (int64, bool) {
-	if s.done {
-		return 0, false
+func (s *GCFStream) nextFromFiniteTail() (int64, bool, bool) {
+	if s.tail == nil {
+		return 0, false, false
 	}
-	if s.err != nil {
+
+	d, ok := s.tail.Next()
+	if !ok {
 		s.done = true
-		return 0, false
+		return 0, false, true
+	}
+	return d, true, true
+}
+
+func (s *GCFStream) ingestNextTerm() bool {
+	p, q, ok := s.src.NextPQ()
+	if !ok {
+		s.srcDone = true
+		return false
 	}
 
-	if s.tail != nil {
-		d, ok := s.tail.Next()
-		if !ok {
-			s.done = true
-			return 0, false
-		}
-		return d, true
+	nextT, err := s.t.IngestGCF(p, q)
+	if err != nil {
+		s.err = err
+		s.done = true
+		return false
 	}
 
+	s.t = nextT
+	s.ingestedAny = true
+	s.prefixTerms++
+	return true
+}
+
+func (s *GCFStream) advanceUntilDigitOrFinish() (int64, bool) {
 	for {
 		if s.srcDone {
 			return s.finalizeFiniteTail()
@@ -205,22 +221,28 @@ func (s *GCFStream) Next() (int64, bool) {
 			return d, ok
 		}
 
-		p, q, ok := s.src.NextPQ()
-		if !ok {
-			s.srcDone = true
-			continue
+		if !s.ingestNextTerm() {
+			if s.done || s.err != nil {
+				return 0, false
+			}
 		}
-
-		nextT, err := s.t.IngestGCF(p, q)
-		if err != nil {
-			s.err = err
-			s.done = true
-			return 0, false
-		}
-		s.t = nextT
-		s.ingestedAny = true
-		s.prefixTerms++
 	}
+}
+
+func (s *GCFStream) Next() (int64, bool) {
+	if s.done {
+		return 0, false
+	}
+	if s.err != nil {
+		s.done = true
+		return 0, false
+	}
+
+	if d, ok, handled := s.nextFromFiniteTail(); handled {
+		return d, ok
+	}
+
+	return s.advanceUntilDigitOrFinish()
 }
 
 func applyULFTAtInfinity(t ULFT) (Rational, error) {
@@ -236,4 +258,4 @@ func applyULFTAtInfinity(t ULFT) (Rational, error) {
 	return newRationalBig(new(big.Int).Set(t.A), new(big.Int).Set(t.C))
 }
 
-// gcf_stream.go v6
+// gcf_stream.go v7
