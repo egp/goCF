@@ -1,4 +1,4 @@
-// gcf_stream.go v13
+// gcf_stream.go v14
 package cf
 
 import (
@@ -35,11 +35,15 @@ type PostEmitTailEvidenceGCFSource interface {
 	PostEmitTailEvidence(emittedDigit int64) (GCFTailEvidence, bool)
 }
 
+type RefinedTailEvidenceGCFSource interface {
+	RefinedTailEvidence() (GCFTailEvidence, bool)
+}
+
 type GCFStream struct {
 	src GCFSource
 	t   ULFT
 
-	lower                *Rational // optional stable positive lower bound for unfinished tail
+	lower                *Rational
 	tailEvidenceOverride *GCFTailEvidence
 	tailEvidenceFresh    bool
 	tail                 ContinuedFraction
@@ -216,6 +220,32 @@ func certifiedFloorDigit(r Range) (int64, bool, error) {
 	return lo, true, nil
 }
 
+func (s *GCFStream) tryRefinedTailEvidence() (used bool, err error) {
+	refiner, ok := s.src.(RefinedTailEvidenceGCFSource)
+	if !ok {
+		return false, nil
+	}
+
+	ev, ok := refiner.RefinedTailEvidence()
+	if !ok {
+		return false, nil
+	}
+
+	if err := validateTailEvidence(fmt.Sprintf("GCFStream refined evidence from source %T", s.src), ev); err != nil {
+		return false, err
+	}
+
+	s.tailEvidenceOverride = &ev
+	s.tailEvidenceFresh = true
+	if ev.LowerBound != nil {
+		lb := *ev.LowerBound
+		s.lower = &lb
+	} else {
+		s.lower = nil
+	}
+	return true, nil
+}
+
 func (s *GCFStream) currentCertifiedTailDigit() (int64, bool, error) {
 	if !s.ingestedAny {
 		return 0, false, nil
@@ -224,16 +254,35 @@ func (s *GCFStream) currentCertifiedTailDigit() (int64, bool, error) {
 	if r, ok, reusable, err := s.explicitTailImageRange(); err != nil {
 		return 0, false, err
 	} else if ok {
-		// Fresh post-emit override evidence is allowed one certification even if
-		// prefixTerms has not increased.
 		if s.tailEvidenceOverride != nil && s.tailEvidenceFresh {
 			s.tailEvidenceFresh = false
 			return certifiedFloorDigit(r)
 		}
 		if !reusable && !s.canEmitFromCurrentPrefixEvidence() {
+			if used, rerr := s.tryRefinedTailEvidence(); rerr != nil {
+				return 0, false, rerr
+			} else if used {
+				if rr, rok, _, eerr := s.explicitTailImageRange(); eerr != nil {
+					return 0, false, eerr
+				} else if rok {
+					s.tailEvidenceFresh = false
+					return certifiedFloorDigit(rr)
+				}
+			}
 			return 0, false, nil
 		}
 		return certifiedFloorDigit(r)
+	}
+
+	if used, rerr := s.tryRefinedTailEvidence(); rerr != nil {
+		return 0, false, rerr
+	} else if used {
+		if rr, rok, _, eerr := s.explicitTailImageRange(); eerr != nil {
+			return 0, false, eerr
+		} else if rok {
+			s.tailEvidenceFresh = false
+			return certifiedFloorDigit(rr)
+		}
 	}
 
 	if !s.canEmitFromCurrentPrefixEvidence() {
@@ -416,4 +465,4 @@ func applyULFTAtInfinity(t ULFT) (Rational, error) {
 	return newRationalBig(new(big.Int).Set(t.A), new(big.Int).Set(t.C))
 }
 
-// gcf_stream.go v13
+// gcf_stream.go v14
