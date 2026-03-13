@@ -1,4 +1,4 @@
-// lambert_pi_tail.go v2
+// lambert_pi_tail.go v3
 package cf
 
 import "fmt"
@@ -23,10 +23,13 @@ func LambertPiOver4TailLowerBoundAfterPrefix(prefixTerms int) Rational {
 //     back to lower-bound-only ray semantics
 //   - (_, false, err) => invalid input
 //
-// Current v1 support:
+// Current v3 support:
 //   - prefixTerms == 0: tail is the whole Lambert object, conservatively in [3/4, 1]
-//   - prefixTerms == 1: remaining tail starts at 1 + 1/(3 + ...), conservatively in [1, 4/3]
-//   - prefixTerms >= 2: no tighter interval currently provided
+//   - prefixTerms == 1: remaining tail starts at 1 + 1/(3 + 4/(5 + ...)),
+//     conservatively in [1, 4/3]
+//   - prefixTerms == 2: remaining tail starts at 3 + 4/(5 + 9/(7 + ...)),
+//     conservatively in [3, 5]
+//   - prefixTerms >= 3: no tighter interval currently provided
 func LambertPiOver4TailRangeAfterPrefix(prefixTerms int) (Range, bool, error) {
 	if prefixTerms < 0 {
 		return Range{}, false, fmt.Errorf("LambertPiOver4TailRangeAfterPrefix: negative prefixTerms %d", prefixTerms)
@@ -37,6 +40,17 @@ func LambertPiOver4TailRangeAfterPrefix(prefixTerms int) (Range, bool, error) {
 		return NewRange(mustRat(3, 4), mustRat(1, 1), true, true), true, nil
 	case 1:
 		return NewRange(mustRat(1, 1), mustRat(4, 3), true, true), true, nil
+	case 2:
+		// Remaining tail is:
+		//   3 + 4/u
+		// where
+		//   u = 5 + 9/(7 + 16/(9 + ...))
+		//
+		// Since u >= 5, a conservative enclosure is:
+		//   3 + 4/u in [3, 3 + 4/5] ⊆ [3, 5]
+		//
+		// We keep the simple closed interval [3,5] for now.
+		return NewRange(mustRat(3, 1), mustRat(5, 1), true, true), true, nil
 	default:
 		return Range{}, false, nil
 	}
@@ -51,4 +65,4 @@ func LambertPiOver4ApproxFromPrefix(prefixTerms int) (GCFApprox, error) {
 	)
 }
 
-// lambert_pi_tail.go v2
+// lambert_pi_tail.go v3

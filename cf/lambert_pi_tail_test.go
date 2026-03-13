@@ -1,4 +1,4 @@
-// lambert_pi_tail_test.go v2
+// lambert_pi_tail_test.go v3
 package cf
 
 import "testing"
@@ -45,8 +45,24 @@ func TestLambertPiOver4TailRangeAfterPrefix_Prefix1(t *testing.T) {
 	}
 }
 
-func TestLambertPiOver4TailRangeAfterPrefix_Prefix2NotYetSpecialized(t *testing.T) {
-	_, ok, err := LambertPiOver4TailRangeAfterPrefix(2)
+func TestLambertPiOver4TailRangeAfterPrefix_Prefix2(t *testing.T) {
+	got, ok, err := LambertPiOver4TailRangeAfterPrefix(2)
+	if err != nil {
+		t.Fatalf("LambertPiOver4TailRangeAfterPrefix failed: %v", err)
+	}
+	if !ok {
+		t.Fatalf("expected ok=true")
+	}
+
+	wantLo := mustRat(3, 1)
+	wantHi := mustRat(5, 1)
+	if got.Lo.Cmp(wantLo) != 0 || got.Hi.Cmp(wantHi) != 0 {
+		t.Fatalf("got [%v,%v] want [%v,%v]", got.Lo, got.Hi, wantLo, wantHi)
+	}
+}
+
+func TestLambertPiOver4TailRangeAfterPrefix_Prefix3NotYetSpecialized(t *testing.T) {
+	_, ok, err := LambertPiOver4TailRangeAfterPrefix(3)
 	if err != nil {
 		t.Fatalf("LambertPiOver4TailRangeAfterPrefix failed: %v", err)
 	}
@@ -78,7 +94,7 @@ func TestLambertPiOver4ApproxFromPrefix_Prefix1UsesSpecializedTailRange(t *testi
 	}
 }
 
-func TestLambertPiOver4ApproxFromPrefix_Prefix2FallsBackToGenericLowerBound(t *testing.T) {
+func TestLambertPiOver4ApproxFromPrefix_Prefix2UsesSpecializedTailRange(t *testing.T) {
 	got, err := LambertPiOver4ApproxFromPrefix(2)
 	if err != nil {
 		t.Fatalf("LambertPiOver4ApproxFromPrefix failed: %v", err)
@@ -92,15 +108,12 @@ func TestLambertPiOver4ApproxFromPrefix_Prefix2FallsBackToGenericLowerBound(t *t
 		t.Fatalf("expected non-nil range")
 	}
 
-	// Generic lower-bound-only behavior:
-	// x = 1/(1 + 1/tail), tail >= 1 => [1/2, 1]
-	wantLo := mustRat(1, 2)
-	wantHi := mustRat(1, 1)
+	// After two terms, x = 1 / (1 + 1/tail) with tail in [3, 5],
+	// so x = tail/(tail+1) in [3/4, 5/6].
+	wantLo := mustRat(3, 4)
+	wantHi := mustRat(5, 6)
 	if got.Range.Lo.Cmp(wantLo) != 0 || got.Range.Hi.Cmp(wantHi) != 0 {
 		t.Fatalf("got range [%v,%v] want [%v,%v]", got.Range.Lo, got.Range.Hi, wantLo, wantHi)
-	}
-	if !got.Range.Contains(mustRat(3, 4)) {
-		t.Fatalf("expected range %v to contain a valid unfinished Lambert value like 3/4", *got.Range)
 	}
 }
 
@@ -111,4 +124,4 @@ func TestLambertPiOver4ApproxFromPrefix_RejectsZeroPrefixTerms(t *testing.T) {
 	}
 }
 
-// lambert_pi_tail_test.go v2
+// lambert_pi_tail_test.go v3

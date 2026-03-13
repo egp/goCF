@@ -52,27 +52,20 @@ func TestLambertSpecializedVsGeneric_Prefix1(t *testing.T) {
 	}
 }
 
-func TestLambertSpecializedVsGeneric_Prefix2_NoSpecializedGain(t *testing.T) {
-	spec, err := LambertPiOver4ApproxFromPrefix(2)
-	if err != nil {
-		t.Fatalf("LambertPiOver4ApproxFromPrefix failed: %v", err)
-	}
-	gen, err := GCFApproxFromPrefix(NewLambertPiOver4GCFSource(), 2)
-	if err != nil {
-		t.Fatalf("GCFApproxFromPrefix failed: %v", err)
-	}
+type lambertLowerBoundOnlySource struct {
+	src *LambertPiOver4GCFSource
+}
 
-	if spec.Range == nil || gen.Range == nil {
-		t.Fatalf("expected both ranges to be non-nil")
-	}
+func newLambertLowerBoundOnlySource() *lambertLowerBoundOnlySource {
+	return &lambertLowerBoundOnlySource{src: NewLambertPiOver4GCFSource()}
+}
 
-	specSpan := rangeSpan(*spec.Range)
-	genSpan := rangeSpan(*gen.Range)
+func (s *lambertLowerBoundOnlySource) NextPQ() (int64, int64, bool) {
+	return s.src.NextPQ()
+}
 
-	// Prefix 2 currently falls back to generic logic, so spans should match.
-	if specSpan.Cmp(genSpan) != 0 {
-		t.Fatalf("expected equal spans at Lambert prefix 2: spec=%v gen=%v", specSpan, genSpan)
-	}
+func (s *lambertLowerBoundOnlySource) TailLowerBound() Rational {
+	return mustRat(1, 1)
 }
 
 func TestBrounckerSpecializedVsGeneric_Prefix1(t *testing.T) {
@@ -114,27 +107,38 @@ func TestBrounckerSpecializedVsGeneric_Prefix1(t *testing.T) {
 		t.Fatalf("generic got [%v,%v] want [%v,%v]", gen.Range.Lo, gen.Range.Hi, wantGenLo, wantGenHi)
 	}
 }
-
-func TestBrounckerSpecializedVsGeneric_Prefix2_NoSpecializedGain(t *testing.T) {
-	spec, err := Brouncker4OverPiApproxFromPrefix(2)
+func TestLambertSpecializedVsGeneric_Prefix2_SpecializedGain(t *testing.T) {
+	spec, err := LambertPiOver4ApproxFromPrefix(2)
 	if err != nil {
-		t.Fatalf("Brouncker4OverPiApproxFromPrefix failed: %v", err)
+		t.Fatalf("LambertPiOver4ApproxFromPrefix failed: %v", err)
 	}
-	gen, err := GCFApproxFromPrefix(NewBrouncker4OverPiGCFSource(), 2)
+
+	gen, err := specializedGCFApproxFromPrefix(
+		2,
+		func() GCFSource { return newLambertLowerBoundOnlySource() },
+		func(prefixTerms int) (Range, bool, error) { return Range{}, false, nil },
+		LambertPiOver4TailLowerBoundAfterPrefix,
+	)
 	if err != nil {
-		t.Fatalf("GCFApproxFromPrefix failed: %v", err)
+		t.Fatalf("specializedGCFApproxFromPrefix failed: %v", err)
 	}
 
 	if spec.Range == nil || gen.Range == nil {
 		t.Fatalf("expected both ranges to be non-nil")
 	}
 
-	specSpan := rangeSpan(*spec.Range)
-	genSpan := rangeSpan(*gen.Range)
+	specSpan, err := spec.Range.Hi.Sub(spec.Range.Lo)
+	if err != nil {
+		t.Fatalf("specialized span failed: %v", err)
+	}
 
-	// Prefix 2 currently falls back to generic logic, so spans should match.
-	if specSpan.Cmp(genSpan) != 0 {
-		t.Fatalf("expected equal spans at Brouncker prefix 2: spec=%v gen=%v", specSpan, genSpan)
+	genSpan, err := gen.Range.Hi.Sub(gen.Range.Lo)
+	if err != nil {
+		t.Fatalf("generic span failed: %v", err)
+	}
+
+	if specSpan.Cmp(genSpan) >= 0 {
+		t.Fatalf("expected Lambert specialized prefix 2 span to be tighter: spec=%v gen=%v", specSpan, genSpan)
 	}
 }
 

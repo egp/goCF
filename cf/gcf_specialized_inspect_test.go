@@ -34,8 +34,8 @@ func TestInspectLambertPiOver4Prefix(t *testing.T) {
 		t.Fatalf("expected non-nil range")
 	}
 
-	wantLo := mustRat(1, 2)
-	wantHi := mustRat(1, 1)
+	wantLo := mustRat(3, 4)
+	wantHi := mustRat(5, 6)
 	if got.Approx.Range.Lo.Cmp(wantLo) != 0 || got.Approx.Range.Hi.Cmp(wantHi) != 0 {
 		t.Fatalf("got range [%v,%v] want [%v,%v]", got.Approx.Range.Lo, got.Approx.Range.Hi, wantLo, wantHi)
 	}
