@@ -1,4 +1,4 @@
-// gcf_stream_named_sources_test.go v1
+// gcf_stream_named_sources_test.go v4
 package cf
 
 import (
@@ -156,4 +156,58 @@ func TestGCFStream_BrounckerInfiniteSourceEmitsFirstDigit(t *testing.T) {
 	}
 }
 
-// gcf_stream_named_sources_test.go v1
+func TestGCFStream_LambertInfinitePrefixMatchesStabilizedFinitePrefixes(t *testing.T) {
+	lambertFactory := func() GCFSource { return NewLambertPiOver4GCFSource() }
+
+	want8 := exactDigitsFromFinitePrefix(t, lambertFactory, 8, 3)
+	want10 := exactDigitsFromFinitePrefix(t, lambertFactory, 10, 3)
+
+	if len(want8) != len(want10) {
+		t.Fatalf("stabilization len mismatch: want8=%v want10=%v", want8, want10)
+	}
+	for i := range want8 {
+		if want8[i] != want10[i] {
+			t.Fatalf("Lambert finite prefixes not stabilized at digit %d: p8=%v p10=%v", i, want8, want10)
+		}
+	}
+
+	got := collectTerms(NewGCFStream(NewLambertPiOver4GCFSource(), GCFStreamOptions{}), 3)
+
+	if len(got) != len(want10) {
+		t.Fatalf("len mismatch: got=%v want=%v", got, want10)
+	}
+	for i := range want10 {
+		if got[i] != want10[i] {
+			t.Fatalf("digit %d: got=%v want=%v", i, got, want10)
+		}
+	}
+}
+
+func TestGCFStream_BrounckerInfinitePrefixMatchesStabilizedFinitePrefixes(t *testing.T) {
+	brounckerFactory := func() GCFSource { return NewBrouncker4OverPiGCFSource() }
+
+	want8 := exactDigitsFromFinitePrefix(t, brounckerFactory, 8, 2)
+	want10 := exactDigitsFromFinitePrefix(t, brounckerFactory, 10, 2)
+
+	if len(want8) != len(want10) {
+		t.Fatalf("stabilization len mismatch: want8=%v want10=%v", want8, want10)
+	}
+	for i := range want8 {
+		if want8[i] != want10[i] {
+			t.Fatalf("Brouncker finite prefixes not stabilized at digit %d: p8=%v p10=%v", i, want8, want10)
+		}
+	}
+
+	got := collectTerms(NewGCFStream(NewBrouncker4OverPiGCFSource(), GCFStreamOptions{}), 2)
+
+	if len(got) != len(want10) {
+		t.Fatalf("len mismatch: got=%v want=%v", got, want10)
+	}
+	for i := range want10 {
+		if got[i] != want10[i] {
+			t.Fatalf("digit %d: got=%v want=%v", i, got, want10)
+		}
+	}
+}
+
+// gcf_stream_named_sources_test.go v4

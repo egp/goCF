@@ -1,5 +1,7 @@
-// gcf_stream_test_helpers_test.go v1
+// gcf_stream_test_helpers_test.go v2
 package cf
+
+import "testing"
 
 type finitePrefixGCFSource struct {
 	src   GCFSource
@@ -38,4 +40,20 @@ func collectFinitePrefixTerms(src GCFSource, n int) [][2]int64 {
 	return out
 }
 
-// gcf_stream_test_helpers_test.go v1
+func exactDigitsFromFinitePrefix(
+	t *testing.T,
+	srcFactory func() GCFSource,
+	prefixLen int,
+	maxDigits int,
+) []int64 {
+	t.Helper()
+
+	terms := collectFinitePrefixTerms(srcFactory(), prefixLen)
+	rat, err := EvaluateFiniteGCF(NewSliceGCF(terms...))
+	if err != nil {
+		t.Fatalf("EvaluateFiniteGCF failed for prefixLen=%d: %v", prefixLen, err)
+	}
+	return collectTerms(NewRationalCF(rat), maxDigits)
+}
+
+// gcf_stream_test_helpers_test.go v2
