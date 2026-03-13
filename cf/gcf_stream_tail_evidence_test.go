@@ -600,4 +600,111 @@ func TestGCFStream_ReusableTailRangePoleBoundaryIsNotImmediateHardError(t *testi
 	}
 }
 
+func TestGCFStream_ReusableTailRangePoleBoundary_ThirdDigitMatchesExactFiniteOracle(t *testing.T) {
+	factory := func() GCFSource { return &plainTwoOneGCFSource{} }
+
+	want8 := exactDigitsFromFinitePrefix(t, factory, 8, 3)
+	want10 := exactDigitsFromFinitePrefix(t, factory, 10, 3)
+
+	if len(want8) != len(want10) {
+		t.Fatalf("stabilization len mismatch: want8=%v want10=%v", want8, want10)
+	}
+	for i := range want8 {
+		if want8[i] != want10[i] {
+			t.Fatalf("oracle fixture not stabilized at digit %d: p8=%v p10=%v", i, want8, want10)
+		}
+	}
+
+	src := &reusableOracleTailRangeGCFSource{}
+	s := NewGCFStream(src, GCFStreamOptions{})
+
+	got := collectTerms(s, 3)
+	if len(got) != 3 {
+		t.Fatalf("expected 3 digits, got=%v err=%v", got, s.Err())
+	}
+
+	for i := range want10 {
+		if got[i] != want10[i] {
+			t.Fatalf("digit %d: got=%v want=%v", i, got, want10)
+		}
+	}
+
+	if err := s.Err(); err != nil {
+		t.Fatalf("unexpected stream err: %v", err)
+	}
+}
+
+type exactPointPoleTailEvidenceGCFSource struct {
+	calls int
+}
+
+func (s *exactPointPoleTailEvidenceGCFSource) NextPQ() (int64, int64, bool) {
+	s.calls++
+	return 2, 1, true
+}
+
+func (s *exactPointPoleTailEvidenceGCFSource) TailEvidence() GCFTailEvidence {
+	// With one ingested (2,1) term and exact tail y=-1:
+	//   x = 2 + 1/y = 1
+	// so the first ordinary CF digit 1 is emitted successfully.
+	//
+	// After emitting 1, the remainder transform is singular at exact point x=1,
+	// so this should remain a hard exact-point error.
+	r := NewRange(mustRat(-1, 1), mustRat(-1, 1), true, true)
+	return GCFTailEvidence{
+		Range:         &r,
+		RangeReusable: true,
+	}
+}
+
+func TestGCFStream_ExactPointExplicitTailRangePoleRemainsHardError(t *testing.T) {
+	src := &exactPointPoleTailEvidenceGCFSource{}
+	s := NewGCFStream(src, GCFStreamOptions{})
+
+	d, ok := s.Next()
+	if !ok {
+		t.Fatalf("expected first digit, err=%v", s.Err())
+	}
+	if d != 1 {
+		t.Fatalf("got first digit %d want 1", d)
+	}
+
+	_, ok = s.Next()
+	if ok {
+		t.Fatalf("expected second step to fail on exact-point pole")
+	}
+	if err := s.Err(); err == nil {
+		t.Fatalf("expected non-nil hard error on exact-point explicit tail-range pole")
+	}
+}
+
+func TestGCFStream_NonPointExplicitTailRangePoleFallsThroughWithoutHardError(t *testing.T) {
+	src := &reusableOracleTailRangeGCFSource{}
+	s := NewGCFStream(src, GCFStreamOptions{})
+
+	d, ok := s.Next()
+	if !ok {
+		t.Fatalf("expected first digit, err=%v", s.Err())
+	}
+	if d != 2 {
+		t.Fatalf("got first digit %d want 2", d)
+	}
+
+	d, ok = s.Next()
+	if !ok {
+		t.Fatalf("expected second digit, err=%v", s.Err())
+	}
+	if d != 2 {
+		t.Fatalf("got second digit %d want 2", d)
+	}
+
+	_, ok = s.Next()
+	if !ok {
+		t.Fatalf("expected third digit after non-point pole fallback, err=%v", s.Err())
+	}
+	if err := s.Err(); err != nil {
+		t.Fatalf("expected no hard error after non-point explicit tail-range pole, got %v", err)
+	}
+}
+
 // gcf_stream_tail_evidence_test.go v3
