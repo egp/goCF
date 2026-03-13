@@ -1,4 +1,4 @@
-// brouncker_pi_tail.go v2
+// brouncker_pi_tail.go v3
 package cf
 
 import "fmt"
@@ -27,11 +27,13 @@ func (s *Brouncker4OverPiGCFSource) LowerBoundRayMinPrefix() int {
 //     back to lower-bound-only ray semantics
 //   - (_, false, err) => invalid input
 //
-// Current v1 support:
+// Current v3 support:
 //   - prefixTerms == 0: tail is the whole Brouncker object, conservatively in [1, 3/2]
 //   - prefixTerms == 1: remaining tail starts at 2 + 1/(2 + 9/(2 + ...)),
 //     conservatively in [2, 5/2]
-//   - prefixTerms >= 2: no tighter interval currently provided
+//   - prefixTerms == 2: remaining tail starts at 2 + 25/(2 + 49/(2 + ...)),
+//     conservatively in [2, 29/2]
+//   - prefixTerms >= 3: no tighter interval currently provided
 func Brouncker4OverPiTailRangeAfterPrefix(prefixTerms int) (Range, bool, error) {
 	if prefixTerms < 0 {
 		return Range{}, false, fmt.Errorf("Brouncker4OverPiTailRangeAfterPrefix: negative prefixTerms %d", prefixTerms)
@@ -42,6 +44,11 @@ func Brouncker4OverPiTailRangeAfterPrefix(prefixTerms int) (Range, bool, error) 
 		return NewRange(mustRat(1, 1), mustRat(3, 2), true, true), true, nil
 	case 1:
 		return NewRange(mustRat(2, 1), mustRat(5, 2), true, true), true, nil
+	case 2:
+		// Remaining tail is:
+		//   2 + 25/u
+		// where u >= 2, hence tail in [2, 2 + 25/2] = [2, 29/2].
+		return NewRange(mustRat(2, 1), mustRat(29, 2), true, true), true, nil
 	default:
 		return Range{}, false, nil
 	}
@@ -56,4 +63,4 @@ func Brouncker4OverPiApproxFromPrefix(prefixTerms int) (GCFApprox, error) {
 	)
 }
 
-// brouncker_pi_tail.go v2
+// brouncker_pi_tail.go v3

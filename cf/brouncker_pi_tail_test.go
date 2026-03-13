@@ -1,4 +1,4 @@
-// brouncker_pi_tail_test.go v2
+// brouncker_pi_tail_test.go v3
 package cf
 
 import "testing"
@@ -45,8 +45,24 @@ func TestBrouncker4OverPiTailRangeAfterPrefix_Prefix1(t *testing.T) {
 	}
 }
 
-func TestBrouncker4OverPiTailRangeAfterPrefix_Prefix2NotYetSpecialized(t *testing.T) {
-	_, ok, err := Brouncker4OverPiTailRangeAfterPrefix(2)
+func TestBrouncker4OverPiTailRangeAfterPrefix_Prefix2(t *testing.T) {
+	got, ok, err := Brouncker4OverPiTailRangeAfterPrefix(2)
+	if err != nil {
+		t.Fatalf("Brouncker4OverPiTailRangeAfterPrefix failed: %v", err)
+	}
+	if !ok {
+		t.Fatalf("expected ok=true")
+	}
+
+	wantLo := mustRat(2, 1)
+	wantHi := mustRat(29, 2)
+	if got.Lo.Cmp(wantLo) != 0 || got.Hi.Cmp(wantHi) != 0 {
+		t.Fatalf("got [%v,%v] want [%v,%v]", got.Lo, got.Hi, wantLo, wantHi)
+	}
+}
+
+func TestBrouncker4OverPiTailRangeAfterPrefix_Prefix3NotYetSpecialized(t *testing.T) {
+	_, ok, err := Brouncker4OverPiTailRangeAfterPrefix(3)
 	if err != nil {
 		t.Fatalf("Brouncker4OverPiTailRangeAfterPrefix failed: %v", err)
 	}
@@ -78,7 +94,7 @@ func TestBrouncker4OverPiApproxFromPrefix_Prefix1UsesSpecializedTailRange(t *tes
 	}
 }
 
-func TestBrouncker4OverPiApproxFromPrefix_Prefix2FallsBackToGenericLowerBound(t *testing.T) {
+func TestBrouncker4OverPiApproxFromPrefix_Prefix2UsesSpecializedTailRange(t *testing.T) {
 	got, err := Brouncker4OverPiApproxFromPrefix(2)
 	if err != nil {
 		t.Fatalf("Brouncker4OverPiApproxFromPrefix failed: %v", err)
@@ -92,15 +108,13 @@ func TestBrouncker4OverPiApproxFromPrefix_Prefix2FallsBackToGenericLowerBound(t 
 		t.Fatalf("expected non-nil range")
 	}
 
-	// Corrected Brouncker source:
-	// x = 1 + 1/(2 + 9/tail), tail >= 1 => [12/11, 3/2]
-	wantLo := mustRat(12, 11)
-	wantHi := mustRat(3, 2)
+	// Prefix 2 means x = 1 + 1/(2 + 9/tail), with tail in [2, 29/2].
+	// Then 2 + 9/tail in [2 + 18/29, 13/2] = [76/29, 13/2],
+	// so x in [1 + 2/13, 1 + 29/76] = [15/13, 105/76].
+	wantLo := mustRat(15, 13)
+	wantHi := mustRat(105, 76)
 	if got.Range.Lo.Cmp(wantLo) != 0 || got.Range.Hi.Cmp(wantHi) != 0 {
 		t.Fatalf("got range [%v,%v] want [%v,%v]", got.Range.Lo, got.Range.Hi, wantLo, wantHi)
-	}
-	if !got.Range.Contains(mustRat(15, 13)) {
-		t.Fatalf("expected range %v to contain a valid unfinished Brouncker value like 15/13", *got.Range)
 	}
 }
 
@@ -111,4 +125,4 @@ func TestBrouncker4OverPiApproxFromPrefix_RejectsZeroPrefixTerms(t *testing.T) {
 	}
 }
 
-// brouncker_pi_tail_test.go v2
+// brouncker_pi_tail_test.go v3
