@@ -359,18 +359,12 @@ func (s *nonReusableOracleTailRangeGCFSource) NextPQ() (int64, int64, bool) {
 	return 2, 1, true
 }
 
-func (s *nonReusableOracleTailRangeGCFSource) TailRange() Range {
-	// After one ingested (2,1) term, x = 2 + 1/y with y in [2, 5/2].
-	// So x in [12/5, 5/2], certifying first digit 2.
-	//
-	// After emitting 2, the remainder is exactly y, and [2, 5/2] still has
-	// unique floor 2. So a reusable tail-range contract can certify the second
-	// digit without another ingest.
-	return NewRange(mustRat(2, 1), mustRat(5, 2), true, true)
-}
-
-func (s *nonReusableOracleTailRangeGCFSource) TailRangeReusable() bool {
-	return false
+func (s *nonReusableOracleTailRangeGCFSource) TailEvidence() GCFTailEvidence {
+	r := NewRange(mustRat(2, 1), mustRat(5, 2), true, true)
+	return GCFTailEvidence{
+		Range:         &r,
+		RangeReusable: false,
+	}
 }
 
 type reusableOracleTailRangeGCFSource struct {
@@ -382,14 +376,13 @@ func (s *reusableOracleTailRangeGCFSource) NextPQ() (int64, int64, bool) {
 	return 2, 1, true
 }
 
-func (s *reusableOracleTailRangeGCFSource) TailRange() Range {
-	return NewRange(mustRat(2, 1), mustRat(5, 2), true, true)
+func (s *reusableOracleTailRangeGCFSource) TailEvidence() GCFTailEvidence {
+	r := NewRange(mustRat(2, 1), mustRat(5, 2), true, true)
+	return GCFTailEvidence{
+		Range:         &r,
+		RangeReusable: true,
+	}
 }
-
-func (s *reusableOracleTailRangeGCFSource) TailRangeReusable() bool {
-	return true
-}
-
 func TestGCFStream_ReusableTailRangePolicyBeatsNonReusablePolicy_OnOracleBackedFixture(t *testing.T) {
 	factory := func() GCFSource { return &plainTwoOneGCFSource{} }
 
@@ -514,6 +507,31 @@ func TestGCFStream_UnifiedTailEvidenceMatchesReusableSplitContracts(t *testing.T
 	}
 	if err := split.Err(); err != nil {
 		t.Fatalf("split source: unexpected stream err: %v", err)
+	}
+}
+
+type invalidReusableTailEvidenceGCFSource struct{}
+
+func (s *invalidReusableTailEvidenceGCFSource) NextPQ() (int64, int64, bool) {
+	return 1, 1, true
+}
+
+func (s *invalidReusableTailEvidenceGCFSource) TailEvidence() GCFTailEvidence {
+	return GCFTailEvidence{
+		Range:         nil,
+		RangeReusable: true,
+	}
+}
+
+func TestGCFStream_InvalidUnifiedTailEvidence_IsError(t *testing.T) {
+	s := NewGCFStream(&invalidReusableTailEvidenceGCFSource{}, GCFStreamOptions{})
+
+	_, ok := s.Next()
+	if ok {
+		t.Fatalf("expected no digit")
+	}
+	if err := s.Err(); err == nil {
+		t.Fatalf("expected non-nil error")
 	}
 }
 
