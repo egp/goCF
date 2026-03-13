@@ -402,4 +402,57 @@ func TestGCFStream_StableTailRangeSecondDigitAfterOneMoreIngest(t *testing.T) {
 	}
 }
 
+type prefixSensitiveTailRangeGCFSource struct {
+	i     int
+	calls int
+}
+
+func (s *prefixSensitiveTailRangeGCFSource) NextPQ() (int64, int64, bool) {
+	s.calls++
+	s.i++
+	return 1, 1, true
+}
+
+func (s *prefixSensitiveTailRangeGCFSource) TailLowerBound() Rational {
+	return mustRat(1, 1)
+}
+
+func (s *prefixSensitiveTailRangeGCFSource) TailRange() Range {
+	switch s.i {
+	case 0:
+		// Before any ingestion, too wide to prove anything useful.
+		return NewRange(mustRat(1, 1), mustRat(3, 1), true, true)
+	case 1:
+		// Still too wide.
+		return NewRange(mustRat(1, 1), mustRat(3, 1), true, true)
+	default:
+		// Tightens after enough ingestion; now should permit first digit 1.
+		return NewRange(mustRat(1, 1), mustRat(2, 1), true, true)
+	}
+}
+
+func TestGCFStream_UsesCurrentPrefixSensitiveTailRange(t *testing.T) {
+	src := &prefixSensitiveTailRangeGCFSource{}
+	s := NewGCFStream(src, GCFStreamOptions{})
+
+	d, ok := s.Next()
+	if !ok {
+		t.Fatalf("expected first digit, err=%v", s.Err())
+	}
+	if d != 1 {
+		t.Fatalf("got first digit %d want 1", d)
+	}
+
+	// If GCFStream were reusing stale constructor-time TailRange evidence,
+	// it would not see the tightened [1,2] range and this would either take
+	// longer or fail to emit here.
+	if src.calls != 2 {
+		t.Fatalf("expected first digit after exactly 2 ingested terms, got %d", src.calls)
+	}
+
+	if err := s.Err(); err != nil {
+		t.Fatalf("unexpected stream err: %v", err)
+	}
+}
+
 // gcf_stream_test.go v1

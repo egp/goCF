@@ -40,6 +40,12 @@ Stretch goal: make Gosper smile.
   - Brouncker 4/pi
 - Specialized inspection helpers are implemented.
 - Generic and specialized GCF helper layers have begun to be consolidated.
+- `GCFStream` finite-first behavior is implemented and currently passes tests for:
+  - finite `SliceGCF` equivalence vs `EvaluateFiniteGCF`
+  - adapted regular CF round-trip through `AdaptCFToGCF`
+  - bounded exact termination semantics
+  - generic stable `TailRange()`-driven earlier emission
+- `GCFStream` now queries `TailRange()` dynamically from source state rather than caching it at construction time.
 
 ### Sources
 - Regular CF sources:
@@ -71,6 +77,7 @@ Stretch goal: make Gosper smile.
   - BLFT denominator helpers
   - Range floor/string/refinement behavior
   - Bounder semantics
+  - `GCFStream` generic stable `TailRange()` cadence / early emission semantics
 - First fuzz target added for `ULFTStream`.
 - Future note: expand fuzz coverage later, especially for BLFTStream, DiagBLFTStream, and other core arithmetic/streaming components.
 
@@ -78,6 +85,7 @@ Stretch goal: make Gosper smile.
 - User guide skeleton exists.
 - `api_spec.md` and `UserGuide.md` currently overlap; later either combine them or sharpen the distinction and remove the redundancy.
 - Hold off on more documentation updates for now while production code and tests improve.
+- Public API is not considered frozen yet; continue improving client ergonomics where it does not compromise mathematical clarity.
 
 ---
 
@@ -88,6 +96,8 @@ Stretch goal: make Gosper smile.
 - Under normal circumstances, keep methods around 30–40 lines so they fit on one screen.
 - Break longer methods into smaller helpers for readability, self-documentation, testability, and safer refactoring.
 - Continue reviewing production code for DRY opportunities and consolidation where it improves maintainability without obscuring the math.
+- Treat current source and tests as ground truth over stale documentation.
+- Prefer dynamic, prefix-sensitive tail evidence over cached metadata when source contracts are stateful.
 
 ---
 
@@ -100,6 +110,8 @@ Stretch goal: make Gosper smile.
 - Fixed BLFT exact-point remainder-pole clean exhaustion semantics.
 - Fixed DiagBLFT refine-before-fail behavior for coarse unsupported intervals.
 - Fixed DiagBLFT exact-point remainder-pole clean exhaustion semantics.
+- Fixed `GCFStream` to use current source-provided `TailRange()` evidence dynamically instead of stale constructor-cached range metadata.
+- Corrected a `GCFStream` stable-tail-range cadence test fixture to match the actual regular CF of the `(1,1)`-forever GCF source (golden-ratio behavior).
 
 ### Refactoring progress
 - Factored shared exact-point exhaustion policy.
@@ -116,49 +128,44 @@ Stretch goal: make Gosper smile.
 
 ## Immediate Next Milestone
 
-### Implement `GCFStream` for finite sources first, test-first
+### Harden `GCFStream` finite-first semantics and prepare for unfinished-tail support
 
-This is the next major step toward the stretch goal.
+`GCFStream` now exists and passes its current finite-first and early-emission tests. The next step is to harden the semantics around tail evidence, cadence, and source contracts before expanding unfinished-tail support.
 
 ### Why
-Right now generalized continued fractions are:
+Generalized continued fractions are now not only:
 - inspectable
 - prefix-comparable
 - enclosure-aware
 
-But not yet truly useful as lazy ordinary continued-fraction producers.
+but also capable of finite-first lazy ordinary CF production.
 
-A finite-first `GCFStream` will turn GCF support from bounded-prefix tooling into actual streaming transform machinery.
+The next leverage comes from making the finite-first implementation more robust and from clarifying the boundary between:
+- exact finite fallback
+- dynamic tail metadata
+- weaker lower-bound-ray fallback
+- future unfinished-tail enclosure streaming
 
-### Phase 1
-Implement a stream for finite GCF sources that:
-- ingests `(p,q)` terms into an internal transform state
-- handles source exhaustion correctly
-- emits ordinary CF digits lazily
-- matches exact rational evaluation of the finite GCF
+### Phase 1a
+Strengthen tests around current `GCFStream` behavior:
+- dynamic prefix-sensitive `TailRange()` semantics
+- preference of explicit `TailRange()` over lower-bound ray
+- cadence rules for metadata-driven emission
+- finite exact fallback after source exhaustion
+- clean separation between reusable strong evidence and weaker conservative evidence
 
-### Initial correctness targets
-- finite `SliceGCF` matches `EvaluateFiniteGCF`
-- adapted regular CF via `AdaptCFToGCF` round-trips back to the original ordinary CF
-- bounded exact termination semantics are correct
-
-### Likely API
-- `type GCFStream struct { ... }`
-- `func NewGCFStream(src GCFSource, opts GCFStreamOptions) *GCFStream`
-- `func (s *GCFStream) Next() (int64, bool)`
-- `func (s *GCFStream) Err() error`
-
-### Likely internal direction
-- represent consumed GCF prefix as an evolving ULFT
-- use exact rational fallback for finite-source termination first
-- add true unfinished-tail enclosure-driven digit safety later
+### Phase 1b
+Review the public/client-facing `GCFStream` API:
+- confirm whether `Next() (int64, bool)` + `Err()` is the right long-term surface
+- compare ergonomics and semantics with the other stream engines
+- add small helper constructors or naming improvements if they materially improve clarity
 
 ---
 
 ## Near-Term Plan After Finite GCFStream
 
-1. Make finite `GCFStream` correct and well tested.
-2. Add adapted regular-CF round-trip tests.
+1. Harden finite `GCFStream` semantics with more targeted tests.
+2. Add additional adapted regular-CF round-trip and cadence tests.
 3. Add named finite-prefix fixtures for Lambert and Brouncker.
 4. Extend `GCFStream` from finite-only behavior toward unfinished-tail enclosure support.
 5. Reuse existing GCF tail metadata ideas where mathematically justified.
@@ -191,12 +198,14 @@ Keep increasing coverage strategically, prioritizing:
 - transform safety / pole behavior
 - exact termination semantics
 - finite rational equivalence to exact arithmetic
+- GCF tail-evidence semantics and fallback boundaries
 
 Future targeted fuzzing:
 - BLFTStream
 - DiagBLFTStream
 - Range / BLFT denominator helpers
 - additional arithmetic and streaming invariants
+- later: `GCFStream` once its unfinished-tail contract stabilizes
 
 ---
 
@@ -218,4 +227,5 @@ Keep making meaningful progress toward:
 - true generalized-CF streaming
 - stronger exact arithmetic foundations
 - transform correctness
+- client-usable API improvements where justified
 - Gosper-utopia
