@@ -1,33 +1,57 @@
 Go CF / GCFStream checkpoint
 
-Current priorities:
+Working rules:
+- keep chat context small
+- ask for current file contents instead of assuming code state
 - mathematical correctness first
 - testability / DfT second
-- keep context small
-- ask for current file contents instead of assuming code state
 - public API is not frozen; improve ergonomics where justified
+- no Lambert/Brouncker-specific logic in generic GCFStream ingestion
 
 What was completed:
-- fixed GCFStream to query TailRange() dynamically from source state instead of caching it
-- corrected golden-ratio stable-tail-range test expectation ((1,1)-forever source => [1;1,1,1,...])
-- added GCFStream tests for:
+- split gcf_stream tests into:
+  - gcf_stream_finite_test.go
+  - gcf_stream_tail_evidence_test.go
+  - gcf_stream_named_sources_test.go
+  - gcf_stream_test_helpers_test.go
+- GCFStream now queries TailRange() dynamically from source state
+- corrected golden-ratio stable-tail-range expectation
+- added and kept tests for:
   - stable TailRange earlier emission
   - prefix-sensitive dynamic TailRange behavior
   - explicit TailRange strength ordering
-  - preference of explicit TailRange over lower-bound ray fallback
+  - preference of explicit TailRange over lower-bound ray
+  - generic lower-bound-ray min-prefix policy
+  - lower-bound-only source can still emit
   - finite Lambert prefix via generic ingestion matches EvaluateFiniteGCF
   - finite Brouncker prefix via generic ingestion matches EvaluateFiniteGCF
   - Lambert infinite source emits first digit
   - Brouncker infinite source emits first digit
-  - generic lower-bound-ray min-prefix policy
-- removed named-source lower-bound-ray policy from GCFStream and moved it to a source contract
+  - Lambert infinite prefix matches stabilized exact finite prefixes
+  - Brouncker infinite prefix matches stabilized exact finite prefixes (currently justified for 2 digits, not 3)
+- moved lower-bound-ray prefix policy out of GCFStream and into a generic source contract
 - refactored GCFStream tail-evidence emission into smaller helpers
-- MasterPlan updated to reflect GCFStream semantic-hardening phase
+- refactored GCFStream Next() flow into smaller progression helpers
+- refined GCFStream tail-evidence handling further; experimental reusable-tail-range black-box tests were removed because the fixtures were not mathematically justified
 
-Architectural rule established:
-- no Lambert/Brouncker-specific logic in generic GCFStream ingestion
-- named behavior belongs in GCFSource / tail-metadata contracts
+Current architectural position:
+- generic GCFStream ingestion is source-agnostic
+- named source behavior belongs in GCFSource / tail-metadata contracts
+- explicit tail-range evidence and lower-bound-ray fallback are distinct concepts
+- lower-bound-ray behavior remains conservative
+- experimental TailRangeReusable-style testing was not solid enough yet; do not treat that capability as established by current black-box tests
 
-Likely next step:
-- continue toward unfinished-tail support for infinite GCF sources
-- inspect current gcf_stream.go and related source contracts before next production change
+Current likely file state:
+- gcf_stream.go is around v7/v8-era refactoring with smaller helpers and explicit evidence-path separation
+- gcf_stream_tail_evidence_test.go has the experimental reusable/non-reusable tail-range section removed
+- test suite is green
+
+What the recent failures taught us:
+- several hand-invented reusable-tail-range fixtures were not mathematically strong enough to prove “two digits without another ingest”
+- Brouncker finite prefixes of lengths 8 and 10 do not yet justify a 3-digit stabilized infinite-prefix claim
+- do not encode speculative expectations into tests
+
+Best next step:
+- continue toward stronger unfinished-tail support for infinite GCF sources
+- before changing production code, inspect current gcf_stream.go and current tail-evidence tests
+- likely next work should use exact finite-prefix oracles to justify any stronger reusable-evidence claims
