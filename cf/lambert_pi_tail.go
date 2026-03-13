@@ -1,4 +1,4 @@
-// lambert_pi_tail.go v1
+// lambert_pi_tail.go v2
 package cf
 
 import "fmt"
@@ -34,12 +34,8 @@ func LambertPiOver4TailRangeAfterPrefix(prefixTerms int) (Range, bool, error) {
 
 	switch prefixTerms {
 	case 0:
-		// Lambert pi/4 lies in (0,1); use conservative closed interval [3/4, 1].
 		return NewRange(mustRat(3, 4), mustRat(1, 1), true, true), true, nil
 	case 1:
-		// Remaining tail after consuming (0,1) is:
-		// 1 + 1/(3 + 4/(5 + ...))
-		// Conservatively bounded in [1, 4/3].
 		return NewRange(mustRat(1, 1), mustRat(4, 3), true, true), true, nil
 	default:
 		return Range{}, false, nil
@@ -47,17 +43,12 @@ func LambertPiOver4TailRangeAfterPrefix(prefixTerms int) (Range, bool, error) {
 }
 
 // LambertPiOver4ApproxFromPrefix ingests up to prefixTerms terms from Lambert's
-// pi/4 GCF source and returns a GCFApprox.
-//
-// It prefers a prefix-aware tighter tail interval when currently available;
-// otherwise it falls back to the generic lower-bound-only enclosure path.
+// pi/4 GCF source and returns a GCFApprox using source-provided tail evidence.
 func LambertPiOver4ApproxFromPrefix(prefixTerms int) (GCFApprox, error) {
-	return specializedGCFApproxFromPrefix(
+	return specializedGCFApproxFromPrefixUsingSourceEvidence(
 		prefixTerms,
 		func() GCFSource { return NewLambertPiOver4GCFSource() },
-		LambertPiOver4TailRangeAfterPrefix,
-		LambertPiOver4TailLowerBoundAfterPrefix,
 	)
 }
 
-// lambert_pi_tail.go v1
+// lambert_pi_tail.go v2

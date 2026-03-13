@@ -1,4 +1,4 @@
-// brouncker_pi_tail.go v1
+// brouncker_pi_tail.go v2
 package cf
 
 import "fmt"
@@ -12,6 +12,7 @@ import "fmt"
 func Brouncker4OverPiTailLowerBoundAfterPrefix(prefixTerms int) Rational {
 	return mustRat(1, 1)
 }
+
 func (s *Brouncker4OverPiGCFSource) LowerBoundRayMinPrefix() int {
 	return 2
 }
@@ -47,17 +48,12 @@ func Brouncker4OverPiTailRangeAfterPrefix(prefixTerms int) (Range, bool, error) 
 }
 
 // Brouncker4OverPiApproxFromPrefix ingests up to prefixTerms terms from Brouncker's
-// 4/pi GCF source and returns a GCFApprox.
-//
-// It prefers a prefix-aware tighter tail interval when currently available;
-// otherwise it falls back to the generic lower-bound-only enclosure path.
+// 4/pi GCF source and returns a GCFApprox using source-provided tail evidence.
 func Brouncker4OverPiApproxFromPrefix(prefixTerms int) (GCFApprox, error) {
-	return specializedGCFApproxFromPrefix(
+	return specializedGCFApproxFromPrefixUsingSourceEvidence(
 		prefixTerms,
 		func() GCFSource { return NewBrouncker4OverPiGCFSource() },
-		Brouncker4OverPiTailRangeAfterPrefix,
-		Brouncker4OverPiTailLowerBoundAfterPrefix,
 	)
 }
 
-// brouncker_pi_tail.go v1
+// brouncker_pi_tail.go v2
