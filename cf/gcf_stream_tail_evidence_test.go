@@ -789,4 +789,88 @@ func TestGCFStream_NonPointExplicitTailRangePoleFallsThroughWithoutHardError(t *
 	}
 }
 
+type chainedPostEmitTailEvidenceGCFSource struct {
+	calls int
+}
+
+func (s *chainedPostEmitTailEvidenceGCFSource) NextPQ() (int64, int64, bool) {
+	s.calls++
+	return 2, 1, true
+}
+
+func (s *chainedPostEmitTailEvidenceGCFSource) TailEvidence() GCFTailEvidence {
+	// Initial evidence certifies first digit 2 after one ingested term.
+	r := NewRange(mustRat(2, 1), mustRat(5, 2), true, true)
+	return GCFTailEvidence{
+		Range:         &r,
+		RangeReusable: false,
+	}
+}
+
+func (s *chainedPostEmitTailEvidenceGCFSource) PostEmitTailEvidence(emittedDigit int64) (GCFTailEvidence, bool) {
+	if emittedDigit != 2 {
+		return GCFTailEvidence{}, false
+	}
+
+	// Provide the same remainder evidence again, so a second emitted 2 can
+	// immediately refresh the same certified tail interval once more.
+	r := NewRange(mustRat(2, 1), mustRat(5, 2), true, true)
+	return GCFTailEvidence{
+		Range:         &r,
+		RangeReusable: false,
+	}, true
+}
+
+func TestGCFStream_ChainedPostEmitTailEvidenceImprovesCadenceOverStaticEvidence(t *testing.T) {
+	factory := func() GCFSource { return &plainTwoOneGCFSource{} }
+
+	want8 := exactDigitsFromFinitePrefix(t, factory, 8, 3)
+	want10 := exactDigitsFromFinitePrefix(t, factory, 10, 3)
+
+	if len(want8) != len(want10) {
+		t.Fatalf("stabilization len mismatch: want8=%v want10=%v", want8, want10)
+	}
+	for i := range want8 {
+		if want8[i] != want10[i] {
+			t.Fatalf("oracle fixture not stabilized at digit %d: p8=%v p10=%v", i, want8, want10)
+		}
+	}
+
+	chainedSrc := &chainedPostEmitTailEvidenceGCFSource{}
+	staticSrc := &reusableOracleTailRangeGCFSource{}
+
+	chained := NewGCFStream(chainedSrc, GCFStreamOptions{})
+	static := NewGCFStream(staticSrc, GCFStreamOptions{})
+
+	gotChained := collectTerms(chained, 3)
+	gotStatic := collectTerms(static, 3)
+
+	if len(gotChained) != 3 {
+		t.Fatalf("expected 3 digits from chained source, got=%v err=%v", gotChained, chained.Err())
+	}
+	if len(gotStatic) != 3 {
+		t.Fatalf("expected 3 digits from static source, got=%v err=%v", gotStatic, static.Err())
+	}
+
+	for i := range want10 {
+		if gotChained[i] != want10[i] {
+			t.Fatalf("chained digit %d: got=%v want=%v", i, gotChained, want10)
+		}
+		if gotStatic[i] != want10[i] {
+			t.Fatalf("static digit %d: got=%v want=%v", i, gotStatic, want10)
+		}
+	}
+
+	if chainedSrc.calls > staticSrc.calls {
+		t.Fatalf("expected chained post-emit evidence to use no more ingestion than static evidence, chained=%d static=%d", chainedSrc.calls, staticSrc.calls)
+	}
+
+	if err := chained.Err(); err != nil {
+		t.Fatalf("chained source: unexpected err=%v", err)
+	}
+	if err := static.Err(); err != nil {
+		t.Fatalf("static source: unexpected err=%v", err)
+	}
+}
+
 // gcf_stream_tail_evidence_test.go v3
