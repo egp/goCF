@@ -1,4 +1,4 @@
-// gcf_stream.go v7
+// gcf_stream.go v8
 package cf
 
 import (
@@ -10,6 +10,14 @@ type GCFStreamOptions struct{}
 
 type LowerBoundRayMinPrefixGCFSource interface {
 	LowerBoundRayMinPrefix() int
+}
+
+type TailRangedGCFSource interface {
+	TailRange() Range
+}
+
+type ReusableTailRangeGCFSource interface {
+	TailRangeReusable() bool
 }
 
 type GCFStream struct {
@@ -52,18 +60,32 @@ func (s *GCFStream) canEmitFromCurrentPrefixEvidence() bool {
 	return s.prefixTerms > s.lastEmitPrefixTerms
 }
 
-func (s *GCFStream) explicitTailImageRange() (Range, bool, error) {
-	ranged, ok := s.src.(interface{ TailRange() Range })
-	if !ok {
-		return Range{}, false, nil
+func (s *GCFStream) explicitTailImageRange() (Range, bool, bool, error) {
+	ranged, hasRange := s.src.(TailRangedGCFSource)
+	reusablePolicy, hasReusablePolicy := s.src.(ReusableTailRangeGCFSource)
+
+	if hasReusablePolicy && !hasRange {
+		return Range{}, false, false, fmt.Errorf(
+			"GCFStream: source %T provides TailRangeReusable without TailRange",
+			s.src,
+		)
+	}
+	if !hasRange {
+		return Range{}, false, false, nil
 	}
 
 	r := ranged.TailRange()
 	img, err := r.ApplyULFT(s.t)
 	if err != nil {
-		return Range{}, false, err
+		return Range{}, false, false, err
 	}
-	return img, true, nil
+
+	reusable := false
+	if hasReusablePolicy {
+		reusable = reusablePolicy.TailRangeReusable()
+	}
+
+	return img, true, reusable, nil
 }
 
 func (s *GCFStream) lowerBoundRayImageRange() (Range, bool, error) {
@@ -106,11 +128,14 @@ func (s *GCFStream) currentCertifiedTailDigit() (int64, bool, error) {
 		return 0, false, nil
 	}
 
-	// Strong explicit tail-range evidence may be reusable across multiple
-	// consecutive emissions from the same ingested prefix.
-	if r, ok, err := s.explicitTailImageRange(); err != nil {
+	// Explicit tail-range evidence may exist even when lower-bound-ray fallback
+	// is unavailable. Reusability is an explicit source contract.
+	if r, ok, reusable, err := s.explicitTailImageRange(); err != nil {
 		return 0, false, err
 	} else if ok {
+		if !reusable && !s.canEmitFromCurrentPrefixEvidence() {
+			return 0, false, nil
+		}
 		return certifiedFloorDigit(r)
 	}
 
@@ -258,4 +283,4 @@ func applyULFTAtInfinity(t ULFT) (Rational, error) {
 	return newRationalBig(new(big.Int).Set(t.A), new(big.Int).Set(t.C))
 }
 
-// gcf_stream.go v7
+// gcf_stream.go v8
