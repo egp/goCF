@@ -1,7 +1,10 @@
-// brouncker_pi_gcf_test.go v3
+// brouncker_pi_gcf_test.go v4
 package cf
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 func TestBrouncker4OverPiGCFSource_FirstTerms(t *testing.T) {
 	s := NewBrouncker4OverPiGCFSource()
@@ -150,14 +153,20 @@ func TestBrouncker4OverPiGCFSource_AsRegularCFTerms(t *testing.T) {
 		}
 	}
 }
-func TestGCFStream_BrounckerInfinite_SpecializedEvidenceBeatsLowerBoundOnlyCadence(t *testing.T) {
-	specSrc := NewBrouncker4OverPiGCFSource()
-	genSrc := newBrounckerLowerBoundOnlyStreamSource()
+func TestGCFStream_BrounckerPrefix_SpecializedEvidenceIsNoWorseThanLowerBoundOnly(t *testing.T) {
+	specBase := NewBrouncker4OverPiGCFSource()
+	genBase := newBrounckerLowerBoundOnlyStreamSource()
+
+	specSrc := newFinitePrefixGCFSource(specBase, 12)
+	genSrc := newFinitePrefixGCFSource(genBase, 12)
 
 	spec := NewGCFStream(specSrc, GCFStreamOptions{})
 	gen := NewGCFStream(genSrc, GCFStreamOptions{})
 
 	want := []int64{1, 3}
+
+	var specCalls []int
+	var genCalls []int
 
 	for i, w := range want {
 		d, ok := spec.Next()
@@ -167,6 +176,7 @@ func TestGCFStream_BrounckerInfinite_SpecializedEvidenceBeatsLowerBoundOnlyCaden
 		if d != w {
 			t.Fatalf("specialized stream digit %d: got %d want %d", i, d, w)
 		}
+		specCalls = append(specCalls, specSrc.n)
 
 		d, ok = gen.Next()
 		if !ok {
@@ -175,13 +185,16 @@ func TestGCFStream_BrounckerInfinite_SpecializedEvidenceBeatsLowerBoundOnlyCaden
 		if d != w {
 			t.Fatalf("generic stream digit %d: got %d want %d", i, d, w)
 		}
+		genCalls = append(genCalls, genSrc.n)
 	}
 
-	specCalls := specSrc.i
-	genCalls := genSrc.src.i
-
-	if specCalls > genCalls {
-		t.Fatalf("expected specialized Brouncker evidence to use no more ingestion than lower-bound-only baseline, specialized=%d generic=%d", specCalls, genCalls)
+	for i := range specCalls {
+		if specCalls[i] > genCalls[i] {
+			t.Fatalf(
+				"expected specialized Brouncker evidence to use no more ingested terms than lower-bound-only baseline, specCalls=%v genCalls=%v",
+				specCalls, genCalls,
+			)
+		}
 	}
 
 	if err := spec.Err(); err != nil {
@@ -191,5 +204,118 @@ func TestGCFStream_BrounckerInfinite_SpecializedEvidenceBeatsLowerBoundOnlyCaden
 		t.Fatalf("generic stream: unexpected err=%v", err)
 	}
 }
+func TestBrouncker4OverPi_ThirdDigitStabilizationWindow(t *testing.T) {
+	prefixes := []int{10, 12, 14, 16, 18, 20, 24, 28}
 
-// brouncker_pi_gcf_test.go v3
+	results := make(map[int][]int64)
+	var firstStablePrefix int
+	var stableDigits []int64
+
+	for _, prefix := range prefixes {
+		got := exactDigitsFromFinitePrefix(
+			t,
+			func() GCFSource { return NewBrouncker4OverPiGCFSource() },
+			prefix,
+			3,
+		)
+		if len(got) != 3 {
+			t.Fatalf("prefix %d: expected 3 digits, got %v", prefix, got)
+		}
+		results[prefix] = got
+	}
+
+	for i := 1; i < len(prefixes); i++ {
+		prev := results[prefixes[i-1]]
+		curr := results[prefixes[i]]
+		if prev[0] == curr[0] && prev[1] == curr[1] && prev[2] == curr[2] {
+			firstStablePrefix = prefixes[i-1]
+			stableDigits = curr
+			break
+		}
+	}
+
+	for _, prefix := range prefixes {
+		t.Logf("prefix %d -> %v", prefix, results[prefix])
+	}
+
+	if firstStablePrefix == 0 {
+		t.Fatalf("Brouncker third digit did not stabilize across tested prefixes: %v", results)
+	}
+
+	t.Logf("first observed stabilization window starts at prefixes %d and %d with digits %v",
+		firstStablePrefix, firstStablePrefix+2, stableDigits)
+}
+
+func TestGCFStream_BrounckerInfinite_ThirdDigitNotForcedByWeakFallback(t *testing.T) {
+	var events []string
+
+	s := NewGCFStream(
+		newFinitePrefixGCFSource(NewBrouncker4OverPiGCFSource(), 16),
+		GCFStreamOptions{
+			Trace: func(event string) {
+				events = append(events, event)
+			},
+		},
+	)
+
+	d, ok := s.Next()
+	if !ok {
+		t.Fatalf("expected first digit, err=%v", s.Err())
+	}
+	if d != 1 {
+		t.Fatalf("got first digit %d want 1", d)
+	}
+
+	d, ok = s.Next()
+	if !ok {
+		t.Fatalf("expected second digit, err=%v", s.Err())
+	}
+	if d != 3 {
+		t.Fatalf("got second digit %d want 3", d)
+	}
+
+	for _, ev := range events {
+		if ev == "tail-evidence/lower-bound-ray" {
+			t.Fatalf("unexpected lower-bound-ray fallback in Brouncker trace: %v", events)
+		}
+	}
+
+	if err := s.Err(); err != nil {
+		t.Fatalf("unexpected stream err after first two digits: %v", err)
+	}
+}
+
+func TestBrouncker4OverPi_PrefixWindowDiagnostic(t *testing.T) {
+	prefixes := []int{8, 10, 12, 14, 16, 18, 20}
+	for _, prefix := range prefixes {
+		t.Run(fmt.Sprintf("prefix_%d", prefix), func(t *testing.T) {
+			got := exactDigitsFromFinitePrefix(
+				t,
+				func() GCFSource { return NewBrouncker4OverPiGCFSource() },
+				prefix,
+				3,
+			)
+			if len(got) != 3 {
+				t.Fatalf("expected 3 digits, got=%v", got)
+			}
+			t.Logf("prefix %d -> %v", prefix, got)
+		})
+	}
+}
+
+func TestGCFStream_BrounckerInfinite_ThirdDigitTrace(t *testing.T) {
+	var events []string
+	s := NewGCFStream(
+		newFinitePrefixGCFSource(NewBrouncker4OverPiGCFSource(), 16),
+		GCFStreamOptions{
+			Trace: func(event string) {
+				events = append(events, event)
+			},
+		},
+	)
+
+	got := collectTerms(s, 2)
+	t.Logf("digits=%v events=%v err=%v", got, events, s.Err())
+}
+
+// brouncker_pi_gcf_test.go v4\

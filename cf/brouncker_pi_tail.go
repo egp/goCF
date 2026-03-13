@@ -14,7 +14,9 @@ func Brouncker4OverPiTailLowerBoundAfterPrefix(prefixTerms int) Rational {
 }
 
 func (s *Brouncker4OverPiGCFSource) LowerBoundRayMinPrefix() int {
-	return 2
+	// Brouncker's generic lower-bound-ray fallback is too weak to trust for
+	// later infinite-stream digits; rely on explicit prefix evidence instead.
+	return 1 << 30
 }
 
 // Brouncker4OverPiTailRangeAfterPrefix returns a tighter conservative inside range
@@ -51,6 +53,9 @@ func Brouncker4OverPiTailRangeAfterPrefix(prefixTerms int) (Range, bool, error) 
 		//   2 + 49/u
 		// where u >= 2, hence tail in [2, 2 + 49/2] = [2, 53/2].
 		return NewRange(mustRat(2, 1), mustRat(53, 2), true, true), true, nil
+
+	case 4:
+		return NewRange(mustRat(2, 1), mustRat(83, 2), true, true), true, nil
 	default:
 		return Range{}, false, nil
 	}

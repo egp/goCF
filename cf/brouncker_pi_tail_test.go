@@ -61,8 +61,8 @@ func TestBrouncker4OverPiTailRangeAfterPrefix_Prefix2(t *testing.T) {
 	}
 }
 
-func TestBrouncker4OverPiTailRangeAfterPrefix_Prefix4NotYetSpecialized(t *testing.T) {
-	_, ok, err := Brouncker4OverPiTailRangeAfterPrefix(4)
+func TestBrouncker4OverPiTailRangeAfterPrefix_Prefix5NotYetSpecialized(t *testing.T) {
+	_, ok, err := Brouncker4OverPiTailRangeAfterPrefix(5)
 	if err != nil {
 		t.Fatalf("Brouncker4OverPiTailRangeAfterPrefix failed: %v", err)
 	}
@@ -161,6 +161,22 @@ func TestBrouncker4OverPiApproxFromPrefix_Prefix3UsesSpecializedTailRange(t *tes
 	wantHi := mustRat(105, 76)
 	if got.Range.Lo.Cmp(wantLo) != 0 || got.Range.Hi.Cmp(wantHi) != 0 {
 		t.Fatalf("got range [%v,%v] want [%v,%v]", got.Range.Lo, got.Range.Hi, wantLo, wantHi)
+	}
+}
+
+func TestBrouncker4OverPiTailRangeAfterPrefix_Prefix4(t *testing.T) {
+	got, ok, err := Brouncker4OverPiTailRangeAfterPrefix(4)
+	if err != nil {
+		t.Fatalf("Brouncker4OverPiTailRangeAfterPrefix failed: %v", err)
+	}
+	if !ok {
+		t.Fatalf("expected ok=true")
+	}
+
+	wantLo := mustRat(2, 1)
+	wantHi := mustRat(83, 2)
+	if got.Lo.Cmp(wantLo) != 0 || got.Hi.Cmp(wantHi) != 0 {
+		t.Fatalf("got [%v,%v] want [%v,%v]", got.Lo, got.Hi, wantLo, wantHi)
 	}
 }
 

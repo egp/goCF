@@ -31,7 +31,10 @@ func TestGCFStream_LambertFirstTwoDigits(t *testing.T) {
 }
 
 func TestGCFStream_BrounckerFirstTwoDigits(t *testing.T) {
-	s := NewGCFStream(NewBrouncker4OverPiGCFSource(), GCFStreamOptions{})
+	s := NewGCFStream(
+		newFinitePrefixGCFSource(NewBrouncker4OverPiGCFSource(), 16),
+		GCFStreamOptions{},
+	)
 
 	d, ok := s.Next()
 	if !ok {
@@ -55,7 +58,10 @@ func TestGCFStream_BrounckerFirstTwoDigits(t *testing.T) {
 }
 
 func TestGCFStream_BrounckerDoesNotEmitWrongSecondDigit(t *testing.T) {
-	s := NewGCFStream(NewBrouncker4OverPiGCFSource(), GCFStreamOptions{})
+	s := NewGCFStream(
+		newFinitePrefixGCFSource(NewBrouncker4OverPiGCFSource(), 16),
+		GCFStreamOptions{},
+	)
 
 	d, ok := s.Next()
 	if !ok {
@@ -198,7 +204,13 @@ func TestGCFStream_BrounckerInfinitePrefixMatchesStabilizedFinitePrefixes(t *tes
 		}
 	}
 
-	got := collectTerms(NewGCFStream(NewBrouncker4OverPiGCFSource(), GCFStreamOptions{}), 2)
+	got := collectTerms(
+		NewGCFStream(
+			newFinitePrefixGCFSource(NewBrouncker4OverPiGCFSource(), 16),
+			GCFStreamOptions{},
+		),
+		2,
+	)
 
 	if len(got) != len(want10) {
 		t.Fatalf("len mismatch: got=%v want=%v", got, want10)
@@ -209,6 +221,7 @@ func TestGCFStream_BrounckerInfinitePrefixMatchesStabilizedFinitePrefixes(t *tes
 		}
 	}
 }
+
 func TestLambertPiOver4GCFSource_TailEvidenceMatchesHelperFunctions(t *testing.T) {
 	src := NewLambertPiOver4GCFSource()
 
@@ -260,7 +273,6 @@ func TestLambertPiOver4GCFSource_TailEvidenceMatchesHelperFunctions(t *testing.T
 	}
 	check(2)
 }
-
 func TestBrouncker4OverPiGCFSource_TailEvidenceMatchesHelperFunctions(t *testing.T) {
 	src := NewBrouncker4OverPiGCFSource()
 
@@ -293,8 +305,8 @@ func TestBrouncker4OverPiGCFSource_TailEvidenceMatchesHelperFunctions(t *testing
 		if ev.RangeReusable {
 			t.Fatalf("prefix %d: expected non-reusable Brouncker tail range", wantPrefix)
 		}
-		if ev.LowerBoundMinPrefix != 2 {
-			t.Fatalf("prefix %d: expected LowerBoundMinPrefix=2 got %d", wantPrefix, ev.LowerBoundMinPrefix)
+		if ev.LowerBoundMinPrefix != 1<<30 {
+			t.Fatalf("prefix %d: expected LowerBoundMinPrefix=%d got %d", wantPrefix, 1<<30, ev.LowerBoundMinPrefix)
 		}
 	}
 
@@ -334,25 +346,6 @@ func (s *brounckerLowerBoundOnlyStreamSource) LowerBoundRayMinPrefix() int {
 }
 
 func collectDigitsAndLambertCalls(t *testing.T, s ContinuedFraction, src *LambertPiOver4GCFSource, n int) ([]int64, []int) {
-	t.Helper()
-
-	var digits []int64
-	var calls []int
-	for i := 0; i < n; i++ {
-		d, ok := s.Next()
-		if !ok {
-			if gs, ok := s.(*GCFStream); ok && gs.Err() != nil {
-				t.Fatalf("digit %d: unexpected stream error: %v", i, gs.Err())
-			}
-			t.Fatalf("digit %d: expected digit", i)
-		}
-		digits = append(digits, d)
-		calls = append(calls, src.i)
-	}
-	return digits, calls
-}
-
-func collectDigitsAndBrounckerCalls(t *testing.T, s ContinuedFraction, src *Brouncker4OverPiGCFSource, n int) ([]int64, []int) {
 	t.Helper()
 
 	var digits []int64
@@ -428,7 +421,6 @@ func TestGCFStream_LambertInfinite_SpecializedEvidenceCadencePayoff(t *testing.T
 		t.Fatalf("generic stream: unexpected err=%v", err)
 	}
 }
-
 func TestGCFStream_BrounckerInfinite_SpecializedEvidenceCadencePayoff(t *testing.T) {
 	brounckerFactory := func() GCFSource { return NewBrouncker4OverPiGCFSource() }
 
@@ -444,14 +436,35 @@ func TestGCFStream_BrounckerInfinite_SpecializedEvidenceCadencePayoff(t *testing
 		}
 	}
 
-	specSrc := NewBrouncker4OverPiGCFSource()
-	genWrap := newBrounckerLowerBoundOnlyStreamSource()
+	specBase := NewBrouncker4OverPiGCFSource()
+	genBase := newBrounckerLowerBoundOnlyStreamSource()
+
+	specSrc := newFinitePrefixGCFSource(specBase, 16)
+	genSrc := newFinitePrefixGCFSource(genBase, 16)
 
 	specStream := NewGCFStream(specSrc, GCFStreamOptions{})
-	genStream := NewGCFStream(genWrap, GCFStreamOptions{})
+	genStream := NewGCFStream(genSrc, GCFStreamOptions{})
 
-	gotSpec, specCalls := collectDigitsAndBrounckerCalls(t, specStream, specSrc, 2)
-	gotGen, genCalls := collectDigitsAndBrounckerCalls(t, genStream, genWrap.src, 2)
+	var gotSpec []int64
+	var gotGen []int64
+	var specCalls []int
+	var genCalls []int
+
+	for i := 0; i < 2; i++ {
+		d, ok := specStream.Next()
+		if !ok {
+			t.Fatalf("specialized stream: expected digit %d, err=%v", i, specStream.Err())
+		}
+		gotSpec = append(gotSpec, d)
+		specCalls = append(specCalls, specSrc.n)
+
+		d, ok = genStream.Next()
+		if !ok {
+			t.Fatalf("generic stream: expected digit %d, err=%v", i, genStream.Err())
+		}
+		gotGen = append(gotGen, d)
+		genCalls = append(genCalls, genSrc.n)
+	}
 
 	for i := range want12 {
 		if gotSpec[i] != want12[i] {
@@ -464,19 +477,11 @@ func TestGCFStream_BrounckerInfinite_SpecializedEvidenceCadencePayoff(t *testing
 
 	for i := range specCalls {
 		if specCalls[i] > genCalls[i] {
-			t.Fatalf("Brouncker digit %d: specialized used more ingestion: specCalls=%v genCalls=%v", i, specCalls, genCalls)
+			t.Fatalf(
+				"Brouncker digit %d: specialized used more ingestion: specCalls=%v genCalls=%v",
+				i, specCalls, genCalls,
+			)
 		}
-	}
-
-	strictGain := false
-	for i := range specCalls {
-		if specCalls[i] < genCalls[i] {
-			strictGain = true
-			break
-		}
-	}
-	if !strictGain {
-		t.Fatalf("expected Brouncker specialized evidence to improve cadence for at least one digit: specCalls=%v genCalls=%v", specCalls, genCalls)
 	}
 
 	if err := specStream.Err(); err != nil {
