@@ -311,6 +311,9 @@ type LambertPiOver4GCFSource struct {
 	i int
 }
 
+func (s *LambertPiOver4GCFSource) TailLowerBound() Rational {
+	return mustRat(1, 1)
+}
 func NewLambertPiOver4GCFSource() *LambertPiOver4GCFSource {
 	return &LambertPiOver4GCFSource{}
 }
@@ -326,6 +329,23 @@ func (s *LambertPiOver4GCFSource) NextPQ() (int64, int64, bool) {
 	q := n * n
 	s.i++
 	return p, q, true
+}
+func (s *LambertPiOver4GCFSource) TailEvidence() GCFTailEvidence {
+	prefixTerms := s.i
+
+	ev := GCFTailEvidence{
+		LowerBoundMinPrefix: 0,
+		RangeReusable:       false,
+	}
+
+	lb := LambertPiOver4TailLowerBoundAfterPrefix(prefixTerms)
+	ev.LowerBound = &lb
+
+	if r, ok, err := LambertPiOver4TailRangeAfterPrefix(prefixTerms); err == nil && ok {
+		ev.Range = &r
+	}
+
+	return ev
 }
 
 // PositiveTailLowerBoundedGCFSource is an optional interface for GCF sources
@@ -352,10 +372,6 @@ func (s *ECFGSource) TailLowerBound() Rational {
 }
 
 func (s *Brouncker4OverPiGCFSource) TailLowerBound() Rational {
-	return mustRat(1, 1)
-}
-
-func (s *LambertPiOver4GCFSource) TailLowerBound() Rational {
 	return mustRat(1, 1)
 }
 
