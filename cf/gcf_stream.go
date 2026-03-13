@@ -1,4 +1,4 @@
-// gcf_stream.go v14
+// gcf_stream.go v15
 package cf
 
 import (
@@ -246,6 +246,36 @@ func (s *GCFStream) tryRefinedTailEvidence() (used bool, err error) {
 	return true, nil
 }
 
+func (s *GCFStream) tryRefinementsUntilCertified(maxSteps int) (int64, bool, error) {
+	for i := 0; i < maxSteps; i++ {
+		used, err := s.tryRefinedTailEvidence()
+		if err != nil {
+			return 0, false, err
+		}
+		if !used {
+			return 0, false, nil
+		}
+
+		r, ok, _, err := s.explicitTailImageRange()
+		if err != nil {
+			return 0, false, err
+		}
+		if !ok {
+			continue
+		}
+
+		s.tailEvidenceFresh = false
+		d, certified, err := certifiedFloorDigit(r)
+		if err != nil {
+			return 0, false, err
+		}
+		if certified {
+			return d, true, nil
+		}
+	}
+	return 0, false, nil
+}
+
 func (s *GCFStream) currentCertifiedTailDigit() (int64, bool, error) {
 	if !s.ingestedAny {
 		return 0, false, nil
@@ -259,30 +289,20 @@ func (s *GCFStream) currentCertifiedTailDigit() (int64, bool, error) {
 			return certifiedFloorDigit(r)
 		}
 		if !reusable && !s.canEmitFromCurrentPrefixEvidence() {
-			if used, rerr := s.tryRefinedTailEvidence(); rerr != nil {
-				return 0, false, rerr
-			} else if used {
-				if rr, rok, _, eerr := s.explicitTailImageRange(); eerr != nil {
-					return 0, false, eerr
-				} else if rok {
-					s.tailEvidenceFresh = false
-					return certifiedFloorDigit(rr)
-				}
+			if d, ok, err := s.tryRefinementsUntilCertified(8); err != nil {
+				return 0, false, err
+			} else if ok {
+				return d, true, nil
 			}
 			return 0, false, nil
 		}
 		return certifiedFloorDigit(r)
 	}
 
-	if used, rerr := s.tryRefinedTailEvidence(); rerr != nil {
-		return 0, false, rerr
-	} else if used {
-		if rr, rok, _, eerr := s.explicitTailImageRange(); eerr != nil {
-			return 0, false, eerr
-		} else if rok {
-			s.tailEvidenceFresh = false
-			return certifiedFloorDigit(rr)
-		}
+	if d, ok, err := s.tryRefinementsUntilCertified(8); err != nil {
+		return 0, false, err
+	} else if ok {
+		return d, true, nil
 	}
 
 	if !s.canEmitFromCurrentPrefixEvidence() {
@@ -465,4 +485,4 @@ func applyULFTAtInfinity(t ULFT) (Rational, error) {
 	return newRationalBig(new(big.Int).Set(t.A), new(big.Int).Set(t.C))
 }
 
-// gcf_stream.go v14
+// gcf_stream.go v15
