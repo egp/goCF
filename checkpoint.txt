@@ -1,16 +1,33 @@
-GCFStream status checkpoint
+Go CF / GCFStream checkpoint
 
-- finite-first GCFStream is implemented and green
-- dynamic TailRange() lookup replaced stale constructor caching
-- current tests cover:
-  - finite SliceGCF equivalence vs exact evaluation
-  - adapted regular CF round-trip
-  - empty-source error
-  - clean finite termination
-  - stable TailRange() earlier emission
-  - prefix-sensitive dynamic TailRange() behavior
-  - stronger TailRange() emits no later than weaker TailRange()
-- likely next work:
-  - clarify/strengthen lower-bound-ray fallback semantics
-  - add Lambert/Brouncker fixture tests for finite prefixes
-  - then consider a small internal refactor of GCFStream tail-evidence selection
+Current priorities:
+- mathematical correctness first
+- testability / DfT second
+- keep context small
+- ask for current file contents instead of assuming code state
+- public API is not frozen; improve ergonomics where justified
+
+What was completed:
+- fixed GCFStream to query TailRange() dynamically from source state instead of caching it
+- corrected golden-ratio stable-tail-range test expectation ((1,1)-forever source => [1;1,1,1,...])
+- added GCFStream tests for:
+  - stable TailRange earlier emission
+  - prefix-sensitive dynamic TailRange behavior
+  - explicit TailRange strength ordering
+  - preference of explicit TailRange over lower-bound ray fallback
+  - finite Lambert prefix via generic ingestion matches EvaluateFiniteGCF
+  - finite Brouncker prefix via generic ingestion matches EvaluateFiniteGCF
+  - Lambert infinite source emits first digit
+  - Brouncker infinite source emits first digit
+  - generic lower-bound-ray min-prefix policy
+- removed named-source lower-bound-ray policy from GCFStream and moved it to a source contract
+- refactored GCFStream tail-evidence emission into smaller helpers
+- MasterPlan updated to reflect GCFStream semantic-hardening phase
+
+Architectural rule established:
+- no Lambert/Brouncker-specific logic in generic GCFStream ingestion
+- named behavior belongs in GCFSource / tail-metadata contracts
+
+Likely next step:
+- continue toward unfinished-tail support for infinite GCF sources
+- inspect current gcf_stream.go and related source contracts before next production change
