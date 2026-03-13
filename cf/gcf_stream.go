@@ -1,4 +1,4 @@
-// gcf_stream.go v17
+// gcf_stream.go v18
 package cf
 
 import (
@@ -10,12 +10,14 @@ const defaultGCFStreamMaxRefinementSteps = 8
 
 type GCFStreamOptions struct {
 	MaxRefinementSteps int
+	Trace              func(event string)
 }
 
 type GCFStream struct {
 	src GCFSource
 	t   ULFT
 
+	trace                func(event string)
 	maxRefinementSteps   int
 	lower                *Rational
 	tailEvidenceOverride *GCFTailEvidence
@@ -38,6 +40,7 @@ func NewGCFStream(src GCFSource, opts GCFStreamOptions) *GCFStream {
 	s := &GCFStream{
 		src:                 src,
 		t:                   NewULFT(big.NewInt(1), big.NewInt(0), big.NewInt(0), big.NewInt(1)),
+		trace:               opts.Trace,
 		maxRefinementSteps:  maxRefinementSteps,
 		lastEmitPrefixTerms: -1,
 	}
@@ -59,6 +62,12 @@ func NewGCFStream(src GCFSource, opts GCFStreamOptions) *GCFStream {
 	}
 
 	return s
+}
+
+func (s *GCFStream) traceEvent(event string) {
+	if s.trace != nil {
+		s.trace(event)
+	}
 }
 
 func (s *GCFStream) Err() error { return s.err }
@@ -94,6 +103,7 @@ func (s *GCFStream) applyPostEmitTailEvidence(d int64) error {
 	} else {
 		s.lower = nil
 	}
+	s.traceEvent("tail-evidence/post-emit")
 	return nil
 }
 
@@ -144,6 +154,7 @@ func (s *GCFStream) finalizeFiniteTail() (int64, bool) {
 	}
 
 	s.tail = NewRationalCF(y)
+	s.traceEvent("tail-evidence/finite-fallback")
 
 	d, ok := s.tail.Next()
 	if !ok {
@@ -185,6 +196,7 @@ func (s *GCFStream) ingestNextTerm() bool {
 	s.prefixTerms++
 	s.tailEvidenceOverride = nil
 	s.tailEvidenceFresh = false
+	s.traceEvent("tail-evidence/ingest")
 	return true
 }
 
@@ -234,4 +246,4 @@ func applyULFTAtInfinity(t ULFT) (Rational, error) {
 	return newRationalBig(new(big.Int).Set(t.A), new(big.Int).Set(t.C))
 }
 
-// gcf_stream.go v17
+// gcf_stream.go v18

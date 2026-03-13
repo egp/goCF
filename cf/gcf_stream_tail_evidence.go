@@ -1,4 +1,4 @@
-// gcf_stream_tail_evidence.go v1
+// gcf_stream_tail_evidence.go v2
 package cf
 
 import "fmt"
@@ -126,6 +126,7 @@ func (s *GCFStream) explicitTailImageRange() (Range, bool, bool, error) {
 		return Range{}, false, false, fatalErr
 	}
 	if !usable {
+		s.traceEvent("tail-evidence/pole-fallback")
 		return Range{}, false, ev.RangeReusable, nil
 	}
 
@@ -141,6 +142,7 @@ func (s *GCFStream) lowerBoundRayImageRange() (Range, bool, error) {
 	if err != nil {
 		return Range{}, false, err
 	}
+	s.traceEvent("tail-evidence/lower-bound-ray")
 	return img, true, nil
 }
 
@@ -190,6 +192,7 @@ func (s *GCFStream) tryRefinedTailEvidence() (used bool, err error) {
 	} else {
 		s.lower = nil
 	}
+	s.traceEvent("tail-evidence/refined")
 	return true, nil
 }
 
@@ -233,6 +236,7 @@ func (s *GCFStream) currentCertifiedTailDigit() (int64, bool, error) {
 	} else if ok {
 		if s.tailEvidenceOverride != nil && s.tailEvidenceFresh {
 			s.tailEvidenceFresh = false
+			s.traceEvent("tail-evidence/override-fresh")
 			return certifiedFloorDigit(r)
 		}
 		if !reusable && !s.canEmitFromCurrentPrefixEvidence() {
@@ -243,6 +247,7 @@ func (s *GCFStream) currentCertifiedTailDigit() (int64, bool, error) {
 			}
 			return 0, false, nil
 		}
+		s.traceEvent("tail-evidence/base")
 		return certifiedFloorDigit(r)
 	}
 
@@ -265,4 +270,4 @@ func (s *GCFStream) currentCertifiedTailDigit() (int64, bool, error) {
 	return 0, false, nil
 }
 
-// gcf_stream_tail_evidence.go v1
+// gcf_stream_tail_evidence.go v2
