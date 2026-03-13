@@ -462,6 +462,88 @@ func TestGCFStream_ReusableTailRangePolicyBeatsNonReusablePolicy_OnOracleBackedF
 	}
 }
 
+type postEmitTailEvidenceGCFSource struct {
+	calls int
+}
+
+func (s *postEmitTailEvidenceGCFSource) NextPQ() (int64, int64, bool) {
+	s.calls++
+	return 2, 1, true
+}
+
+func (s *postEmitTailEvidenceGCFSource) TailEvidence() GCFTailEvidence {
+	// Initial evidence certifies first digit 2 after one ingested term:
+	// x = 2 + 1/y, y in [2, 5/2] => x in [12/5, 5/2].
+	r := NewRange(mustRat(2, 1), mustRat(5, 2), true, true)
+	return GCFTailEvidence{
+		Range:         &r,
+		RangeReusable: false,
+	}
+}
+
+func (s *postEmitTailEvidenceGCFSource) PostEmitTailEvidence(emittedDigit int64) (GCFTailEvidence, bool) {
+	if emittedDigit != 2 {
+		return GCFTailEvidence{}, false
+	}
+
+	// After emitting 2, provide tighter remainder evidence directly.
+	// This should certify a second digit 2 without another ingest, even though
+	// the initial TailEvidence() was non-reusable.
+	r := NewRange(mustRat(2, 1), mustRat(5, 2), true, true)
+	return GCFTailEvidence{
+		Range:         &r,
+		RangeReusable: false,
+	}, true
+}
+
+func TestGCFStream_PostEmitTailEvidenceCanContinueWithoutReusableStaticRange(t *testing.T) {
+	factory := func() GCFSource { return &plainTwoOneGCFSource{} }
+
+	want6 := exactDigitsFromFinitePrefix(t, factory, 6, 2)
+	want8 := exactDigitsFromFinitePrefix(t, factory, 8, 2)
+
+	if len(want6) != len(want8) {
+		t.Fatalf("stabilization len mismatch: want6=%v want8=%v", want6, want8)
+	}
+	for i := range want6 {
+		if want6[i] != want8[i] {
+			t.Fatalf("oracle fixture not stabilized at digit %d: p6=%v p8=%v", i, want6, want8)
+		}
+	}
+
+	src := &postEmitTailEvidenceGCFSource{}
+	s := NewGCFStream(src, GCFStreamOptions{})
+
+	d, ok := s.Next()
+	if !ok {
+		t.Fatalf("expected first digit, err=%v", s.Err())
+	}
+	if d != want8[0] {
+		t.Fatalf("got first digit %d want %d", d, want8[0])
+	}
+	callsAfterFirst := src.calls
+
+	d, ok = s.Next()
+	if !ok {
+		t.Fatalf("expected second digit, err=%v", s.Err())
+	}
+	if d != want8[1] {
+		t.Fatalf("got second digit %d want %d", d, want8[1])
+	}
+
+	if src.calls != callsAfterFirst {
+		t.Fatalf(
+			"expected second digit via post-emit evidence without additional ingestion, first calls=%d second calls=%d",
+			callsAfterFirst,
+			src.calls,
+		)
+	}
+
+	if err := s.Err(); err != nil {
+		t.Fatalf("unexpected stream err: %v", err)
+	}
+}
+
 type unifiedTailEvidenceGCFSource struct {
 	calls int
 }

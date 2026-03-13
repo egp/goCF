@@ -1,4 +1,4 @@
-// gcf_stream.go v11
+// gcf_stream.go v13
 package cf
 
 import (
@@ -31,18 +31,24 @@ type TailEvidenceGCFSource interface {
 	TailEvidence() GCFTailEvidence
 }
 
+type PostEmitTailEvidenceGCFSource interface {
+	PostEmitTailEvidence(emittedDigit int64) (GCFTailEvidence, bool)
+}
+
 type GCFStream struct {
 	src GCFSource
 	t   ULFT
 
-	lower               *Rational // optional stable positive lower bound for unfinished tail
-	tail                ContinuedFraction
-	ingestedAny         bool
-	prefixTerms         int
-	lastEmitPrefixTerms int
-	srcDone             bool
-	done                bool
-	err                 error
+	lower                *Rational // optional stable positive lower bound for unfinished tail
+	tailEvidenceOverride *GCFTailEvidence
+	tailEvidenceFresh    bool
+	tail                 ContinuedFraction
+	ingestedAny          bool
+	prefixTerms          int
+	lastEmitPrefixTerms  int
+	srcDone              bool
+	done                 bool
+	err                  error
 }
 
 func NewGCFStream(src GCFSource, opts GCFStreamOptions) *GCFStream {
@@ -54,7 +60,7 @@ func NewGCFStream(src GCFSource, opts GCFStreamOptions) *GCFStream {
 			big.NewInt(0),
 			big.NewInt(1),
 		),
-		lastEmitPrefixTerms: -1, // no emissions yet
+		lastEmitPrefixTerms: -1,
 	}
 
 	if evSrc, ok := src.(TailEvidenceGCFSource); ok {
@@ -77,21 +83,29 @@ func (s *GCFStream) canEmitFromCurrentPrefixEvidence() bool {
 	return s.prefixTerms > s.lastEmitPrefixTerms
 }
 
+func validateTailEvidence(owner string, ev GCFTailEvidence) error {
+	if ev.RangeReusable && ev.Range == nil {
+		return fmt.Errorf("%s provides reusable tail-range policy without a tail range", owner)
+	}
+	if ev.LowerBoundMinPrefix < 0 {
+		return fmt.Errorf("%s provides negative LowerBoundMinPrefix=%d", owner, ev.LowerBoundMinPrefix)
+	}
+	return nil
+}
+
 func (s *GCFStream) tailEvidence() (GCFTailEvidence, bool, error) {
+	if s.tailEvidenceOverride != nil {
+		ev := *s.tailEvidenceOverride
+		if err := validateTailEvidence(fmt.Sprintf("GCFStream override from source %T", s.src), ev); err != nil {
+			return GCFTailEvidence{}, false, err
+		}
+		return ev, true, nil
+	}
+
 	if evSrc, ok := s.src.(TailEvidenceGCFSource); ok {
 		ev := evSrc.TailEvidence()
-		if ev.RangeReusable && ev.Range == nil {
-			return GCFTailEvidence{}, false, fmt.Errorf(
-				"GCFStream: source %T provides reusable tail-range policy without a tail range",
-				s.src,
-			)
-		}
-		if ev.LowerBoundMinPrefix < 0 {
-			return GCFTailEvidence{}, false, fmt.Errorf(
-				"GCFStream: source %T provides negative LowerBoundMinPrefix=%d",
-				s.src,
-				ev.LowerBoundMinPrefix,
-			)
+		if err := validateTailEvidence(fmt.Sprintf("GCFStream: source %T", s.src), ev); err != nil {
+			return GCFTailEvidence{}, false, err
 		}
 		return ev, true, nil
 	}
@@ -210,6 +224,12 @@ func (s *GCFStream) currentCertifiedTailDigit() (int64, bool, error) {
 	if r, ok, reusable, err := s.explicitTailImageRange(); err != nil {
 		return 0, false, err
 	} else if ok {
+		// Fresh post-emit override evidence is allowed one certification even if
+		// prefixTerms has not increased.
+		if s.tailEvidenceOverride != nil && s.tailEvidenceFresh {
+			s.tailEvidenceFresh = false
+			return certifiedFloorDigit(r)
+		}
 		if !reusable && !s.canEmitFromCurrentPrefixEvidence() {
 			return 0, false, nil
 		}
@@ -229,6 +249,36 @@ func (s *GCFStream) currentCertifiedTailDigit() (int64, bool, error) {
 	return 0, false, nil
 }
 
+func (s *GCFStream) applyPostEmitTailEvidence(d int64) error {
+	postSrc, ok := s.src.(PostEmitTailEvidenceGCFSource)
+	if !ok {
+		s.tailEvidenceOverride = nil
+		s.tailEvidenceFresh = false
+		return nil
+	}
+
+	ev, ok := postSrc.PostEmitTailEvidence(d)
+	if !ok {
+		s.tailEvidenceOverride = nil
+		s.tailEvidenceFresh = false
+		return nil
+	}
+
+	if err := validateTailEvidence(fmt.Sprintf("GCFStream post-emit evidence from source %T", s.src), ev); err != nil {
+		return err
+	}
+
+	s.tailEvidenceOverride = &ev
+	s.tailEvidenceFresh = true
+	if ev.LowerBound != nil {
+		lb := *ev.LowerBound
+		s.lower = &lb
+	} else {
+		s.lower = nil
+	}
+	return nil
+}
+
 func (s *GCFStream) emitCertifiedDigit(d int64) (int64, bool, bool) {
 	nextT, err := EmitDigit(s.t, d)
 	if err != nil {
@@ -238,6 +288,13 @@ func (s *GCFStream) emitCertifiedDigit(d int64) (int64, bool, bool) {
 	}
 	s.t = nextT
 	s.lastEmitPrefixTerms = s.prefixTerms
+
+	if err := s.applyPostEmitTailEvidence(d); err != nil {
+		s.err = err
+		s.done = true
+		return 0, false, true
+	}
+
 	return d, true, true
 }
 
@@ -308,6 +365,8 @@ func (s *GCFStream) ingestNextTerm() bool {
 	s.t = nextT
 	s.ingestedAny = true
 	s.prefixTerms++
+	s.tailEvidenceOverride = nil
+	s.tailEvidenceFresh = false
 	return true
 }
 
@@ -357,4 +416,4 @@ func applyULFTAtInfinity(t ULFT) (Rational, error) {
 	return newRationalBig(new(big.Int).Set(t.A), new(big.Int).Set(t.C))
 }
 
-// gcf_stream.go v11
+// gcf_stream.go v13
