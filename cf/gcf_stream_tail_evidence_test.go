@@ -534,5 +534,35 @@ func TestGCFStream_InvalidUnifiedTailEvidence_IsError(t *testing.T) {
 		t.Fatalf("expected non-nil error")
 	}
 }
+func TestGCFStream_ReusableTailRangePolicy_StopsAtPoleBoundary_OnOracleBackedFixture(t *testing.T) {
+	src := &reusableOracleTailRangeGCFSource{}
+	s := NewGCFStream(src, GCFStreamOptions{})
+
+	d, ok := s.Next()
+	if !ok {
+		t.Fatalf("expected first digit, err=%v", s.Err())
+	}
+	if d != 2 {
+		t.Fatalf("got first digit %d want 2", d)
+	}
+
+	d, ok = s.Next()
+	if !ok {
+		t.Fatalf("expected second digit, err=%v", s.Err())
+	}
+	if d != 2 {
+		t.Fatalf("got second digit %d want 2", d)
+	}
+
+	_, ok = s.Next()
+	if ok {
+		t.Fatalf("expected third digit to be unavailable at current pole boundary")
+	}
+
+	err := s.Err()
+	if err == nil {
+		t.Fatalf("expected non-nil error at pole boundary")
+	}
+}
 
 // gcf_stream_tail_evidence_test.go v3
