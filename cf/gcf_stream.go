@@ -1,4 +1,4 @@
-// gcf_stream.go v4
+// gcf_stream.go v5
 package cf
 
 import (
@@ -7,6 +7,10 @@ import (
 )
 
 type GCFStreamOptions struct{}
+
+type LowerBoundRayMinPrefixGCFSource interface {
+	LowerBoundRayMinPrefix() int
+}
 
 type GCFStream struct {
 	src GCFSource
@@ -47,6 +51,7 @@ func (s *GCFStream) Err() error { return s.err }
 func (s *GCFStream) canEmitFromCurrentPrefixEvidence() bool {
 	return s.prefixTerms > s.lastEmitPrefixTerms
 }
+
 func (s *GCFStream) currentTailImageRange() (Range, bool, error) {
 	if ranged, ok := s.src.(interface{ TailRange() Range }); ok {
 		r := ranged.TailRange()
@@ -73,16 +78,13 @@ func (s *GCFStream) canUseGenericLowerBoundEmission() bool {
 		return false
 	}
 
-	switch s.src.(type) {
-	case *Brouncker4OverPiGCFSource:
-		// A single ingested Brouncker term is not enough for sound early emission
-		// from the generic lower-bound ray. Require a little more prefix before
-		// falling back to that weaker enclosure.
-		return s.prefixTerms >= 2
-	default:
-		return true
+	minPrefix := 0
+	if delayed, ok := s.src.(LowerBoundRayMinPrefixGCFSource); ok {
+		minPrefix = delayed.LowerBoundRayMinPrefix()
 	}
+	return s.prefixTerms >= minPrefix
 }
+
 func (s *GCFStream) maybeEmitFromTailMetadata() (int64, bool, bool) {
 	if !s.ingestedAny {
 		return 0, false, false
@@ -215,4 +217,4 @@ func applyULFTAtInfinity(t ULFT) (Rational, error) {
 	return newRationalBig(new(big.Int).Set(t.A), new(big.Int).Set(t.C))
 }
 
-// gcf_stream.go v4
+// gcf_stream.go v5

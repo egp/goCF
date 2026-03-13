@@ -660,4 +660,74 @@ func TestGCFStream_FiniteBrounckerPrefixMatchesEvaluateFiniteGCF(t *testing.T) {
 	}
 }
 
+func TestGCFStream_LambertInfiniteSourceEmitsFirstDigit(t *testing.T) {
+	s := NewGCFStream(NewLambertPiOver4GCFSource(), GCFStreamOptions{})
+
+	d, ok := s.Next()
+	if !ok {
+		t.Fatalf("expected first digit, err=%v", s.Err())
+	}
+	if d != 0 {
+		t.Fatalf("got first digit %d want 0", d)
+	}
+	if err := s.Err(); err != nil {
+		t.Fatalf("unexpected stream err: %v", err)
+	}
+}
+
+func TestGCFStream_BrounckerInfiniteSourceEmitsFirstDigit(t *testing.T) {
+	s := NewGCFStream(NewBrouncker4OverPiGCFSource(), GCFStreamOptions{})
+
+	d, ok := s.Next()
+	if !ok {
+		t.Fatalf("expected first digit, err=%v", s.Err())
+	}
+	if d != 1 {
+		t.Fatalf("got first digit %d want 1", d)
+	}
+	if err := s.Err(); err != nil {
+		t.Fatalf("unexpected stream err: %v", err)
+	}
+}
+
+type delayedLowerBoundRayGCFSource struct {
+	calls int
+}
+
+func (s *delayedLowerBoundRayGCFSource) NextPQ() (int64, int64, bool) {
+	s.calls++
+	return 1, 1, true
+}
+
+func (s *delayedLowerBoundRayGCFSource) TailLowerBound() Rational {
+	return mustRat(1, 1)
+}
+
+func (s *delayedLowerBoundRayGCFSource) LowerBoundRayMinPrefix() int {
+	return 2
+}
+
+func TestGCFStream_UsesGenericLowerBoundRayMinPrefixPolicy(t *testing.T) {
+	src := &delayedLowerBoundRayGCFSource{}
+	s := NewGCFStream(src, GCFStreamOptions{})
+
+	d, ok := s.Next()
+	if !ok {
+		t.Fatalf("expected first digit, err=%v", s.Err())
+	}
+	if d != 1 {
+		t.Fatalf("got first digit %d want 1", d)
+	}
+
+	// The generic source-provided policy should delay lower-bound-ray fallback
+	// until at least two ingested terms have been seen.
+	if src.calls < 2 {
+		t.Fatalf("expected at least 2 ingested terms before first digit, got %d", src.calls)
+	}
+
+	if err := s.Err(); err != nil {
+		t.Fatalf("unexpected stream err: %v", err)
+	}
+}
+
 // gcf_stream_test.go v1

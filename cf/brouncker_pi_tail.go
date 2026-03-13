@@ -12,6 +12,9 @@ import "fmt"
 func Brouncker4OverPiTailLowerBoundAfterPrefix(prefixTerms int) Rational {
 	return mustRat(1, 1)
 }
+func (s *Brouncker4OverPiGCFSource) LowerBoundRayMinPrefix() int {
+	return 2
+}
 
 // Brouncker4OverPiTailRangeAfterPrefix returns a tighter conservative inside range
 // for the unfinished Brouncker 4/pi tail after consuming prefixTerms terms, when
