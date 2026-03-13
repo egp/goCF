@@ -279,7 +279,23 @@ type Brouncker4OverPiGCFSource struct {
 func NewBrouncker4OverPiGCFSource() *Brouncker4OverPiGCFSource {
 	return &Brouncker4OverPiGCFSource{}
 }
+func (s *Brouncker4OverPiGCFSource) TailEvidence() GCFTailEvidence {
+	prefixTerms := s.i
 
+	ev := GCFTailEvidence{
+		LowerBoundMinPrefix: s.LowerBoundRayMinPrefix(),
+		RangeReusable:       false,
+	}
+
+	lb := Brouncker4OverPiTailLowerBoundAfterPrefix(prefixTerms)
+	ev.LowerBound = &lb
+
+	if r, ok, err := Brouncker4OverPiTailRangeAfterPrefix(prefixTerms); err == nil && ok {
+		ev.Range = &r
+	}
+
+	return ev
+}
 func (s *Brouncker4OverPiGCFSource) NextPQ() (int64, int64, bool) {
 	if s.i == 0 {
 		s.i++

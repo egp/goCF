@@ -261,4 +261,56 @@ func TestLambertPiOver4GCFSource_TailEvidenceMatchesHelperFunctions(t *testing.T
 	check(2)
 }
 
+func TestBrouncker4OverPiGCFSource_TailEvidenceMatchesHelperFunctions(t *testing.T) {
+	src := NewBrouncker4OverPiGCFSource()
+
+	check := func(wantPrefix int) {
+		t.Helper()
+
+		ev := src.TailEvidence()
+
+		if ev.LowerBound == nil {
+			t.Fatalf("prefix %d: expected non-nil lower bound", wantPrefix)
+		}
+
+		wantLB := Brouncker4OverPiTailLowerBoundAfterPrefix(wantPrefix)
+		if ev.LowerBound.String() != wantLB.String() {
+			t.Fatalf("prefix %d: lower bound mismatch: got=%v want=%v", wantPrefix, *ev.LowerBound, wantLB)
+		}
+
+		wantRange, wantOK, err := Brouncker4OverPiTailRangeAfterPrefix(wantPrefix)
+		if err != nil {
+			t.Fatalf("prefix %d: helper returned err: %v", wantPrefix, err)
+		}
+
+		if wantOK != (ev.Range != nil) {
+			t.Fatalf("prefix %d: range presence mismatch: got=%v want=%v", wantPrefix, ev.Range != nil, wantOK)
+		}
+		if wantOK && ev.Range != nil && ev.Range.String() != wantRange.String() {
+			t.Fatalf("prefix %d: range mismatch: got=%v want=%v", wantPrefix, *ev.Range, wantRange)
+		}
+
+		if ev.RangeReusable {
+			t.Fatalf("prefix %d: expected non-reusable Brouncker tail range", wantPrefix)
+		}
+		if ev.LowerBoundMinPrefix != 2 {
+			t.Fatalf("prefix %d: expected LowerBoundMinPrefix=2 got %d", wantPrefix, ev.LowerBoundMinPrefix)
+		}
+	}
+
+	check(0)
+
+	_, _, ok := src.NextPQ()
+	if !ok {
+		t.Fatalf("expected first Brouncker term")
+	}
+	check(1)
+
+	_, _, ok = src.NextPQ()
+	if !ok {
+		t.Fatalf("expected second Brouncker term")
+	}
+	check(2)
+}
+
 // gcf_stream_named_sources_test.go v4
