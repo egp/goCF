@@ -341,4 +341,132 @@ func TestGCFStream_LowerBoundOnlySourceCanStillEmit(t *testing.T) {
 	}
 }
 
+type plainTwoOneGCFSource struct {
+	calls int
+}
+
+func (s *plainTwoOneGCFSource) NextPQ() (int64, int64, bool) {
+	s.calls++
+	return 2, 1, true
+}
+
+type nonReusableOracleTailRangeGCFSource struct {
+	calls int
+}
+
+func (s *nonReusableOracleTailRangeGCFSource) NextPQ() (int64, int64, bool) {
+	s.calls++
+	return 2, 1, true
+}
+
+func (s *nonReusableOracleTailRangeGCFSource) TailRange() Range {
+	// After one ingested (2,1) term, x = 2 + 1/y with y in [2, 5/2].
+	// So x in [12/5, 5/2], certifying first digit 2.
+	//
+	// After emitting 2, the remainder is exactly y, and [2, 5/2] still has
+	// unique floor 2. So a reusable tail-range contract can certify the second
+	// digit without another ingest.
+	return NewRange(mustRat(2, 1), mustRat(5, 2), true, true)
+}
+
+func (s *nonReusableOracleTailRangeGCFSource) TailRangeReusable() bool {
+	return false
+}
+
+type reusableOracleTailRangeGCFSource struct {
+	calls int
+}
+
+func (s *reusableOracleTailRangeGCFSource) NextPQ() (int64, int64, bool) {
+	s.calls++
+	return 2, 1, true
+}
+
+func (s *reusableOracleTailRangeGCFSource) TailRange() Range {
+	return NewRange(mustRat(2, 1), mustRat(5, 2), true, true)
+}
+
+func (s *reusableOracleTailRangeGCFSource) TailRangeReusable() bool {
+	return true
+}
+
+func TestGCFStream_ReusableTailRangePolicyBeatsNonReusablePolicy_OnOracleBackedFixture(t *testing.T) {
+	factory := func() GCFSource { return &plainTwoOneGCFSource{} }
+
+	want6 := exactDigitsFromFinitePrefix(t, factory, 6, 2)
+	want8 := exactDigitsFromFinitePrefix(t, factory, 8, 2)
+
+	if len(want6) != len(want8) {
+		t.Fatalf("stabilization len mismatch: want6=%v want8=%v", want6, want8)
+	}
+	for i := range want6 {
+		if want6[i] != want8[i] {
+			t.Fatalf("oracle fixture not stabilized at digit %d: p6=%v p8=%v", i, want6, want8)
+		}
+	}
+
+	reusableSrc := &reusableOracleTailRangeGCFSource{}
+	nonReusableSrc := &nonReusableOracleTailRangeGCFSource{}
+
+	reusable := NewGCFStream(reusableSrc, GCFStreamOptions{})
+	nonReusable := NewGCFStream(nonReusableSrc, GCFStreamOptions{})
+
+	d, ok := reusable.Next()
+	if !ok {
+		t.Fatalf("reusable source: expected first digit, err=%v", reusable.Err())
+	}
+	if d != want8[0] {
+		t.Fatalf("reusable source: got first digit %d want %d", d, want8[0])
+	}
+	reusableCallsAfterFirst := reusableSrc.calls
+
+	d, ok = nonReusable.Next()
+	if !ok {
+		t.Fatalf("non-reusable source: expected first digit, err=%v", nonReusable.Err())
+	}
+	if d != want8[0] {
+		t.Fatalf("non-reusable source: got first digit %d want %d", d, want8[0])
+	}
+	nonReusableCallsAfterFirst := nonReusableSrc.calls
+
+	d, ok = reusable.Next()
+	if !ok {
+		t.Fatalf("reusable source: expected second digit, err=%v", reusable.Err())
+	}
+	if d != want8[1] {
+		t.Fatalf("reusable source: got second digit %d want %d", d, want8[1])
+	}
+
+	d, ok = nonReusable.Next()
+	if !ok {
+		t.Fatalf("non-reusable source: expected second digit, err=%v", nonReusable.Err())
+	}
+	if d != want8[1] {
+		t.Fatalf("non-reusable source: got second digit %d want %d", d, want8[1])
+	}
+
+	if reusableSrc.calls > reusableCallsAfterFirst {
+		t.Fatalf(
+			"reusable source: expected second digit without additional ingestion, first calls=%d second calls=%d",
+			reusableCallsAfterFirst,
+			reusableSrc.calls,
+		)
+	}
+
+	if nonReusableSrc.calls <= nonReusableCallsAfterFirst {
+		t.Fatalf(
+			"non-reusable source: expected additional ingestion before second digit, first calls=%d second calls=%d",
+			nonReusableCallsAfterFirst,
+			nonReusableSrc.calls,
+		)
+	}
+
+	if err := reusable.Err(); err != nil {
+		t.Fatalf("reusable source: unexpected stream err: %v", err)
+	}
+	if err := nonReusable.Err(); err != nil {
+		t.Fatalf("non-reusable source: unexpected stream err: %v", err)
+	}
+}
+
 // gcf_stream_tail_evidence_test.go v3
