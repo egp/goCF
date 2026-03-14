@@ -39,58 +39,25 @@ func (p SqrtPolicy2) Validate() error {
 // SqrtApprox2 uses a simple default policy to compute a bounded rational
 // approximation to sqrt(x).
 func SqrtApprox2(x Rational) (Rational, error) {
-	p := DefaultSqrtPolicy2()
-	approx, _, err := SqrtCoreApproxRationalUntilResidualDefault2(x, p.MaxSteps, p.Tol)
-	return approx, err
+	return sqrtApproxCanonical(x)
 }
 
 // SqrtApproxCF2 returns a ContinuedFraction source for the bounded default
 // sqrt approximation produced by SqrtApprox2.
 func SqrtApproxCF2(x Rational) (ContinuedFraction, error) {
-	approx, err := SqrtApprox2(x)
-	if err != nil {
-		return nil, err
-	}
-	return NewRationalCF(approx), nil
+	return sqrtApproxCFCanonical(x)
 }
 
 // SqrtApproxTerms2 returns up to digits CF terms for the bounded default
 // sqrt approximation produced by SqrtApprox2.
 func SqrtApproxTerms2(x Rational, digits int) ([]int64, error) {
-	if digits < 0 {
-		return nil, fmt.Errorf("SqrtApproxTerms2: negative digits %d", digits)
-	}
-	cf, err := SqrtApproxCF2(x)
-	if err != nil {
-		return nil, err
-	}
-	return collectTerms(cf, digits), nil
+	return sqrtApproxTermsCanonical(x, digits)
 }
 
 // SqrtApproxWithPolicy2 computes a bounded rational approximation to sqrt(x)
 // using the supplied policy.
 func SqrtApproxWithPolicy2(x Rational, p SqrtPolicy2) (Rational, error) {
-	if err := p.Validate(); err != nil {
-		return Rational{}, err
-	}
-
-	if p.Seed != nil {
-		approx, _, err := SqrtCoreApproxRationalUntilResidual(x, *p.Seed, p.MaxSteps, p.Tol)
-		return approx, err
-	}
-
-	approx, _, err := SqrtCoreApproxRationalUntilResidualDefault2(x, p.MaxSteps, p.Tol)
-	return approx, err
-}
-
-// SqrtCoreApproxRationalUntilResidualDefault2 performs bounded Newton iteration for
-// sqrt(x), using SqrtSeedDefault(x), and stops early once |y^2 - x| <= tol.
-func SqrtCoreApproxRationalUntilResidualDefault2(x Rational, maxSteps int, tol Rational) (Rational, bool, error) {
-	seed, err := SqrtSeedDefault(x)
-	if err != nil {
-		return Rational{}, false, err
-	}
-	return SqrtCoreApproxRationalUntilResidual(x, seed, maxSteps, tol)
+	return sqrtApproxWithPolicyCanonical(x, p)
 }
 
 // sqrt_api2.go v1

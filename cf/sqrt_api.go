@@ -67,7 +67,7 @@ func SqrtApproxWithPolicy(x Rational, p SqrtPolicy) (Rational, error) {
 }
 
 func SqrtApproxCF2WithPolicyBridge(x Rational, p SqrtPolicy) (ContinuedFraction, error) {
-	approx, err := SqrtApproxWithPolicy2(x, sqrtPolicy2FromOld(p))
+	approx, err := sqrtApproxWithPolicyCanonical(x, sqrtPolicy2FromOld(p))
 	if err != nil {
 		return nil, err
 	}
