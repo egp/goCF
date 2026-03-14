@@ -108,6 +108,23 @@ func (t BLFT) ApplyRat(x, y Rational) (Rational, error) {
 	return Rational{r: out}, nil
 }
 
+func (t BLFT) IngestGCFX(p, q int64) (BLFT, error) {
+	if q <= 0 {
+		return BLFT{}, fmt.Errorf("BLFT IngestGCFX: require q>0, got q=%d", q)
+	}
+
+	return BLFT{
+		A: t.A*p + t.C,
+		B: t.B*p + t.D,
+		C: t.A * q,
+		D: t.B * q,
+		E: t.E*p + t.G,
+		F: t.F*p + t.H,
+		G: t.E * q,
+		H: t.F * q,
+	}, nil
+}
+
 // IngestGCF rewrites the ULFT after ingesting one generalized continued-fraction
 // term into x, using the convention:
 //
