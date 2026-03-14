@@ -16,10 +16,7 @@ type GCFDiagStream struct {
 	src     GCFSource
 	tailSrc GCFTailSource
 	opts    GCFULFTStreamOptions
-	err     error
-	done    bool
-	started bool
-	exactCF ContinuedFraction
+	state   exactCFStreamState
 }
 
 // NewGCFDiagStream constructs a GCF-native diagonal stream using explicit tail
@@ -50,50 +47,26 @@ func NewGCFDiagStreamWithTail(
 	return NewGCFDiagStream(t, src, NewExactTailSource(tail), opts)
 }
 
-func (s *GCFDiagStream) Err() error { return s.err }
-
-func (s *GCFDiagStream) initializeExactCF() bool {
-	if s.started {
-		return s.err == nil
-	}
-	s.started = true
-
-	tail, ok := s.tailSrc.ExactTail()
-	if !ok {
-		s.err = fmt.Errorf("GCFDiagStream: tail evidence not implemented")
-		s.done = true
-		return false
-	}
-
-	y, _, err := ApplyComposedGCFDiagBLFTToTailExact(s.t, s.src, tail, s.opts.MaxIngestTerms)
-	if err != nil {
-		s.err = fmt.Errorf("GCFDiagStream: %w", err)
-		s.done = true
-		return false
-	}
-
-	s.exactCF = NewRationalCF(y)
-	return true
-}
+func (s *GCFDiagStream) Err() error { return s.state.Err() }
 
 func (s *GCFDiagStream) Next() (int64, bool) {
-	if s.done {
-		return 0, false
-	}
-	if s.err != nil {
-		s.done = true
-		return 0, false
-	}
-	if !s.initializeExactCF() {
-		return 0, false
-	}
+	return s.state.nextFromExactCF(func() (Rational, error) {
+		tail, ok := s.tailSrc.ExactTail()
+		if !ok {
+			return Rational{}, fmt.Errorf("GCFDiagStream: tail evidence not implemented")
+		}
 
-	d, ok := s.exactCF.Next()
-	if !ok {
-		s.done = true
-		return 0, false
-	}
-	return d, true
+		y, _, err := ApplyComposedGCFDiagBLFTToTailExact(
+			s.t,
+			s.src,
+			tail,
+			s.opts.MaxIngestTerms,
+		)
+		if err != nil {
+			return Rational{}, fmt.Errorf("GCFDiagStream: %w", err)
+		}
+		return y, nil
+	})
 }
 
 // gcf_diag_stream.go v2
