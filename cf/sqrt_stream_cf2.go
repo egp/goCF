@@ -1,4 +1,4 @@
-// sqrt_stream_cf2.go v2
+// sqrt_stream_cf2.go v4
 package cf
 
 import "fmt"
@@ -18,10 +18,17 @@ type SqrtCFPrefixStream2 struct {
 	done    bool
 	started bool
 	exactCF ContinuedFraction
+	approx  *Rational
 
 	src         ContinuedFraction
 	prefixTerms int
 	policy      SqrtPolicy2
+}
+
+type SqrtCFPrefixStream2Snapshot struct {
+	Started     bool
+	PrefixTerms int
+	Approx      *Rational
 }
 
 func NewSqrtCFPrefixStream2(src ContinuedFraction, prefixTerms int, p SqrtPolicy2) *SqrtCFPrefixStream2 {
@@ -34,20 +41,34 @@ func NewSqrtCFPrefixStream2(src ContinuedFraction, prefixTerms int, p SqrtPolicy
 
 func (s *SqrtCFPrefixStream2) Err() error { return s.err }
 
+func (s *SqrtCFPrefixStream2) Snapshot() SqrtCFPrefixStream2Snapshot {
+	var approxCopy *Rational
+	if s.approx != nil {
+		v := *s.approx
+		approxCopy = &v
+	}
+	return SqrtCFPrefixStream2Snapshot{
+		Started:     s.started,
+		PrefixTerms: s.prefixTerms,
+		Approx:      approxCopy,
+	}
+}
+
 func (s *SqrtCFPrefixStream2) initExactCF() bool {
 	if s.started {
 		return s.err == nil
 	}
 	s.started = true
 
-	cf, err := SqrtApproxCFFromSourceRangeSeed2(s.src, s.prefixTerms, s.policy)
+	approx, err := SqrtApproxFromSourceRangeSeed2(s.src, s.prefixTerms, s.policy)
 	if err != nil {
 		s.err = fmt.Errorf("SqrtCFPrefixStream2: %w", err)
 		s.done = true
 		return false
 	}
 
-	s.exactCF = cf
+	s.approx = &approx
+	s.exactCF = NewRationalCF(approx)
 	return true
 }
 
@@ -71,4 +92,4 @@ func (s *SqrtCFPrefixStream2) Next() (int64, bool) {
 	return d, true
 }
 
-// sqrt_stream_cf2.go v2
+// sqrt_stream_cf2.go v4
