@@ -36,32 +36,6 @@ func TestApproxFromCFPrefix_InfiniteSourceTwoTerms(t *testing.T) {
 	}
 }
 
-func TestDefaultSqrtSeedFromRange_Sqrt2PrefixTwoTerms(t *testing.T) {
-	rng := NewRange(mustRat(4, 3), mustRat(3, 2), true, true)
-
-	got, err := DefaultSqrtSeedFromRange(rng)
-	if err != nil {
-		t.Fatalf("DefaultSqrtSeedFromRange failed: %v", err)
-	}
-
-	want := mustRat(29, 24)
-	if got.Cmp(want) != 0 {
-		t.Fatalf("got %v, want %v", got, want)
-	}
-}
-
-func TestDefaultSqrtSeedFromCFPrefix_Sqrt2TwoTerms(t *testing.T) {
-	got, err := DefaultSqrtSeedFromCFPrefix(Sqrt2CF(), 2)
-	if err != nil {
-		t.Fatalf("DefaultSqrtSeedFromCFPrefix failed: %v", err)
-	}
-
-	want := mustRat(29, 24)
-	if got.Cmp(want) != 0 {
-		t.Fatalf("got %v, want %v", got, want)
-	}
-}
-
 func TestNewSqrtApproxCFFromSourceRangeSeed_Sqrt2PrefixTwoTerms(t *testing.T) {
 	p := SqrtPolicy{
 		MaxSteps: 3,

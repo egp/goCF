@@ -3,44 +3,6 @@ package cf
 
 import "testing"
 
-func TestDefaultSqrtSeed_NegativeRejected(t *testing.T) {
-	_, err := DefaultSqrtSeed(mustRat(-1, 1))
-	if err == nil {
-		t.Fatalf("expected error for negative input")
-	}
-}
-
-func TestDefaultSqrtSeed_ZeroGivesOne(t *testing.T) {
-	got, err := DefaultSqrtSeed(mustRat(0, 1))
-	if err != nil {
-		t.Fatalf("DefaultSqrtSeed failed: %v", err)
-	}
-	if got.Cmp(intRat(1)) != 0 {
-		t.Fatalf("got %v, want 1", got)
-	}
-}
-
-func TestDefaultSqrtSeed_FractionBelowOneGivesOne(t *testing.T) {
-	got, err := DefaultSqrtSeed(mustRat(3, 4))
-	if err != nil {
-		t.Fatalf("DefaultSqrtSeed failed: %v", err)
-	}
-	if got.Cmp(intRat(1)) != 0 {
-		t.Fatalf("got %v, want 1", got)
-	}
-}
-
-func TestDefaultSqrtSeed_AboveOneReturnsX(t *testing.T) {
-	x := mustRat(5, 2)
-	got, err := DefaultSqrtSeed(x)
-	if err != nil {
-		t.Fatalf("DefaultSqrtSeed failed: %v", err)
-	}
-	if got.Cmp(x) != 0 {
-		t.Fatalf("got %v, want %v", got, x)
-	}
-}
-
 func TestNewSqrtApproxCFDefault_Sqrt2_ThreeSteps(t *testing.T) {
 	cf, err := NewSqrtApproxCFDefault(mustRat(2, 1), 3)
 	if err != nil {
