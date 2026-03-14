@@ -1,4 +1,4 @@
-// gcf_blft_stream.go v2
+// gcf_blft_stream.go v3
 package cf
 
 import "fmt"
@@ -17,11 +17,31 @@ type GCFBLFTStream struct {
 	xTailSrc GCFTailSource
 	ySrc     GCFSource
 	yTailSrc GCFTailSource
-	opts     GCFULFTStreamOptions
+	opts     GCFBLFTStreamOptions
 	err      error
 	done     bool
 	started  bool
 	exactCF  ContinuedFraction
+}
+
+// GCFBLFTStreamOptions controls bounded exact ingestion for the binary stream.
+//
+// Current meaning:
+//
+//   - MaxXIngestTerms < 0 : unlimited x-side ingestion
+//
+//   - MaxXIngestTerms = 0 : no x-side ingestion allowed
+//
+//   - MaxXIngestTerms > 0 : maximum permitted x-side source terms
+//
+//   - MaxYIngestTerms < 0 : unlimited y-side ingestion
+//
+//   - MaxYIngestTerms = 0 : no y-side ingestion allowed
+//
+//   - MaxYIngestTerms > 0 : maximum permitted y-side source terms
+type GCFBLFTStreamOptions struct {
+	MaxXIngestTerms int
+	MaxYIngestTerms int
 }
 
 func NewGCFBLFTStream(
@@ -30,7 +50,7 @@ func NewGCFBLFTStream(
 	xTailSrc GCFTailSource,
 	ySrc GCFSource,
 	yTailSrc GCFTailSource,
-	opts GCFULFTStreamOptions,
+	opts GCFBLFTStreamOptions,
 ) *GCFBLFTStream {
 	return &GCFBLFTStream{
 		t:        t,
@@ -48,7 +68,7 @@ func NewGCFBLFTStreamWithTails(
 	xTail Rational,
 	ySrc GCFSource,
 	yTail Rational,
-	opts GCFULFTStreamOptions,
+	opts GCFBLFTStreamOptions,
 ) *GCFBLFTStream {
 	return NewGCFBLFTStream(
 		t,
@@ -86,10 +106,10 @@ func (s *GCFBLFTStream) initializeExactCF() bool {
 		s.t,
 		s.xSrc,
 		xTail,
-		s.opts.MaxIngestTerms,
+		s.opts.MaxXIngestTerms,
 		s.ySrc,
 		yTail,
-		s.opts.MaxIngestTerms,
+		s.opts.MaxYIngestTerms,
 	)
 	if err != nil {
 		s.err = fmt.Errorf("GCFBLFTStream: %w", err)
@@ -121,4 +141,4 @@ func (s *GCFBLFTStream) Next() (int64, bool) {
 	return d, true
 }
 
-// gcf_blft_stream.go v2
+// gcf_blft_stream.go v3

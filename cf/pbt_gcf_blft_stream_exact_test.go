@@ -54,8 +54,9 @@ func TestPBT_GCFBLFTStreamWithTails_MatchesExactRationalImage(t *testing.T) {
 			xTail,
 			cloneSliceGCF(yTerms),
 			yTail,
-			GCFULFTStreamOptions{
-				MaxIngestTerms: 16,
+			GCFBLFTStreamOptions{
+				MaxXIngestTerms: 16,
+				MaxYIngestTerms: 16,
 			},
 		)
 
