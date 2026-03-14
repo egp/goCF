@@ -1,31 +1,40 @@
-CHECKPOINT.txt
+goCF checkpoint: GCF-native exact substrate progress
 
-goCF checkpoint for next chat
+Current focus:
+- mathematical correctness first
+- bounded tests only
+- named-source tail-certification deferred
+- old regular-CF unary path kept intact until new GCF-native path is complete enough
 
-Status
-- GCFStream split into gcf_stream.go + gcf_stream_tail_evidence.go.
-- Evidence layers now exist: TailEvidence, CandidateTailEvidence, RefinedTailEvidence, PostEmitTailEvidence, MaxRefinementSteps, Trace.
-- Lambert is in good shape: prefix-2 and prefix-3 specialized evidence added; visible cadence win over lower-bound-only baseline.
-- Brouncker got prefix-2/3/4 specialized ranges, but weak lower-bound-ray fallback was traced as the cause of a bad third digit and was effectively disabled.
-- After disabling that fallback, several Brouncker “infinite” tests started hanging and were converted to bounded finite-prefix variants.
-- Brouncker is now safer/correctness-first, but infinite early-digit certifiability is weaker than before.
-- Current highest-leverage production work: strengthen Brouncker explicit source evidence so infinite early digits become certifiable again without re-enabling weak generic lower-bound-ray fallback.
+What is now implemented and green:
+- ULFT exact finite-GCF substrate:
+  - ComposeGCFIntoULFTBounded
+  - ApplyComposedGCFULFTToTailExact
+  - EvalGCFWithTailExact
+  - GCFULFTStream with exact tail source only
+  - GCFTailSource, ExactTailSource, NoTailSource
+  - ULFT.IngestGCF rewrite law locked down with direct + PBT tests
+- BLFT exact finite-GCF substrate:
+  - BLFT.IngestGCFX
+  - BLFT.IngestGCFY
+  - ApplyComposedGCFXBLFTToTailsExact
+  - ApplyComposedGCFYBLFTToTailsExact
+  - ApplyComposedGCFXYBLFTToTailsExact
+  - x/y rewrite laws and two-sided consistency are tested and green
+- DiagBLFT exact finite-GCF substrate:
+  - DiagBLFT.IngestGCF rewrite law tested and green
+  - ApplyComposedGCFDiagBLFTToTailExact
+  - GCFDiagStream with exact tail source only
+  - BLFT diagonal consistency with DiagBLFT tested and green
 
-Guidance for the new chat
-1. First ask me for CURRENT contents of:
-   - cf/brouncker_pi_tail.go
-   - cf/brouncker_pi_gcf_test.go
-   - cf/gcf_stream_named_sources_test.go
-   - cf/gcf_stream_tail_evidence.go
-2. Do not assume earlier code still matches prior suggestions; resync from current files before proposing changes.
-3. Focus on Brouncker production code, not docs/API cleanup yet.
-4. Goal: recover safe infinite Brouncker digit 2, then digit 3, using stronger source-specific evidence.
-5. Preferred directions:
-   - improve Brouncker TailEvidence()
-   - add/use CandidateTailEvidence() for Brouncker
-   - or add/use PostEmitTailEvidence() for Brouncker
-6. Avoid generic framework expansion unless clearly necessary.
-7. Keep tests bounded; do not reintroduce hanging infinite Brouncker tests.
-8. Lambert should be treated as the working example; Brouncker is the active problem area.
-9. If a proposed fix affects infinite Brouncker behavior, add a trace-based test or bounded payoff test to prove where the digit came from.
-10. Correctness first: better “no digit yet” than a wrong digit from weak fallback.
+Current architectural conclusion:
+- exact finite-prefix GCF algebra is in much better shape
+- next challenge is honest non-exact / infinite GCF support without reviving source-specific tail-certification work
+
+Suggested next step:
+- inspect current new GCF-native files and decide the next narrow step toward non-exact / infinite GCF interfaces, or toward sqrt if the diagonal substrate is now sufficient
+
+Ask first for:
+1. current relevant production files
+2. current relevant test files
+3. latest failing test output, if any
