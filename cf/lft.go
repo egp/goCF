@@ -125,6 +125,23 @@ func (t BLFT) IngestGCFX(p, q int64) (BLFT, error) {
 	}, nil
 }
 
+func (t BLFT) IngestGCFY(p, q int64) (BLFT, error) {
+	if q <= 0 {
+		return BLFT{}, fmt.Errorf("BLFT IngestGCFY: require q>0, got q=%d", q)
+	}
+
+	return BLFT{
+		A: t.A*p + t.B,
+		B: t.A * q,
+		C: t.C*p + t.D,
+		D: t.C * q,
+		E: t.E*p + t.F,
+		F: t.E * q,
+		G: t.G*p + t.H,
+		H: t.G * q,
+	}, nil
+}
+
 // IngestGCF rewrites the ULFT after ingesting one generalized continued-fraction
 // term into x, using the convention:
 //
