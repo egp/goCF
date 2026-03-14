@@ -1,40 +1,62 @@
-goCF checkpoint: GCF-native exact substrate progress
+# checkpoint_sqrt_bootstrap.txt
 
-Current focus:
-- mathematical correctness first
-- bounded tests only
-- named-source tail-certification deferred
-- old regular-CF unary path kept intact until new GCF-native path is complete enough
+Status:
+- Major sqrt migration/refactor is largely done.
+- New canonical/internal sqrt path exists and old public APIs mostly delegate to it.
+- Full suite is green and fast.
 
-What is now implemented and green:
-- ULFT exact finite-GCF substrate:
-  - ComposeGCFIntoULFTBounded
-  - ApplyComposedGCFULFTToTailExact
-  - EvalGCFWithTailExact
-  - GCFULFTStream with exact tail source only
-  - GCFTailSource, ExactTailSource, NoTailSource
-  - ULFT.IngestGCF rewrite law locked down with direct + PBT tests
-- BLFT exact finite-GCF substrate:
-  - BLFT.IngestGCFX
-  - BLFT.IngestGCFY
-  - ApplyComposedGCFXBLFTToTailsExact
-  - ApplyComposedGCFYBLFTToTailsExact
-  - ApplyComposedGCFXYBLFTToTailsExact
-  - x/y rewrite laws and two-sided consistency are tested and green
-- DiagBLFT exact finite-GCF substrate:
-  - DiagBLFT.IngestGCF rewrite law tested and green
-  - ApplyComposedGCFDiagBLFTToTailExact
-  - GCFDiagStream with exact tail source only
-  - BLFT diagonal consistency with DiagBLFT tested and green
+Canonical/new-path files added:
+- sqrt_core_exact.go
+- sqrt_seed_range.go
+- sqrt_api2.go
+- sqrt_source_api2.go
+- sqrt_source_prefix_api2.go
+- sqrt_gcf_api2.go
+- sqrt_gcf_range_seed_api2.go
+- sqrt_gcf_tail_api2.go
+- sqrt_midpoint_api2.go
+- sqrt_canonical_api.go
+- sqrt_canonical_source_api.go
+- sqrt_stream2.go
+- sqrt_gcf_prefix_stream2.go
+- sqrt_stream_cf2.go
 
-Current architectural conclusion:
-- exact finite-prefix GCF algebra is in much better shape
-- next challenge is honest non-exact / infinite GCF support without reviving source-specific tail-certification work
+Key new capabilities:
+- bounded sqrt over GCF exact-tail input
+- bounded sqrt over GCF prefix input
+- bounded sqrt over CF prefix input
+- canonical exact/Newton/seed/range layers
 
-Suggested next step:
-- inspect current new GCF-native files and decide the next narrow step toward non-exact / infinite GCF interfaces, or toward sqrt if the diagonal substrate is now sufficient
+Legacy status:
+- many old sqrt functions now wrap canonical code
+- old Newton/range implementation bodies retired
+- several obsolete old sqrt tests retired
+- remaining legacy tests mostly serve compatibility/public-surface coverage
 
-Ask first for:
-1. current relevant production files
-2. current relevant test files
-3. latest failing test output, if any
+Important semantic note:
+- bounded prefix streams currently collapse to a bounded rational approximation first, then stream CF terms from that rational
+- they are not yet true progressively certifying sqrt streams
+
+Recommended next step:
+- stop refactoring
+- make real sqrt progress:
+  1. add a stub for the next operator-shaped sqrt milestone
+  2. add focused failing tests
+  3. implement the smallest passing version
+
+Most likely next target:
+- a more genuine transform/diagonal-aware sqrt stream with stronger progressive certification semantics than the current exact-collapse streams
+
+If context is needed next:
+- ask for current contents of:
+  - sqrt_stream2.go
+  - sqrt_gcf_prefix_stream2.go
+  - sqrt_stream_cf2.go
+  - diag_blft.go
+  - diag_stream.go
+  - any new sqrt stream tests
+
+Reminder:
+- user prefers baby steps
+- user prefers complete small-file replacements, complete-function replacements for larger files
+- full test suite is cheap; usually just run `go test ./cf`
