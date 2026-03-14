@@ -1,4 +1,4 @@
-// gcf_specialized_vs_generic_test.go v1
+// gcf_specialized_vs_generic_test.go v2
 package cf
 
 import "testing"
@@ -93,10 +93,10 @@ func TestBrounckerSpecializedVsGeneric_Prefix1(t *testing.T) {
 		t.Fatalf("expected specialized Brouncker range tighter than generic: spec=%v gen=%v", specSpan, genSpan)
 	}
 
-	// specialized: [7/5,3/2]
+	// specialized: [15/13,105/76]
 	// generic:     [1,2]
-	wantSpecLo := mustRat(7, 5)
-	wantSpecHi := mustRat(3, 2)
+	wantSpecLo := mustRat(15, 13)
+	wantSpecHi := mustRat(105, 76)
 	if spec.Range.Lo.Cmp(wantSpecLo) != 0 || spec.Range.Hi.Cmp(wantSpecHi) != 0 {
 		t.Fatalf("specialized got [%v,%v] want [%v,%v]", spec.Range.Lo, spec.Range.Hi, wantSpecLo, wantSpecHi)
 	}
@@ -107,6 +107,7 @@ func TestBrounckerSpecializedVsGeneric_Prefix1(t *testing.T) {
 		t.Fatalf("generic got [%v,%v] want [%v,%v]", gen.Range.Lo, gen.Range.Hi, wantGenLo, wantGenHi)
 	}
 }
+
 func TestLambertSpecializedVsGeneric_Prefix2_SpecializedGain(t *testing.T) {
 	spec, err := LambertPiOver4ApproxFromPrefix(2)
 	if err != nil {
@@ -142,4 +143,4 @@ func TestLambertSpecializedVsGeneric_Prefix2_SpecializedGain(t *testing.T) {
 	}
 }
 
-// gcf_specialized_vs_generic_test.go v1
+// gcf_specialized_vs_generic_test.go v2

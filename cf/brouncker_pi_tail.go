@@ -1,4 +1,4 @@
-// brouncker_pi_tail.go v3
+// brouncker_pi_tail.go v4
 package cf
 
 import "fmt"
@@ -29,18 +29,22 @@ func (s *Brouncker4OverPiGCFSource) LowerBoundRayMinPrefix() int {
 //     back to lower-bound-only ray semantics
 //   - (_, false, err) => invalid input
 //
-// Current v3 support:
-//   - prefixTerms == 0: tail is the whole Brouncker object, conservatively in [1, 3/2]
-//   - prefixTerms == 1: remaining tail starts at 2 + 1/(2 + 9/(2 + ...)),
-//     conservatively in [2, 5/2]
+// Current v4 support:
+//   - prefixTerms == 0: full Brouncker value, conservatively in [15/13, 105/76]
+//   - prefixTerms == 1: remaining tail starts at 2 + 9/(2 + 25/(2 + ...)),
+//     conservatively in [76/29, 13/2]
 //   - prefixTerms == 2: remaining tail starts at 2 + 25/(2 + 49/(2 + ...)),
-//     conservatively in [2, 29/2]
-//   - prefixTerms >= 3: no tighter interval currently provided
+//     conservatively in [156/53, 29/2]
+//   - prefixTerms == 3: remaining tail starts at 2 + 49/(2 + 81/(2 + ...)),
+//     conservatively in [215/83, 53/2]
+//   - prefixTerms == 4: remaining tail starts at 2 + 81/(2 + 121/(2 + ...)),
+//     conservatively in [2, 83/2]
+//   - prefixTerms >= 5: no tighter interval currently provided
 //
-// Brouncker uses source-specific prefix evidence mainly to improve correctness
-// and avoid weak generic fallback paths. Current specializations help bound the
-// unfinished value safely, but later infinite digits may still require stronger
-// explicit evidence rather than generic lower-bound-ray reasoning.
+// These bounds are correctness-first. The upper bounds come from the next
+// unfinished denominator being at least 2. Where available, lower bounds are
+// improved by combining that recurrence with the next prefix's conservative
+// upper bound.
 func Brouncker4OverPiTailRangeAfterPrefix(prefixTerms int) (Range, bool, error) {
 	if prefixTerms < 0 {
 		return Range{}, false, fmt.Errorf("Brouncker4OverPiTailRangeAfterPrefix: negative prefixTerms %d", prefixTerms)
@@ -48,19 +52,51 @@ func Brouncker4OverPiTailRangeAfterPrefix(prefixTerms int) (Range, bool, error) 
 
 	switch prefixTerms {
 	case 0:
-		return NewRange(mustRat(1, 1), mustRat(3, 2), true, true), true, nil
+		// Full value is:
+		//   1 + 1/t1
+		// where t1 is the prefix-1 tail in [76/29, 13/2].
+		//
+		// Since x -> 1 + 1/x is decreasing on x > 0:
+		//   lo = 1 + 1/(13/2) = 15/13
+		//   hi = 1 + 1/(76/29) = 105/76
+		return NewRange(mustRat(15, 13), mustRat(105, 76), true, true), true, nil
+
 	case 1:
-		return NewRange(mustRat(2, 1), mustRat(5, 2), true, true), true, nil
+		// Remaining tail is:
+		//   2 + 9/u
+		// where u is the prefix-2 tail.
+		//
+		// Using prefix-2 upper bound u <= 29/2 and positivity u >= 2:
+		//   lo = 2 + 9/(29/2) = 76/29
+		//   hi = 2 + 9/2       = 13/2
+		return NewRange(mustRat(76, 29), mustRat(13, 2), true, true), true, nil
+
 	case 2:
-		return NewRange(mustRat(2, 1), mustRat(29, 2), true, true), true, nil
+		// Remaining tail is:
+		//   2 + 25/u
+		// where u is the prefix-3 tail.
+		//
+		// Using prefix-3 upper bound u <= 53/2 and positivity u >= 2:
+		//   lo = 2 + 25/(53/2) = 156/53
+		//   hi = 2 + 25/2      = 29/2
+		return NewRange(mustRat(156, 53), mustRat(29, 2), true, true), true, nil
+
 	case 3:
 		// Remaining tail is:
 		//   2 + 49/u
-		// where u >= 2, hence tail in [2, 2 + 49/2] = [2, 53/2].
-		return NewRange(mustRat(2, 1), mustRat(53, 2), true, true), true, nil
+		// where u is the prefix-4 tail.
+		//
+		// Using prefix-4 upper bound u <= 83/2 and positivity u >= 2:
+		//   lo = 2 + 49/(83/2) = 215/83
+		//   hi = 2 + 49/2      = 53/2
+		return NewRange(mustRat(215, 83), mustRat(53, 2), true, true), true, nil
 
 	case 4:
+		// Remaining tail is:
+		//   2 + 81/u
+		// where u >= 2, hence tail in [2, 2 + 81/2] = [2, 83/2].
 		return NewRange(mustRat(2, 1), mustRat(83, 2), true, true), true, nil
+
 	default:
 		return Range{}, false, nil
 	}
@@ -75,4 +111,4 @@ func Brouncker4OverPiApproxFromPrefix(prefixTerms int) (GCFApprox, error) {
 	)
 }
 
-// brouncker_pi_tail.go v3
+// brouncker_pi_tail.go v4

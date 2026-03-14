@@ -1,246 +1,122 @@
 # MasterPlan.md
 
-## Project Goal
+# goCF Master Plan
 
-Build a mathematically correct, test-driven continued-fraction arithmetic library centered on Gosper-style streaming transforms, exact rational foundations, conservative enclosure reasoning, and eventual exact-real style workflows.
+## Current strategic goals
+- Keep mathematical correctness first.
+- Improve streaming certifiability for generalized continued fractions.
+- Prefer source-specific mathematically justified evidence over weak generic fallback.
+- Keep production code cohesive and testable.
+- Use bounded/fast tests and avoid unbounded hangs.
 
-Stretch goal: make Gosper smile.
+## Current status summary
+- `GCFStream` has been refactored and split into:
+  - `gcf_stream.go`
+  - `gcf_stream_tail_evidence.go`
+- The stream now supports a layered evidence model:
+  - `TailEvidence`
+  - `CandidateTailEvidence`
+  - `RefinedTailEvidence`
+  - `PostEmitTailEvidence`
+- `GCFStreamOptions` now includes:
+  - `MaxRefinementSteps`
+  - `Trace`
+- Trace-based tests exist for evidence-path observation.
+- Tail-evidence-driven certification is materially more capable than earlier versions.
 
----
+## Completed recently
 
-## Current Status
+### GCFStream structure and policy
+- Split `gcf_stream.go` into progression/lifecycle logic and tail-evidence logic.
+- Added configurable refinement depth via `GCFStreamOptions`.
+- Added trace hook to observe evidence-path selection in tests.
+- Added support for multiple successive refinements before further ingestion.
+- Added support for candidate tail evidences before refinement or ingestion.
 
-### Core arithmetic and representations
-- Exact `Rational` foundation is in place.
-- Regular CF finite streaming via `RationalCF` is working.
-- Core interval/enclosure type `Range` is in place, with inside/outside semantics and refinement metrics.
-- `Bounder` for regular CF prefixes is implemented and well tested.
-- `GCFBounder` exists and supports:
-  - exact convergents for finite GCF prefixes
-  - placeholder point ranges
-  - lower-bound ray enclosure
-  - explicit tail-range enclosure
-- ULFT / BLFT / DiagBLFT exact rational application is implemented.
+### Lambert improvements
+- Added Lambert prefix-2 specialized tail evidence.
+- Added Lambert prefix-3 specialized tail evidence.
+- Updated Lambert approximation and inspect expectations to match stronger evidence.
+- Added Lambert cadence/baseline comparisons against a true lower-bound-only wrapper.
+- Demonstrated that Lambert specialization gives visible cadence payoff.
 
-### Streaming engines
-- `ULFTStream`, `BLFTStream`, and `DiagBLFTStream` exist.
-- Recent work substantially improved correctness for:
-  - exact-point termination
-  - remainder-pole clean exhaustion after emitted digits
-  - distinguish real exact-input singularities from clean exhaustion
-  - refine-before-fail behavior on coarse intervals
-  - shared refine-budget accounting
-- Stream `Next()` methods have started to be refactored into smaller helpers.
+### Brouncker improvements
+- Added Brouncker prefix-2 specialized tail evidence.
+- Added Brouncker prefix-3 specialized tail evidence.
+- Added Brouncker prefix-4 specialized tail evidence.
+- Updated Brouncker approximation and inspect expectations to match stronger evidence.
+- Added true lower-bound-only Brouncker wrapper/baseline comparisons.
+- Traced a bad Brouncker third-digit path to generic `lower-bound-ray` fallback.
+- Disabled weak Brouncker lower-bound-ray fallback by raising `LowerBoundMinPrefix` to an effectively-disabled sentinel.
+- Converted several Brouncker infinite-stream tests to bounded finite-prefix versions to avoid hangs after fallback disablement.
+- Established that Brouncker specialization is currently “no worse than” lower-bound-only for early digits, but its main benefit so far is correctness/safety rather than visible first-two-digit cadence improvement.
 
-### Generalized continued fractions
-- GCF finite prefix ingestion is implemented.
-- GCF exact convergents and bounded inspection helpers are implemented.
-- Prefix-aware specialized enclosure helpers exist for:
-  - Lambert pi/4
-  - Brouncker 4/pi
-- Specialized inspection helpers are implemented.
-- Generic and specialized GCF helper layers have begun to be consolidated.
-- `GCFStream` finite-first behavior is implemented and currently passes tests for:
-  - finite `SliceGCF` equivalence vs `EvaluateFiniteGCF`
-  - adapted regular CF round-trip through `AdaptCFToGCF`
-  - bounded exact termination semantics
-  - generic stable `TailRange()`-driven earlier emission
-  - prefix-sensitive dynamic `TailRange()` behavior
-  - explicit `TailRange()` strength ordering
-  - preference of explicit `TailRange()` evidence over weaker lower-bound-ray fallback when both are available
-- `GCFStream` now queries `TailRange()` dynamically from source state rather than caching it at construction time.
+### Test organization
+- Split oversized `gcf_stream_tail_evidence_test.go` into smaller focused files.
+- Continued moving named-source-specific tests into named-source-specific files where appropriate.
+- Reworked hanging tests into bounded forms where needed.
 
-### Sources
-- Regular CF sources:
-  - `SliceCF`
-  - periodic irrational-style sources including sqrt examples
-- GCF sources:
-  - `SliceGCF`
-  - `PeriodicGCF`
-  - adapted regular CF to GCF bridge
-  - Lambert pi/4 source
-  - Brouncker 4/pi source
-  - algorithmic/unit-pattern GCF sources
-- Note: many juicy future GCF sources remain, including pi and other constants.
-  - https://en.wikipedia.org/wiki/Physical_constant
+## Important current conclusions
+- Lambert is paying rent: source-specific evidence improves real streaming cadence.
+- Brouncker is not yet healthy as an infinite stream after weak fallback disablement:
+  - correctness improved,
+  - but some early infinite digits are no longer readily certifiable.
+- Therefore, the next leverage is in Brouncker source math/evidence, not more generic infrastructure.
 
-### Testing and quality
-- Coverage is now above 81%.
-- Property tests exist for:
-  - ULFTStream vs exact rational image
-  - BLFTStream vs exact rational image
-  - DiagBLFTStream vs exact rational image (within currently supported subclass)
-- Recent focused regression tests were added for:
-  - exact input poles
-  - remainder-pole clean exhaustion
-  - refine-budget guards
-  - GCFBounder range semantics
-  - RationalCF
-  - Rational.Div
-  - BLFT denominator helpers
-  - Range floor/string/refinement behavior
-  - Bounder semantics
-  - `GCFStream` generic stable `TailRange()` cadence / early emission semantics
-  - `GCFStream` prefix-sensitive dynamic `TailRange()` semantics
-  - `GCFStream` explicit-tail-range strength ordering
-  - `GCFStream` preference of explicit `TailRange()` over lower-bound-ray fallback
-- First fuzz target added for `ULFTStream`.
-- Future note: expand fuzz coverage later, especially for BLFTStream, DiagBLFTStream, and other core arithmetic/streaming components.
+## Highest-leverage next production task
+- Restore useful infinite Brouncker streaming by adding stronger explicit source-specific evidence.
+- Target:
+  - make the infinite Brouncker source safely certify at least the first two digits again,
+  - and then work toward the third digit,
+  - without re-enabling weak generic lower-bound-ray fallback.
 
-### Documentation and API
-- User guide skeleton exists.
-- `api_spec.md` and `UserGuide.md` currently overlap; later either combine them or sharpen the distinction and remove the redundancy.
-- Hold off on more documentation updates for now while production code and tests improve.
-- Public API is not considered frozen yet; continue improving client ergonomics where it does not compromise mathematical clarity.
+## Recommended immediate work items
+1. Review current Brouncker source/tail files and current named-source stream tests.
+2. Identify which current Brouncker early-digit tests still use finite-prefix wrappers because infinite certification is too weak.
+3. Improve Brouncker source-specific evidence, likely via one or more of:
+   - stronger `TailEvidence()`
+   - `CandidateTailEvidence()`
+   - `PostEmitTailEvidence()`
+4. Reintroduce true infinite-source Brouncker tests only when the source can certify them safely and boundedly.
+5. Keep generic lower-bound-ray fallback effectively disabled for Brouncker unless a mathematically justified restricted policy is found.
 
----
+## Secondary cleanup tasks
+- Clarify evidence hierarchy comments near `GCFTailEvidence` and related interfaces.
+- Rename any remaining Brouncker tests whose names still imply infinite behavior when they now use finite-prefix wrappers.
+- Add a compact note or matrix documenting which evidence layers each named source currently uses.
+- Revisit API elegance after Brouncker infinite streaming is in a healthier state.
 
-## Design / Style Rules
+## Deferred for now
+- Large API documentation rewrite.
+- Broad API simplification pass.
+- Additional generic evidence machinery.
+- More Brouncker prefix helpers if they are only crude upper-bound extensions without clear payoff.
+- More documentation updates unrelated to current production/test progress.
 
-- Favor mathematical correctness over cleverness.
-- Prefer test-first work when appropriate.
-- Under normal circumstances, keep methods around 30–40 lines so they fit on one screen.
-- Break longer methods into smaller helpers for readability, self-documentation, testability, and safer refactoring.
-- Continue reviewing production code for DRY opportunities and consolidation where it improves maintainability without obscuring the math.
-- Treat current source and tests as ground truth over stale documentation.
-- Prefer dynamic, prefix-sensitive tail evidence over cached metadata when source contracts are stateful.
+## Ongoing design principles
+- Prefer fewer medium-sized cohesive files over many tiny files.
+- Keep methods around one screen when practical; extract helpers for clarity.
+- Bound tests and avoid any test that can wait forever on infinite uncertified streaming.
+- Do not mistake “does not hang” for “mathematically justified”.
+- Cash out infrastructure work into real named-source improvements whenever possible.
 
----
+## Current named-source characterization
+- Lambert:
+  - cadence-oriented specialization
+  - prefix-specific evidence visibly improves streaming
+- Brouncker:
+  - safety-oriented specialization
+  - weak generic fallback was found to be too permissive
+  - explicit source evidence needs to be strengthened to recover healthy infinite early-digit certification
 
-## Recent Progress Highlights
+## Suggested next-chat bootstrap
+Ask for current contents of:
+- `cf/brouncker_pi_tail.go`
+- `cf/brouncker_pi_gcf_test.go`
+- `cf/gcf_stream_named_sources_test.go`
+- `cf/gcf_stream_tail_evidence.go`
 
-### Stream correctness
-- Fixed ULFT exact-integer termination issues.
-- Fixed ULFT exact-point remainder-pole clean exhaustion semantics.
-- Fixed BLFT transient rectangle-pole behavior by refining before failing.
-- Fixed BLFT exact-point remainder-pole clean exhaustion semantics.
-- Fixed DiagBLFT refine-before-fail behavior for coarse unsupported intervals.
-- Fixed DiagBLFT exact-point remainder-pole clean exhaustion semantics.
-- Fixed `GCFStream` to use current source-provided `TailRange()` evidence dynamically instead of stale constructor-cached range metadata.
-- Corrected a `GCFStream` stable-tail-range cadence test fixture to match the actual regular CF of the `(1,1)`-forever GCF source (golden-ratio behavior).
-- Added targeted tests for dynamic `TailRange()` lookup, explicit-tail-range strength ordering, and preference of explicit tail-range evidence over weaker lower-bound-ray fallback.
-
-### Refactoring progress
-- Factored shared exact-point exhaustion policy.
-- Factored shared refine-budget accounting across stream engines.
-- Refactored `ULFTStream.Next()` into smaller private helpers.
-- Refactored `BLFTStream.Next()` into smaller private helpers.
-- Refactored `DiagBLFTStream.Next()` into smaller private helpers.
-- Factored shared GCFApprox construction from prepared bounders.
-- Factored shared GCFInspect construction from GCFApprox.
-- Factored shared positive-prefix validation.
-- Factored shared bounded-prefix ingestion loop.
-
----
-
-## Immediate Next Milestone
-
-### Harden `GCFStream` finite-first semantics and prepare for unfinished-tail support
-
-`GCFStream` now exists and passes its current finite-first and early-emission tests. The next step is to harden the semantics around tail evidence, cadence, and source contracts before expanding unfinished-tail support.
-
-### Why
-Generalized continued fractions are now not only:
-- inspectable
-- prefix-comparable
-- enclosure-aware
-
-but also capable of finite-first lazy ordinary CF production.
-
-The next leverage comes from making the finite-first implementation more robust and from clarifying the boundary between:
-- exact finite fallback
-- dynamic tail metadata
-- weaker lower-bound-ray fallback
-- future unfinished-tail enclosure streaming
-
-### Phase 1a
-Strengthen tests around current `GCFStream` behavior:
-- dynamic prefix-sensitive `TailRange()` semantics
-- preference of explicit `TailRange()` over lower-bound ray
-- cadence rules for metadata-driven emission
-- finite exact fallback after source exhaustion
-- clean separation between reusable strong evidence and weaker conservative evidence
-- named-source finite-prefix fixture coverage for Lambert and Brouncker
-
-### Phase 1b
-Review the public/client-facing `GCFStream` API:
-- confirm whether `Next() (int64, bool)` + `Err()` is the right long-term surface
-- compare ergonomics and semantics with the other stream engines
-- add small helper constructors or naming improvements if they materially improve clarity
-
-### Phase 1c
-Simplify internal `GCFStream` evidence-selection logic where it improves maintainability without weakening the mathematics:
-- separate “obtain best current tail evidence” from emission policy
-- reduce duplication between explicit-tail-range and lower-bound-ray handling
-- keep the stronger evidence path clearly preferred over weaker fallback logic
-
----
-
-## Near-Term Plan After Finite GCFStream
-
-1. Harden finite `GCFStream` semantics with more targeted tests.
-2. Add additional adapted regular-CF round-trip and cadence tests.
-3. Add named finite-prefix fixtures for Lambert and Brouncker.
-4. Simplify `GCFStream` internal evidence-selection structure where that improves clarity.
-5. Extend `GCFStream` from finite-only behavior toward unfinished-tail enclosure support.
-6. Reuse existing GCF tail metadata ideas where mathematically justified.
-7. Let named sources benefit automatically once unfinished-tail streaming works.
-
----
-
-## Medium-Term Plan
-
-### GCF / exact-real direction
-- Extend `GCFStream` to infinite or unfinished sources using conservative tail enclosures.
-- Improve GCF enclosure semantics where lower-bound ray logic is too weak.
-- Add more published GCF sources for pi and other constants.
-- Investigate additional generalized continued fraction algorithms for pi and other constants as future `GCFSource` implementations.
-
-### Unary / client-facing operator support
-- Consider useful client-facing unary operators where they give real leverage beyond current ULFT support.
-- Brainstorm convenience constructors/helpers for common ULFT matrices such as identity `(1,0,0,1)` and other useful named transforms.
-
-### sqrt direction
-- Continue improving sqrt approximation / source workflows once GCF streaming is stronger.
-- Preserve focus on exact rational and bounded semantics rather than opaque approximation.
-
----
-
-## Coverage / Hardening Plan
-
-Keep increasing coverage strategically, prioritizing:
-- branch-heavy core streaming logic
-- transform safety / pole behavior
-- exact termination semantics
-- finite rational equivalence to exact arithmetic
-- GCF tail-evidence semantics and fallback boundaries
-
-Future targeted fuzzing:
-- BLFTStream
-- DiagBLFTStream
-- Range / BLFT denominator helpers
-- additional arithmetic and streaming invariants
-- later: `GCFStream` once its unfinished-tail contract stabilizes
-
----
-
-## Documentation Later
-
-When production code stabilizes further:
-- refresh API surface view if needed
-- expand `UserGuide.md`
-- reconcile `api_spec.md` vs `UserGuide.md`
-- add an API user guide covering public interfaces, usage notes, warnings, and examples
-
----
-
-## Current Focus
-
-Do not broaden documentation work right now.
-Do not chase easy cosmetic coverage.
-Keep making meaningful progress toward:
-- true generalized-CF streaming
-- stronger exact arithmetic foundations
-- transform correctness
-- client-usable API improvements where justified
-- Gosper-utopia
+Then focus on:
+- strengthening Brouncker explicit evidence for infinite early digits,
+- not on generic framework growth,
+- not on docs first.
