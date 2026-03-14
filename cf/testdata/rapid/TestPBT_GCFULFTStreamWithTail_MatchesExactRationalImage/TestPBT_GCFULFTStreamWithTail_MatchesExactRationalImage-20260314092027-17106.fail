@@ -1,0 +1,37 @@
+# 2026/03/14 09:20:27.999844 [TestPBT_GCFULFTStreamWithTail_MatchesExactRationalImage] [rapid] draw u: cf.ULFT{A:0, B:1, C:1, D:0}
+# 2026/03/14 09:20:27.999874 [TestPBT_GCFULFTStreamWithTail_MatchesExactRationalImage] [rapid] draw srcA: &cf.SliceGCF{terms:[][2]int64(nil), i:0}
+# 2026/03/14 09:20:27.999878 [TestPBT_GCFULFTStreamWithTail_MatchesExactRationalImage] [rapid] draw srcB: &cf.SliceGCF{terms:[][2]int64{[2]int64{0, 1}}, i:0}
+# 2026/03/14 09:20:27.999881 [TestPBT_GCFULFTStreamWithTail_MatchesExactRationalImage] [rapid] draw tail: cf.Rational{r:big.Rat{a:big.Int{neg:false, abs:big.nat{0x1}}, b:big.Int{neg:false, abs:big.nat{0x2}}}}
+# 2026/03/14 09:20:27.999888 [TestPBT_GCFULFTStreamWithTail_MatchesExactRationalImage] len mismatch: got=[0 2] want=[2] u=[[0 1],[1 0]] tail=1/2
+# 
+v0.4.8#17030642731888368789
+0x0
+0x0
+0x0
+0x0
+0x0
+0x1
+0x0
+0x0
+0x1
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x1
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x1

@@ -1,0 +1,43 @@
+# 2026/03/14 09:20:28.015673 [TestPBT_GCFDiagStreamWithTail_MatchesExactRationalImage] [rapid] draw d: cf.DiagBLFT{A:0, B:0, C:1, D:0, E:1, F:0}
+# 2026/03/14 09:20:28.015679 [TestPBT_GCFDiagStreamWithTail_MatchesExactRationalImage] [rapid] draw srcA: &cf.SliceGCF{terms:[][2]int64(nil), i:0}
+# 2026/03/14 09:20:28.015681 [TestPBT_GCFDiagStreamWithTail_MatchesExactRationalImage] [rapid] draw srcB: &cf.SliceGCF{terms:[][2]int64{[2]int64{0, 1}}, i:0}
+# 2026/03/14 09:20:28.015683 [TestPBT_GCFDiagStreamWithTail_MatchesExactRationalImage] [rapid] draw tail: cf.Rational{r:big.Rat{a:big.Int{neg:false, abs:big.nat{0x1}}, b:big.Int{neg:false, abs:big.nat{0x2}}}}
+# 2026/03/14 09:20:28.015690 [TestPBT_GCFDiagStreamWithTail_MatchesExactRationalImage] len mismatch: got=[0 2] want=[2] d=(0*x^2 + 0*x + 1) / (0*x^2 + 1*x + 0) tail=1/2
+# 
+v0.4.8#137242387481386687
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x1
+0x0
+0x0
+0x0
+0x0
+0x0
+0x1
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x1
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x1
