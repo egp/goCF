@@ -45,58 +45,39 @@ func (p SqrtPolicy) Validate() error {
 //
 // This is a convenience API, not yet a true streaming sqrt operator.
 func SqrtApprox(x Rational) (Rational, error) {
-	p := DefaultSqrtPolicy()
-	approx, _, err := SqrtApproxRationalUntilResidualDefault(x, p.MaxSteps, p.Tol)
-	return approx, err
+	return SqrtApprox2(x)
 }
 
 // SqrtApproxCF returns a ContinuedFraction source for the bounded default
 // sqrt approximation produced by SqrtApprox.
 func SqrtApproxCF(x Rational) (ContinuedFraction, error) {
-	approx, err := SqrtApprox(x)
-	if err != nil {
-		return nil, err
-	}
-	return NewRationalCF(approx), nil
+	return SqrtApproxCF2(x)
 }
 
 // SqrtApproxTermsAuto returns up to digits CF terms for the bounded default
 // sqrt approximation produced by SqrtApprox.
 func SqrtApproxTermsAuto(x Rational, digits int) ([]int64, error) {
-	if digits < 0 {
-		return nil, fmt.Errorf("SqrtApproxTermsAuto: negative digits %d", digits)
-	}
-	cf, err := SqrtApproxCF(x)
-	if err != nil {
-		return nil, err
-	}
-	return collectTerms(cf, digits), nil
+	return SqrtApproxTerms2(x, digits)
 }
 
 // SqrtApproxWithPolicy computes a bounded rational approximation to sqrt(x)
 // using the supplied policy.
 func SqrtApproxWithPolicy(x Rational, p SqrtPolicy) (Rational, error) {
-	if err := p.Validate(); err != nil {
-		return Rational{}, err
-	}
+	return SqrtApproxWithPolicy2(x, sqrtPolicy2FromOld(p))
+}
 
-	if p.Seed != nil {
-		approx, _, err := SqrtApproxRationalUntilResidual(x, *p.Seed, p.MaxSteps, p.Tol)
-		return approx, err
+func SqrtApproxCF2WithPolicyBridge(x Rational, p SqrtPolicy) (ContinuedFraction, error) {
+	approx, err := SqrtApproxWithPolicy2(x, sqrtPolicy2FromOld(p))
+	if err != nil {
+		return nil, err
 	}
-
-	approx, _, err := SqrtApproxRationalUntilResidualDefault(x, p.MaxSteps, p.Tol)
-	return approx, err
+	return NewRationalCF(approx), nil
 }
 
 // SqrtApproxCFWithPolicy returns a ContinuedFraction source for the bounded
 // sqrt approximation produced by SqrtApproxWithPolicy.
 func SqrtApproxCFWithPolicy(x Rational, p SqrtPolicy) (ContinuedFraction, error) {
-	approx, err := SqrtApproxWithPolicy(x, p)
-	if err != nil {
-		return nil, err
-	}
-	return NewRationalCF(approx), nil
+	return SqrtApproxCF2WithPolicyBridge(x, p)
 }
 
 // SqrtApproxTermsWithPolicy returns up to digits CF terms for the bounded
@@ -105,7 +86,7 @@ func SqrtApproxTermsWithPolicy(x Rational, p SqrtPolicy, digits int) ([]int64, e
 	if digits < 0 {
 		return nil, fmt.Errorf("SqrtApproxTermsWithPolicy: negative digits %d", digits)
 	}
-	cf, err := SqrtApproxCFWithPolicy(x, p)
+	cf, err := SqrtApproxCF2WithPolicyBridge(x, p)
 	if err != nil {
 		return nil, err
 	}
