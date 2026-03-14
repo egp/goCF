@@ -1,4 +1,4 @@
-// gcf_ulft_stream.go v3
+// gcf_ulft_stream.go v4
 package cf
 
 import "fmt"
@@ -61,32 +61,16 @@ func (s *GCFULFTStream) initializeExactCF() bool {
 	}
 	s.started = true
 
-	cur := s.t
-	ingested := 0
-
-	for {
-		if s.opts.MaxIngestTerms >= 0 && ingested >= s.opts.MaxIngestTerms {
-			s.err = fmt.Errorf(
-				"GCFULFTStream: exceeded MaxIngestTerms=%d before source exhaustion",
-				s.opts.MaxIngestTerms,
-			)
-			s.done = true
-			return false
-		}
-
-		p, q, ok := s.src.NextPQ()
-		if !ok {
-			break
-		}
-
-		var err error
-		cur, err = cur.IngestGCF(p, q)
-		if err != nil {
-			s.err = fmt.Errorf("GCFULFTStream: ingest (%d,%d): %w", p, q, err)
-			s.done = true
-			return false
-		}
-		ingested++
+	cur, _, exhausted, err := ComposeGCFIntoULFTBounded(s.t, s.src, s.opts.MaxIngestTerms)
+	if err != nil {
+		s.err = fmt.Errorf("GCFULFTStream: %w", err)
+		s.done = true
+		return false
+	}
+	if !exhausted {
+		s.err = fmt.Errorf("GCFULFTStream: internal: bounded compose returned !exhausted without error")
+		s.done = true
+		return false
 	}
 
 	y, err := cur.ApplyRat(s.tail)
@@ -120,4 +104,4 @@ func (s *GCFULFTStream) Next() (int64, bool) {
 	return d, true
 }
 
-// gcf_ulft_stream.go v3
+// gcf_ulft_stream.go v4
