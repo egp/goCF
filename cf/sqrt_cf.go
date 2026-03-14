@@ -268,32 +268,27 @@ func SqrtApproxTermsFromSourceDefault(src ContinuedFraction, prefixTerms int, di
 //
 // If p.Seed is already set, it is honored and the range-derived seed is not used.
 func NewSqrtApproxCFFromApproxRangeSeed(a CFApprox, p SqrtPolicy) (ContinuedFraction, error) {
-	pp := p
-	if pp.Seed == nil {
-		seed, err := DefaultSqrtSeedFromRange(a.Range)
-		if err != nil {
-			return nil, err
-		}
-		pp.Seed = &seed
-	}
-	return SqrtApproxCFWithPolicy(a.Convergent, pp)
+	return SqrtApproxCFFromApproxRangeSeed2(
+		a,
+		sqrtPolicy2FromOld(p),
+	)
 }
 
 // NewSqrtApproxCFFromSourceRangeSeed consumes a finite prefix of src, converts
 // that prefix to a CFApprox, and then returns a ContinuedFraction source for the
 // bounded sqrt approximation under the supplied policy.
 func NewSqrtApproxCFFromSourceRangeSeed(src ContinuedFraction, prefixTerms int, p SqrtPolicy) (ContinuedFraction, error) {
-	a, err := CFApproxFromPrefix(src, prefixTerms)
-	if err != nil {
-		return nil, err
-	}
-	return NewSqrtApproxCFFromApproxRangeSeed(a, p)
+	return SqrtApproxCFFromSourceRangeSeed2(
+		src,
+		prefixTerms,
+		sqrtPolicy2FromOld(p),
+	)
 }
 
 // NewSqrtApproxCFFromSourceRangeSeedDefault is the default-policy wrapper
 // around NewSqrtApproxCFFromSourceRangeSeed.
 func NewSqrtApproxCFFromSourceRangeSeedDefault(src ContinuedFraction, prefixTerms int) (ContinuedFraction, error) {
-	return NewSqrtApproxCFFromSourceRangeSeed(src, prefixTerms, DefaultSqrtPolicy())
+	return SqrtApproxCFFromSourceRangeSeedDefault2(src, prefixTerms)
 }
 
 // SqrtApproxTermsFromApproxRangeSeed returns up to digits CF terms for the
@@ -302,11 +297,11 @@ func SqrtApproxTermsFromApproxRangeSeed(a CFApprox, p SqrtPolicy, digits int) ([
 	if digits < 0 {
 		return nil, fmt.Errorf("SqrtApproxTermsFromApproxRangeSeed: negative digits %d", digits)
 	}
-	cf, err := NewSqrtApproxCFFromApproxRangeSeed(a, p)
-	if err != nil {
-		return nil, err
-	}
-	return collectTerms(cf, digits), nil
+	return SqrtApproxTermsFromApproxRangeSeed2(
+		a,
+		sqrtPolicy2FromOld(p),
+		digits,
+	)
 }
 
 // SqrtApproxTermsFromSourceRangeSeed returns up to digits CF terms for the
@@ -315,11 +310,12 @@ func SqrtApproxTermsFromSourceRangeSeed(src ContinuedFraction, prefixTerms int, 
 	if digits < 0 {
 		return nil, fmt.Errorf("SqrtApproxTermsFromSourceRangeSeed: negative digits %d", digits)
 	}
-	cf, err := NewSqrtApproxCFFromSourceRangeSeed(src, prefixTerms, p)
-	if err != nil {
-		return nil, err
-	}
-	return collectTerms(cf, digits), nil
+	return SqrtApproxTermsFromSourceRangeSeed2(
+		src,
+		prefixTerms,
+		sqrtPolicy2FromOld(p),
+		digits,
+	)
 }
 
 // SqrtApproxTermsFromSourceRangeSeedDefault is the default-policy wrapper
@@ -328,7 +324,7 @@ func SqrtApproxTermsFromSourceRangeSeedDefault(src ContinuedFraction, prefixTerm
 	if digits < 0 {
 		return nil, fmt.Errorf("SqrtApproxTermsFromSourceRangeSeedDefault: negative digits %d", digits)
 	}
-	return SqrtApproxTermsFromSourceRangeSeed(src, prefixTerms, DefaultSqrtPolicy(), digits)
+	return SqrtApproxTermsFromSourceRangeSeedDefault2(src, prefixTerms, digits)
 }
 
 // NewSqrtApproxCFFromApproxRangeMidpoint takes a bundled CFApprox, uses the
