@@ -115,6 +115,24 @@ func TestBrouncker4OverPiTailRangeAfterPrefix_Prefix4(t *testing.T) {
 	}
 }
 
+func TestBrouncker4OverPiTailLookaheadRangeAfterPrefix_Prefix1Depth20CertifiesFloor3(t *testing.T) {
+	got, ok, err := Brouncker4OverPiTailLookaheadRangeAfterPrefix(1, 20)
+	if err != nil {
+		t.Fatalf("Brouncker4OverPiTailLookaheadRangeAfterPrefix failed: %v", err)
+	}
+	if !ok {
+		t.Fatalf("expected ok=true")
+	}
+
+	lo, hi, err := got.FloorBounds()
+	if err != nil {
+		t.Fatalf("FloorBounds failed: %v", err)
+	}
+	if lo != 3 || hi != 3 {
+		t.Fatalf("expected depth-20 prefix-1 lookahead to certify floor 3, got range [%v,%v] floor bounds [%d,%d]", got.Lo, got.Hi, lo, hi)
+	}
+}
+
 func TestBrouncker4OverPiTailRangeAfterPrefix_Prefix5NotYetSpecialized(t *testing.T) {
 	_, ok, err := Brouncker4OverPiTailRangeAfterPrefix(5)
 	if err != nil {

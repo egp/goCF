@@ -1,4 +1,4 @@
-// brouncker_pi_tail.go v4
+// brouncker_pi_tail.go v6
 package cf
 
 import "fmt"
@@ -29,7 +29,7 @@ func (s *Brouncker4OverPiGCFSource) LowerBoundRayMinPrefix() int {
 //     back to lower-bound-only ray semantics
 //   - (_, false, err) => invalid input
 //
-// Current v4 support:
+// Current v6 support:
 //   - prefixTerms == 0: full Brouncker value, conservatively in [15/13, 105/76]
 //   - prefixTerms == 1: remaining tail starts at 2 + 9/(2 + 25/(2 + ...)),
 //     conservatively in [76/29, 13/2]
@@ -41,10 +41,11 @@ func (s *Brouncker4OverPiGCFSource) LowerBoundRayMinPrefix() int {
 //     conservatively in [2, 83/2]
 //   - prefixTerms >= 5: no tighter interval currently provided
 //
-// These bounds are correctness-first. The upper bounds come from the next
-// unfinished denominator being at least 2. Where available, lower bounds are
-// improved by combining that recurrence with the next prefix's conservative
-// upper bound.
+// These are base Brouncker tail evidences. They are safe, but for infinite
+// streaming they may still be too weak to certify later digits quickly.
+// Stronger same-state candidate evidences can be derived by deeper bounded
+// lookahead into the Brouncker recurrence; see
+// Brouncker4OverPiTailLookaheadRangeAfterPrefix.
 func Brouncker4OverPiTailRangeAfterPrefix(prefixTerms int) (Range, bool, error) {
 	if prefixTerms < 0 {
 		return Range{}, false, fmt.Errorf("Brouncker4OverPiTailRangeAfterPrefix: negative prefixTerms %d", prefixTerms)
@@ -102,6 +103,106 @@ func Brouncker4OverPiTailRangeAfterPrefix(prefixTerms int) (Range, bool, error) 
 	}
 }
 
+type brounckerLookaheadBound struct {
+	value  Rational
+	finite bool
+}
+
+func finiteBrounckerLookaheadBound(num, den int64) brounckerLookaheadBound {
+	return brounckerLookaheadBound{
+		value:  mustRat(num, den),
+		finite: true,
+	}
+}
+
+func addTwoPlusSquareOverBound(square int64, b brounckerLookaheadBound) (brounckerLookaheadBound, error) {
+	// 2 + square / b
+	sq := mustRat(square, 1)
+
+	term, err := sq.Div(b.value)
+	if err != nil {
+		return brounckerLookaheadBound{}, err
+	}
+
+	sum, err := mustRat(2, 1).Add(term)
+	if err != nil {
+		return brounckerLookaheadBound{}, err
+	}
+
+	return brounckerLookaheadBound{
+		value:  sum,
+		finite: true,
+	}, nil
+}
+
+// Brouncker4OverPiTailLookaheadRangeAfterPrefix returns a stronger same-state
+// conservative tail interval by looking ahead a fixed finite number of Brouncker
+// denominator terms and then closing the still-unfinished tail with only the
+// positive lower bound >= 2.
+//
+// Intended use:
+//   - base TailEvidence() remains simple and cheap
+//   - CandidateTailEvidence() can use this helper to offer stronger same-state
+//     alternate enclosures before further ingestion
+//
+// Domain:
+//   - prefixTerms >= 1
+//   - lookaheadTerms >= 1
+//
+// Construction:
+//
+//	If the current tail starts at odd^2, then each backward step applies
+//
+//	    x = 2 + odd^2 / tail
+//
+//	over a current positive interval [L,U]. Since this map is decreasing on
+//	positive tails, the image interval is:
+//
+//	    [2 + odd^2/U, 2 + odd^2/L]
+//
+//	with the initial unfinished tail closed conservatively by [2, +∞).
+func Brouncker4OverPiTailLookaheadRangeAfterPrefix(prefixTerms int, lookaheadTerms int) (Range, bool, error) {
+	if prefixTerms < 1 {
+		return Range{}, false, fmt.Errorf(
+			"Brouncker4OverPiTailLookaheadRangeAfterPrefix: prefixTerms must be >= 1, got %d",
+			prefixTerms,
+		)
+	}
+	if lookaheadTerms < 1 {
+		return Range{}, false, fmt.Errorf(
+			"Brouncker4OverPiTailLookaheadRangeAfterPrefix: lookaheadTerms must be >= 1, got %d",
+			lookaheadTerms,
+		)
+	}
+
+	lo := finiteBrounckerLookaheadBound(2, 1)
+	hi := brounckerLookaheadBound{finite: false} // +∞
+
+	for j := lookaheadTerms - 1; j >= 0; j-- {
+		odd := int64(2*(prefixTerms+j) + 1)
+		square := odd * odd
+
+		nextLo := finiteBrounckerLookaheadBound(2, 1)
+		if hi.finite {
+			var err error
+			nextLo, err = addTwoPlusSquareOverBound(square, hi)
+			if err != nil {
+				return Range{}, false, err
+			}
+		}
+
+		nextHi, err := addTwoPlusSquareOverBound(square, lo)
+		if err != nil {
+			return Range{}, false, err
+		}
+
+		lo = nextLo
+		hi = nextHi
+	}
+
+	return NewRange(lo.value, hi.value, true, true), true, nil
+}
+
 // Brouncker4OverPiApproxFromPrefix ingests up to prefixTerms terms from Brouncker's
 // 4/pi GCF source and returns a GCFApprox using source-provided tail evidence.
 func Brouncker4OverPiApproxFromPrefix(prefixTerms int) (GCFApprox, error) {
@@ -111,4 +212,4 @@ func Brouncker4OverPiApproxFromPrefix(prefixTerms int) (GCFApprox, error) {
 	)
 }
 
-// brouncker_pi_tail.go v4
+// brouncker_pi_tail.go v6

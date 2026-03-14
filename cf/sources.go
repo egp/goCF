@@ -1,4 +1,4 @@
-// sources.go v15
+// sources.go v18
 package cf
 
 // GCFSource streams generalized continued-fraction terms (p,q), using the convention:
@@ -296,6 +296,68 @@ func (s *Brouncker4OverPiGCFSource) TailEvidence() GCFTailEvidence {
 
 	return ev
 }
+
+func (s *Brouncker4OverPiGCFSource) CandidateTailEvidence() []GCFTailEvidence {
+	prefixTerms := s.i
+
+	// Current focus is early infinite Brouncker digit certifiability.
+	// Restrict candidate generation to small prefixes where it is intended to pay
+	// rent, avoid unnecessary arithmetic for later prefixes for now.
+	if prefixTerms < 1 || prefixTerms > 6 {
+		return nil
+	}
+
+	// Ordered from cheaper to tighter. These are same-state alternate enclosures
+	// derived from deeper bounded lookahead into the Brouncker recurrence.
+	lookaheads := []int{8, 12, 16, 20}
+
+	out := make([]GCFTailEvidence, 0, len(lookaheads))
+	for _, depth := range lookaheads {
+		r, ok, err := Brouncker4OverPiTailLookaheadRangeAfterPrefix(prefixTerms, depth)
+		if err != nil || !ok {
+			continue
+		}
+
+		rCopy := r
+		out = append(out, GCFTailEvidence{
+			Range:               &rCopy,
+			RangeReusable:       false,
+			LowerBoundMinPrefix: s.LowerBoundRayMinPrefix(),
+		})
+	}
+
+	return out
+}
+
+func (s *Brouncker4OverPiGCFSource) PostEmitTailEvidence(emittedDigit int64) (GCFTailEvidence, bool) {
+	// After the first emitted regular CF digit 1 from Brouncker 4/pi, the new
+	// remainder is exactly the unfinished Brouncker denominator tail after the
+	// leading (1,1) term:
+	//
+	//   4/pi = 1 + 1/tail1
+	//   => remainder after emitting 1 is tail1
+	//
+	// So when the source has ingested exactly one Brouncker term, we can hand
+	// the stream direct evidence for that remainder.
+	if emittedDigit != 1 || s.i != 1 {
+		return GCFTailEvidence{}, false
+	}
+
+	ev := GCFTailEvidence{
+		LowerBoundMinPrefix: s.LowerBoundRayMinPrefix(),
+		RangeReusable:       false,
+	}
+
+	lb := Brouncker4OverPiTailLowerBoundAfterPrefix(1)
+	ev.LowerBound = &lb
+
+	if r, ok, err := Brouncker4OverPiTailRangeAfterPrefix(1); err == nil && ok {
+		ev.Range = &r
+	}
+
+	return ev, true
+}
+
 func (s *Brouncker4OverPiGCFSource) NextPQ() (int64, int64, bool) {
 	if s.i == 0 {
 		s.i++
@@ -400,4 +462,4 @@ type TailRangeBoundedGCFSource interface {
 	TailRange() Range
 }
 
-// sources.go v15
+// sources.go v18

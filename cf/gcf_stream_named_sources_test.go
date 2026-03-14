@@ -4,6 +4,7 @@ package cf
 import (
 	"fmt"
 	"testing"
+	"time"
 )
 
 func TestGCFStream_LambertFirstTwoDigits(t *testing.T) {
@@ -159,6 +160,48 @@ func TestGCFStream_BrounckerInfiniteSourceEmitsFirstDigit(t *testing.T) {
 	}
 	if err := s.Err(); err != nil {
 		t.Fatalf("unexpected stream err: %v", err)
+	}
+}
+
+func TestGCFStream_BrounckerInfiniteSourceEmitsFirstTwoDigitsBounded(t *testing.T) {
+	s := NewGCFStream(NewBrouncker4OverPiGCFSource(), GCFStreamOptions{})
+
+	type result struct {
+		digits []int64
+		err    error
+	}
+
+	done := make(chan result, 1)
+	go func() {
+		var digits []int64
+		for i := 0; i < 2; i++ {
+			d, ok := s.Next()
+			if !ok {
+				done <- result{digits: digits, err: s.Err()}
+				return
+			}
+			digits = append(digits, d)
+		}
+		done <- result{digits: digits, err: s.Err()}
+	}()
+
+	select {
+	case got := <-done:
+		if got.err != nil {
+			t.Fatalf("unexpected stream err: %v digits=%v", got.err, got.digits)
+		}
+		want := []int64{1, 3}
+		if len(got.digits) != len(want) {
+			t.Fatalf("got digits=%v want=%v", got.digits, want)
+		}
+		for i := range want {
+			if got.digits[i] != want[i] {
+				t.Fatalf("digit %d: got=%v want=%v", i, got.digits, want)
+			}
+		}
+
+	case <-time.After(200 * time.Millisecond):
+		t.Fatalf("timed out waiting for two infinite Brouncker digits")
 	}
 }
 
@@ -323,6 +366,115 @@ func TestBrouncker4OverPiGCFSource_TailEvidenceMatchesHelperFunctions(t *testing
 		t.Fatalf("expected second Brouncker term")
 	}
 	check(2)
+}
+
+func TestBrouncker4OverPiGCFSource_PostEmitTailEvidenceAfterFirstDigit(t *testing.T) {
+	src := NewBrouncker4OverPiGCFSource()
+
+	_, _, ok := src.NextPQ()
+	if !ok {
+		t.Fatalf("expected first Brouncker term")
+	}
+
+	ev, ok := src.PostEmitTailEvidence(1)
+	if !ok {
+		t.Fatalf("expected post-emit evidence after first digit")
+	}
+
+	if ev.LowerBound == nil {
+		t.Fatalf("expected non-nil lower bound")
+	}
+	wantLB := Brouncker4OverPiTailLowerBoundAfterPrefix(1)
+	if ev.LowerBound.String() != wantLB.String() {
+		t.Fatalf("lower bound mismatch: got=%v want=%v", *ev.LowerBound, wantLB)
+	}
+
+	if ev.Range == nil {
+		t.Fatalf("expected non-nil range")
+	}
+	wantRange, wantOK, err := Brouncker4OverPiTailRangeAfterPrefix(1)
+	if err != nil {
+		t.Fatalf("helper returned err: %v", err)
+	}
+	if !wantOK {
+		t.Fatalf("expected helper range for prefix 1")
+	}
+	if ev.Range.String() != wantRange.String() {
+		t.Fatalf("range mismatch: got=%v want=%v", *ev.Range, wantRange)
+	}
+
+	if ev.RangeReusable {
+		t.Fatalf("expected non-reusable post-emit Brouncker tail range")
+	}
+	if ev.LowerBoundMinPrefix != 1<<30 {
+		t.Fatalf("expected LowerBoundMinPrefix=%d got %d", 1<<30, ev.LowerBoundMinPrefix)
+	}
+}
+
+func TestGCFStream_BrounckerInfiniteSecondDigitUsesPostEmitCandidatePathBounded(t *testing.T) {
+	var events []string
+
+	s := NewGCFStream(
+		NewBrouncker4OverPiGCFSource(),
+		GCFStreamOptions{
+			Trace: func(event string) {
+				events = append(events, event)
+			},
+		},
+	)
+
+	d, ok := s.Next()
+	if !ok {
+		t.Fatalf("expected first digit, err=%v", s.Err())
+	}
+	if d != 1 {
+		t.Fatalf("got first digit %d want 1", d)
+	}
+
+	type result struct {
+		digit int64
+		ok    bool
+		err   error
+	}
+
+	done := make(chan result, 1)
+	go func() {
+		d, ok := s.Next()
+		done <- result{digit: d, ok: ok, err: s.Err()}
+	}()
+
+	select {
+	case got := <-done:
+		if !got.ok {
+			t.Fatalf("expected second digit, err=%v events=%v", got.err, events)
+		}
+		if got.digit != 3 {
+			t.Fatalf("got second digit %d want 3 events=%v", got.digit, events)
+		}
+
+		sawFresh := false
+		sawCandidate := false
+		for _, ev := range events {
+			if ev == "tail-evidence/override-fresh" {
+				sawFresh = true
+			}
+			if ev == "tail-evidence/candidate" {
+				sawCandidate = true
+			}
+			if ev == "tail-evidence/lower-bound-ray" {
+				t.Fatalf("unexpected lower-bound-ray fallback: events=%v", events)
+			}
+		}
+		if !sawFresh {
+			t.Fatalf("expected fresh post-emit override path, events=%v", events)
+		}
+		if !sawCandidate {
+			t.Fatalf("expected candidate tail evidence to be used after post-emit override, events=%v", events)
+		}
+
+	case <-time.After(200 * time.Millisecond):
+		t.Fatalf("timed out waiting for second Brouncker digit after first-digit emit")
+	}
 }
 
 type brounckerLowerBoundOnlyStreamSource struct {

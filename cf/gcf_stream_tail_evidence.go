@@ -311,10 +311,22 @@ func (s *GCFStream) currentCertifiedTailDigit() (int64, bool, error) {
 	if r, ok, reusable, err := s.explicitTailImageRange(); err != nil {
 		return 0, false, err
 	} else if ok {
+
 		if s.tailEvidenceOverride != nil && s.tailEvidenceFresh {
 			s.tailEvidenceFresh = false
 			s.traceEvent("tail-evidence/override-fresh")
-			return certifiedFloorDigit(r)
+
+			d, certified, err := certifiedFloorDigit(r)
+			if err != nil {
+				return 0, false, err
+			}
+			if certified {
+				return d, true, nil
+			}
+			// Fresh post-emit/refined override was useful enough to establish an explicit
+			// same-prefix range, but not enough by itself to certify a digit. Continue on
+			// the same source state so candidate/refined evidence can tighten further
+			// before we ingest again.
 		}
 		if !reusable && !s.canEmitFromCurrentPrefixEvidence() {
 			if d, ok, err := s.tryCandidateTailEvidence(); err != nil {
