@@ -1,4 +1,4 @@
-// gcf_ulft_stream.go v4
+// gcf_ulft_stream.go v5
 package cf
 
 import "fmt"
@@ -7,14 +7,14 @@ import "fmt"
 //
 // Current supported milestone:
 //   - finite GCF prefix ingestion
-//   - explicit exact tail Rational supplied by caller
+//   - exact tail evidence supplied by caller
 //   - output regular CF digits of the exact transformed value
 //
 // Infinite uncertified GCF emission is intentionally out of scope for now.
 type GCFULFTStream struct {
 	t       ULFT
 	src     GCFSource
-	tail    Rational
+	tailSrc GCFTailSource
 	opts    GCFULFTStreamOptions
 	err     error
 	done    bool
@@ -31,26 +31,33 @@ type GCFULFTStreamOptions struct {
 	MaxIngestTerms int
 }
 
-// NewGCFULFTStreamWithTail constructs a GCF-native ULFT stream for the current
-// exact finite-prefix milestone.
+// NewGCFULFTStream constructs a GCF-native ULFT stream using explicit tail
+// evidence.
 //
-// Semantics for current version:
-//   - src must exhaust within MaxIngestTerms (if bounded)
-//   - tail is the exact remaining tail variable value after src exhaustion
-//   - the stream emits the regular CF digits of T(x), where
-//     x is represented by the ingested GCF prefix followed by exact tail
+// Current implementation supports only exact tail evidence.
+// Other evidence modes are intentionally deferred.
+func NewGCFULFTStream(
+	t ULFT,
+	src GCFSource,
+	tailSrc GCFTailSource,
+	opts GCFULFTStreamOptions,
+) *GCFULFTStream {
+	return &GCFULFTStream{
+		t:       t,
+		src:     src,
+		tailSrc: tailSrc,
+		opts:    opts,
+	}
+}
+
+// NewGCFULFTStreamWithTail is a convenience wrapper for the current exact-tail path.
 func NewGCFULFTStreamWithTail(
 	t ULFT,
 	src GCFSource,
 	tail Rational,
 	opts GCFULFTStreamOptions,
 ) *GCFULFTStream {
-	return &GCFULFTStream{
-		t:    t,
-		src:  src,
-		tail: tail,
-		opts: opts,
-	}
+	return NewGCFULFTStream(t, src, NewExactTailSource(tail), opts)
 }
 
 func (s *GCFULFTStream) Err() error { return s.err }
@@ -61,7 +68,14 @@ func (s *GCFULFTStream) initializeExactCF() bool {
 	}
 	s.started = true
 
-	y, _, err := ApplyComposedGCFULFTToTailExact(s.t, s.src, s.tail, s.opts.MaxIngestTerms)
+	tail, ok := s.tailSrc.ExactTail()
+	if !ok {
+		s.err = fmt.Errorf("GCFULFTStream: tail evidence not implemented")
+		s.done = true
+		return false
+	}
+
+	y, _, err := ApplyComposedGCFULFTToTailExact(s.t, s.src, tail, s.opts.MaxIngestTerms)
 	if err != nil {
 		s.err = fmt.Errorf("GCFULFTStream: %w", err)
 		s.done = true
@@ -92,4 +106,4 @@ func (s *GCFULFTStream) Next() (int64, bool) {
 	return d, true
 }
 
-// gcf_ulft_stream.go v4
+// gcf_ulft_stream.go v5

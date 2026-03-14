@@ -190,4 +190,64 @@ func TestGCFULFTStreamWithTail_ZeroMaxIngestTermsFailsImmediately(t *testing.T) 
 	}
 }
 
+func TestNewGCFULFTStream_UsesExactTailSource(t *testing.T) {
+	src := NewSliceGCF(
+		[2]int64{1, 2},
+		[2]int64{3, 4},
+	)
+	tailSrc := NewExactTailSource(mustRat(5, 1))
+	id := NewULFT(mustBig(1), mustBig(0), mustBig(0), mustBig(1))
+
+	// Exact reference:
+	composed, err := composeGCFIntoULFT(id, NewSliceGCF(
+		[2]int64{1, 2},
+		[2]int64{3, 4},
+	))
+	if err != nil {
+		t.Fatalf("composeGCFIntoULFT failed: %v", err)
+	}
+	wantRat, err := composed.ApplyRat(mustRat(5, 1))
+	if err != nil {
+		t.Fatalf("ApplyRat failed: %v", err)
+	}
+	want := collectAll(NewRationalCF(wantRat))
+
+	s := NewGCFULFTStream(
+		id,
+		src,
+		tailSrc,
+		GCFULFTStreamOptions{MaxIngestTerms: 8},
+	)
+
+	got := collectAll(s)
+	if err := s.Err(); err != nil {
+		t.Fatalf("stream error: %v", err)
+	}
+	if !equalSlice(got, want) {
+		t.Fatalf("got %v want %v", got, want)
+	}
+}
+
+func TestNewGCFULFTStream_MissingTailEvidenceIsError(t *testing.T) {
+	id := NewULFT(mustBig(1), mustBig(0), mustBig(0), mustBig(1))
+
+	s := NewGCFULFTStream(
+		id,
+		NewSliceGCF([2]int64{1, 1}),
+		NoTailSource{},
+		GCFULFTStreamOptions{MaxIngestTerms: 8},
+	)
+
+	_, ok := s.Next()
+	if ok {
+		t.Fatalf("expected failure, not a digit")
+	}
+	if s.Err() == nil {
+		t.Fatalf("expected non-nil error")
+	}
+	if !strings.Contains(s.Err().Error(), "tail evidence not implemented") {
+		t.Fatalf("unexpected error: %v", s.Err())
+	}
+}
+
 // gcf_ulft_stream_test.go v2
