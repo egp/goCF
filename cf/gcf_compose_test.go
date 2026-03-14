@@ -220,4 +220,76 @@ func TestApplyComposedGCFULFTToTailExact_ApplyRatErrorPropagates(t *testing.T) {
 	}
 }
 
+func TestEvalGCFWithTailExact_EmptyPrefixIsTail(t *testing.T) {
+	got, ingested, err := EvalGCFWithTailExact(NewSliceGCF(), mustRat(7, 3), 8)
+	if err != nil {
+		t.Fatalf("EvalGCFWithTailExact failed: %v", err)
+	}
+	if ingested != 0 {
+		t.Fatalf("got ingested=%d want 0", ingested)
+	}
+
+	want := mustRat(7, 3)
+	if got.Cmp(want) != 0 {
+		t.Fatalf("got=%v want=%v", got, want)
+	}
+}
+
+func TestEvalGCFWithTailExact_FinitePrefixMatchesHandComputation(t *testing.T) {
+	// x = 3 + 2/(5 + 7/11) = 104/31
+	got, ingested, err := EvalGCFWithTailExact(
+		NewSliceGCF(
+			[2]int64{3, 2},
+			[2]int64{5, 7},
+		),
+		mustRat(11, 1),
+		8,
+	)
+	if err != nil {
+		t.Fatalf("EvalGCFWithTailExact failed: %v", err)
+	}
+	if ingested != 2 {
+		t.Fatalf("got ingested=%d want 2", ingested)
+	}
+
+	want := mustRat(104, 31)
+	if got.Cmp(want) != 0 {
+		t.Fatalf("got=%v want=%v", got, want)
+	}
+}
+
+func TestEvalGCFWithTailExact_RequiresExhaustionWithinBound(t *testing.T) {
+	_, ingested, err := EvalGCFWithTailExact(
+		NewUnitPArithmeticQGCFSource(1, 1),
+		mustRat(1, 1),
+		3,
+	)
+	if err == nil {
+		t.Fatalf("expected non-nil error")
+	}
+	if !strings.Contains(err.Error(), "exceeded MaxIngestTerms=3") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if ingested != 3 {
+		t.Fatalf("got ingested=%d want 3", ingested)
+	}
+}
+
+func TestEvalGCFWithTailExact_InvalidTermPropagatesError(t *testing.T) {
+	_, ingested, err := EvalGCFWithTailExact(
+		NewSliceGCF([2]int64{3, 0}),
+		mustRat(1, 1),
+		8,
+	)
+	if err == nil {
+		t.Fatalf("expected non-nil error")
+	}
+	if !strings.Contains(err.Error(), "require q>0") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if ingested != 0 {
+		t.Fatalf("got ingested=%d want 0", ingested)
+	}
+}
+
 // EOF gcf_compose_test.go v1

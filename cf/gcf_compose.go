@@ -1,9 +1,12 @@
-// gcf_compose.go v1
+// gcf_compose.go v2
 package cf
 
-import "fmt"
+import (
+	"fmt"
+	"math/big"
+)
 
-// ComposeGCFIntoULFTBounded ingests up to MaxIngestTerms from src into base.
+// ComposeGCFIntoULFTBounded ingests up to maxIngestTerms from src into base.
 //
 // Contract:
 //   - If src exhausts before the bound is hit, returns (tFinal, ingested, true, nil).
@@ -68,4 +71,36 @@ func ApplyComposedGCFULFTToTailExact(
 	return y, ingested, nil
 }
 
-// gcf_compose.go v1
+// EvalGCFWithTailExact evaluates a bounded finite GCF prefix with an explicit
+// exact tail rational.
+//
+// It computes x represented by:
+//
+//	p0 + q0/(p1 + q1/(... tail ...))
+//
+// by first composing the prefix into a ULFT and then applying that ULFT to tail.
+func EvalGCFWithTailExact(
+	src GCFSource,
+	tail Rational,
+	maxIngestTerms int,
+) (Rational, int, error) {
+	id := NewULFT(big.NewInt(1), big.NewInt(0), big.NewInt(0), big.NewInt(1))
+
+	composed, ingested, exhausted, err := ComposeGCFIntoULFTBounded(id, src, maxIngestTerms)
+	if err != nil {
+		return Rational{}, ingested, err
+	}
+	if !exhausted {
+		return Rational{}, ingested, fmt.Errorf(
+			"EvalGCFWithTailExact: internal: bounded compose returned !exhausted without error",
+		)
+	}
+
+	x, err := composed.ApplyRat(tail)
+	if err != nil {
+		return Rational{}, ingested, err
+	}
+	return x, ingested, nil
+}
+
+// gcf_compose.go v2
