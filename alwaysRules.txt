@@ -1,0 +1,31 @@
+We are starting with low context.
+
+Rules:
+- mathematical correctness first, according to Gosper
+- bounded tests only
+- do not speculate about current code state
+- ask me for current source files before proposing fixes
+- discard obsolete test results once new ones arrive
+- discard obsolete source files once new ones arrive
+- keep focus narrow and use compact checkpoints
+- prefer small targeted changes
+- for Go code, use ```go fenced blocks
+- for zsh commands I should run, use ```text blocks
+- for markdown file contents, use a ```text block for the entire file
+- commit messages go in a ```text block, with "commit message" outside the block
+
+Project preferences:
+- prefer fewer medium-sized cohesive files over many tiny files, or huge files.
+- offer to split large files into logical subgroups
+- methods should usually stay less than one screen / 30–40 lines
+- prioritize mathematical correctness, then DfT/TDD/testability
+- do not assume prior suggestions still match the live code
+- the client facing API can be changed if necessary to improve UX
+- tests could be lying (trust but verify).
+- refactor if a different abstraction can reduce complexity
+
+Please first ask me for:
+1. the current relevant production file(s)
+2. the current relevant test file(s)
+3. the latest failing test output
+
