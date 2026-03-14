@@ -7,36 +7,21 @@ import "fmt"
 // prefix to a CFApprox, then returns a bounded rational sqrt approximation
 // under the supplied policy.
 func SqrtApproxFromSourceRangeSeed2(src ContinuedFraction, prefixTerms int, p SqrtPolicy2) (Rational, error) {
-	a, err := CFApproxFromPrefix(src, prefixTerms)
-	if err != nil {
-		return Rational{}, err
-	}
-	return SqrtApproxFromApproxRangeSeed2(a, p)
+	return sqrtApproxFromSourceRangeSeedCanonical(src, prefixTerms, p)
 }
 
 // SqrtApproxCFFromSourceRangeSeed2 consumes a finite prefix of src, converts
 // that prefix to a CFApprox, then returns a ContinuedFraction source for the
 // bounded sqrt approximation under the supplied policy.
 func SqrtApproxCFFromSourceRangeSeed2(src ContinuedFraction, prefixTerms int, p SqrtPolicy2) (ContinuedFraction, error) {
-	approx, err := SqrtApproxFromSourceRangeSeed2(src, prefixTerms, p)
-	if err != nil {
-		return nil, err
-	}
-	return NewRationalCF(approx), nil
+	return sqrtApproxCFFromSourceRangeSeedCanonical(src, prefixTerms, p)
 }
 
 // SqrtApproxTermsFromSourceRangeSeed2 consumes a finite prefix of src, converts
 // that prefix to a CFApprox, then returns up to digits CF terms for the bounded
 // sqrt approximation under the supplied policy.
 func SqrtApproxTermsFromSourceRangeSeed2(src ContinuedFraction, prefixTerms int, p SqrtPolicy2, digits int) ([]int64, error) {
-	if digits < 0 {
-		return nil, fmt.Errorf("SqrtApproxTermsFromSourceRangeSeed2: negative digits %d", digits)
-	}
-	cf, err := SqrtApproxCFFromSourceRangeSeed2(src, prefixTerms, p)
-	if err != nil {
-		return nil, err
-	}
-	return collectTerms(cf, digits), nil
+	return sqrtApproxTermsFromSourceRangeSeedCanonical(src, prefixTerms, p, digits)
 }
 
 // SqrtApproxFromSourceRangeSeedDefault2 is the default-policy wrapper around
