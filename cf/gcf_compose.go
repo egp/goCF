@@ -42,4 +42,30 @@ func ComposeGCFIntoULFTBounded(
 	}
 }
 
+// ApplyComposedGCFULFTToTailExact boundedly ingests src into base, requires
+// source exhaustion within the bound, then applies the resulting ULFT exactly
+// to the supplied tail rational.
+func ApplyComposedGCFULFTToTailExact(
+	base ULFT,
+	src GCFSource,
+	tail Rational,
+	maxIngestTerms int,
+) (Rational, int, error) {
+	composed, ingested, exhausted, err := ComposeGCFIntoULFTBounded(base, src, maxIngestTerms)
+	if err != nil {
+		return Rational{}, ingested, err
+	}
+	if !exhausted {
+		return Rational{}, ingested, fmt.Errorf(
+			"ApplyComposedGCFULFTToTailExact: internal: bounded compose returned !exhausted without error",
+		)
+	}
+
+	y, err := composed.ApplyRat(tail)
+	if err != nil {
+		return Rational{}, ingested, err
+	}
+	return y, ingested, nil
+}
+
 // gcf_compose.go v1

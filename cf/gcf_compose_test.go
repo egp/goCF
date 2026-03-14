@@ -152,4 +152,72 @@ func TestComposeGCFIntoULFTBounded_InvalidTermPropagatesError(t *testing.T) {
 	}
 }
 
+func TestApplyComposedGCFULFTToTailExact_Identity_FinitePrefix(t *testing.T) {
+	base := NewULFT(mustBig(1), mustBig(0), mustBig(0), mustBig(1))
+	src := NewSliceGCF(
+		[2]int64{1, 2},
+		[2]int64{3, 4},
+	)
+	tail := mustRat(5, 1)
+
+	got, ingested, err := ApplyComposedGCFULFTToTailExact(base, src, tail, 8)
+	if err != nil {
+		t.Fatalf("ApplyComposedGCFULFTToTailExact failed: %v", err)
+	}
+	if ingested != 2 {
+		t.Fatalf("got ingested=%d want 2", ingested)
+	}
+
+	composed, err := composeGCFIntoULFT(base, NewSliceGCF(
+		[2]int64{1, 2},
+		[2]int64{3, 4},
+	))
+	if err != nil {
+		t.Fatalf("composeGCFIntoULFT failed: %v", err)
+	}
+	want, err := composed.ApplyRat(tail)
+	if err != nil {
+		t.Fatalf("ApplyRat failed: %v", err)
+	}
+
+	if got.Cmp(want) != 0 {
+		t.Fatalf("got=%v want=%v", got, want)
+	}
+}
+
+func TestApplyComposedGCFULFTToTailExact_RequiresExhaustionWithinBound(t *testing.T) {
+	base := NewULFT(mustBig(1), mustBig(0), mustBig(0), mustBig(1))
+	src := NewUnitPArithmeticQGCFSource(1, 1)
+	tail := mustRat(1, 1)
+
+	_, ingested, err := ApplyComposedGCFULFTToTailExact(base, src, tail, 3)
+	if err == nil {
+		t.Fatalf("expected non-nil error")
+	}
+	if !strings.Contains(err.Error(), "exceeded MaxIngestTerms=3") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if ingested != 3 {
+		t.Fatalf("got ingested=%d want 3", ingested)
+	}
+}
+
+func TestApplyComposedGCFULFTToTailExact_ApplyRatErrorPropagates(t *testing.T) {
+	// T(x) = x/(x-1), tail = 1, empty prefix => undefined exact point.
+	base := NewULFT(mustBig(1), mustBig(0), mustBig(1), mustBig(-1))
+	src := NewSliceGCF()
+	tail := mustRat(1, 1)
+
+	_, ingested, err := ApplyComposedGCFULFTToTailExact(base, src, tail, 8)
+	if err == nil {
+		t.Fatalf("expected non-nil error")
+	}
+	if ingested != 0 {
+		t.Fatalf("got ingested=%d want 0", ingested)
+	}
+	if !strings.Contains(err.Error(), "denominator is zero") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 // EOF gcf_compose_test.go v1

@@ -61,21 +61,9 @@ func (s *GCFULFTStream) initializeExactCF() bool {
 	}
 	s.started = true
 
-	cur, _, exhausted, err := ComposeGCFIntoULFTBounded(s.t, s.src, s.opts.MaxIngestTerms)
+	y, _, err := ApplyComposedGCFULFTToTailExact(s.t, s.src, s.tail, s.opts.MaxIngestTerms)
 	if err != nil {
 		s.err = fmt.Errorf("GCFULFTStream: %w", err)
-		s.done = true
-		return false
-	}
-	if !exhausted {
-		s.err = fmt.Errorf("GCFULFTStream: internal: bounded compose returned !exhausted without error")
-		s.done = true
-		return false
-	}
-
-	y, err := cur.ApplyRat(s.tail)
-	if err != nil {
-		s.err = fmt.Errorf("GCFULFTStream: apply exact tail: %w", err)
 		s.done = true
 		return false
 	}
