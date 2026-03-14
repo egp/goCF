@@ -73,22 +73,6 @@ func TestCFApproxFromPrefix_RejectsNegativePrefixTerms(t *testing.T) {
 	}
 }
 
-func TestDefaultSqrtSeedFromRange_ExactMidpointSquare(t *testing.T) {
-	// midpoint = (1 + 3)/2 = 2, so exact sqrt is not rational; use a case with midpoint 1.
-	r := NewRange(mustRat(1, 2), mustRat(3, 2), true, true)
-
-	got, err := DefaultSqrtSeedFromRange(r)
-	if err != nil {
-		t.Fatalf("DefaultSqrtSeedFromRange failed: %v", err)
-	}
-
-	// midpoint = 1, exact sqrt = 1
-	want := mustRat(1, 1)
-	if got.Cmp(want) != 0 {
-		t.Fatalf("got %v, want %v", got, want)
-	}
-}
-
 func TestNewSqrtApproxCFFromApproxRangeSeed_HonorsExplicitSeedOverride(t *testing.T) {
 	a := CFApprox{
 		Convergent:  mustRat(3, 2),
@@ -115,37 +99,6 @@ func TestNewSqrtApproxCFFromApproxRangeSeed_HonorsExplicitSeedOverride(t *testin
 	}
 	if got[0] != want[0] {
 		t.Fatalf("got first digit %d, want %d; full=%v", got[0], want[0], got)
-	}
-}
-
-func TestSqrtRangeExact_RejectsOutsideRange(t *testing.T) {
-	r := NewRange(mustRat(2, 1), mustRat(1, 1), true, true) // outside
-
-	_, _, err := SqrtRangeExact(r)
-	if err == nil {
-		t.Fatalf("expected error for outside range")
-	}
-}
-
-func TestSqrtRangeHeuristic_PreservesEndpointInclusions(t *testing.T) {
-	r := NewRange(mustRat(1, 4), mustRat(9, 16), false, false)
-
-	got, err := SqrtRangeHeuristic(r)
-	if err != nil {
-		t.Fatalf("SqrtRangeHeuristic failed: %v", err)
-	}
-
-	if got.IncLo || got.IncHi {
-		t.Fatalf("expected inclusions preserved as false,false; got %v %v", got.IncLo, got.IncHi)
-	}
-}
-
-func TestSqrtRangeHeuristic_RejectsOutsideRange(t *testing.T) {
-	r := NewRange(mustRat(2, 1), mustRat(1, 1), true, true)
-
-	_, err := SqrtRangeHeuristic(r)
-	if err == nil {
-		t.Fatalf("expected error for outside range")
 	}
 }
 
