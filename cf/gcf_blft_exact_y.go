@@ -1,11 +1,10 @@
 // gcf_blft_exact_y.go v2
 package cf
 
-import "fmt"
-
 // ApplyComposedGCFYBLFTToTailsExact boundedly ingests ySrc into the y-side of
 // base, requires source exhaustion within the bound, then applies the resulting
 // BLFT exactly to (x, yTail).
+
 func ApplyComposedGCFYBLFTToTailsExact(
 	base BLFT,
 	x Rational,
@@ -14,25 +13,19 @@ func ApplyComposedGCFYBLFTToTailsExact(
 	maxIngestTerms int,
 ) (Rational, int, error) {
 	cur := base
-	ingested := 0
 
-	for {
-		if maxIngestTerms >= 0 && ingested >= maxIngestTerms {
-			return Rational{}, ingested,
-				fmt.Errorf("ApplyComposedGCFYBLFTToTailsExact: exceeded MaxIngestTerms=%d before source exhaustion", maxIngestTerms)
-		}
-
-		p, q, ok := ySrc.NextPQ()
-		if !ok {
-			break
-		}
-
-		var err error
-		cur, err = cur.IngestGCFY(p, q)
-		if err != nil {
-			return Rational{}, ingested, err
-		}
-		ingested++
+	ingested, err := ingestGCFBounded(
+		"ApplyComposedGCFYBLFTToTailsExact",
+		ySrc,
+		maxIngestTerms,
+		func(p, q int64) error {
+			var ierr error
+			cur, ierr = cur.IngestGCFY(p, q)
+			return ierr
+		},
+	)
+	if err != nil {
+		return Rational{}, ingested, err
 	}
 
 	out, err := cur.ApplyRat(x, yTail)

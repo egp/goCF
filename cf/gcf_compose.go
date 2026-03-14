@@ -23,26 +23,21 @@ func ComposeGCFIntoULFTBounded(
 	maxIngestTerms int,
 ) (ULFT, int, bool, error) {
 	cur := base
-	ingested := 0
 
-	for {
-		if maxIngestTerms >= 0 && ingested >= maxIngestTerms {
-			return ULFT{}, ingested, false,
-				fmt.Errorf("ComposeGCFIntoULFTBounded: exceeded MaxIngestTerms=%d before source exhaustion", maxIngestTerms)
-		}
-
-		p, q, ok := src.NextPQ()
-		if !ok {
-			return cur, ingested, true, nil
-		}
-
-		var err error
-		cur, err = cur.IngestGCF(p, q)
-		if err != nil {
-			return ULFT{}, ingested, false, err
-		}
-		ingested++
+	ingested, err := ingestGCFBounded(
+		"ComposeGCFIntoULFTBounded",
+		src,
+		maxIngestTerms,
+		func(p, q int64) error {
+			var ierr error
+			cur, ierr = cur.IngestGCF(p, q)
+			return ierr
+		},
+	)
+	if err != nil {
+		return ULFT{}, ingested, false, err
 	}
+	return cur, ingested, true, nil
 }
 
 // ApplyComposedGCFULFTToTailExact boundedly ingests src into base, requires

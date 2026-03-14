@@ -1,11 +1,10 @@
 // gcf_blft_exact_xy.go v2
 package cf
 
-import "fmt"
-
 // ApplyComposedGCFXYBLFTToTailsExact boundedly ingests xSrc into the x-side
 // and ySrc into the y-side of base, requires both sources to exhaust within
 // their bounds, then applies the resulting BLFT exactly to (xTail, yTail).
+
 func ApplyComposedGCFXYBLFTToTailsExact(
 	base BLFT,
 	xSrc GCFSource,
@@ -16,45 +15,33 @@ func ApplyComposedGCFXYBLFTToTailsExact(
 	maxYIngestTerms int,
 ) (Rational, int, int, error) {
 	cur := base
-	xIngested := 0
-	yIngested := 0
 
-	for {
-		if maxXIngestTerms >= 0 && xIngested >= maxXIngestTerms {
-			return Rational{}, xIngested, yIngested,
-				fmt.Errorf("ApplyComposedGCFXYBLFTToTailsExact: exceeded MaxIngestTerms=%d before x-source exhaustion", maxXIngestTerms)
-		}
-
-		p, q, ok := xSrc.NextPQ()
-		if !ok {
-			break
-		}
-
-		var err error
-		cur, err = cur.IngestGCFX(p, q)
-		if err != nil {
-			return Rational{}, xIngested, yIngested, err
-		}
-		xIngested++
+	xIngested, err := ingestGCFBounded(
+		"ApplyComposedGCFXYBLFTToTailsExact",
+		xSrc,
+		maxXIngestTerms,
+		func(p, q int64) error {
+			var ierr error
+			cur, ierr = cur.IngestGCFX(p, q)
+			return ierr
+		},
+	)
+	if err != nil {
+		return Rational{}, xIngested, 0, err
 	}
 
-	for {
-		if maxYIngestTerms >= 0 && yIngested >= maxYIngestTerms {
-			return Rational{}, xIngested, yIngested,
-				fmt.Errorf("ApplyComposedGCFXYBLFTToTailsExact: exceeded MaxIngestTerms=%d before y-source exhaustion", maxYIngestTerms)
-		}
-
-		p, q, ok := ySrc.NextPQ()
-		if !ok {
-			break
-		}
-
-		var err error
-		cur, err = cur.IngestGCFY(p, q)
-		if err != nil {
-			return Rational{}, xIngested, yIngested, err
-		}
-		yIngested++
+	yIngested, err := ingestGCFBounded(
+		"ApplyComposedGCFXYBLFTToTailsExact",
+		ySrc,
+		maxYIngestTerms,
+		func(p, q int64) error {
+			var ierr error
+			cur, ierr = cur.IngestGCFY(p, q)
+			return ierr
+		},
+	)
+	if err != nil {
+		return Rational{}, xIngested, yIngested, err
 	}
 
 	out, err := cur.ApplyRat(xTail, yTail)
