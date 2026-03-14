@@ -1,4 +1,4 @@
-// sqrt_gcf_prefix_stream2.go v2
+// sqrt_gcf_prefix_stream2.go v3
 package cf
 
 import "fmt"
@@ -18,10 +18,17 @@ type SqrtGCFPrefixStream2 struct {
 	done    bool
 	started bool
 	exactCF ContinuedFraction
+	approx  *Rational
 
 	src         GCFSource
 	prefixTerms int
 	policy      SqrtPolicy2
+}
+
+type SqrtGCFPrefixStream2Snapshot struct {
+	Started     bool
+	PrefixTerms int
+	Approx      *Rational
 }
 
 func NewSqrtGCFPrefixStream2(src GCFSource, prefixTerms int, p SqrtPolicy2) *SqrtGCFPrefixStream2 {
@@ -34,20 +41,34 @@ func NewSqrtGCFPrefixStream2(src GCFSource, prefixTerms int, p SqrtPolicy2) *Sqr
 
 func (s *SqrtGCFPrefixStream2) Err() error { return s.err }
 
+func (s *SqrtGCFPrefixStream2) Snapshot() SqrtGCFPrefixStream2Snapshot {
+	var approxCopy *Rational
+	if s.approx != nil {
+		v := *s.approx
+		approxCopy = &v
+	}
+	return SqrtGCFPrefixStream2Snapshot{
+		Started:     s.started,
+		PrefixTerms: s.prefixTerms,
+		Approx:      approxCopy,
+	}
+}
+
 func (s *SqrtGCFPrefixStream2) initExactCF() bool {
 	if s.started {
 		return s.err == nil
 	}
 	s.started = true
 
-	approx, err := SqrtApproxCFFromGCFSourceRangeSeed2(s.src, s.prefixTerms, s.policy)
+	approx, err := SqrtApproxFromGCFSourceRangeSeed2(s.src, s.prefixTerms, s.policy)
 	if err != nil {
 		s.err = fmt.Errorf("SqrtGCFPrefixStream2: %w", err)
 		s.done = true
 		return false
 	}
 
-	s.exactCF = approx
+	s.approx = &approx
+	s.exactCF = NewRationalCF(approx)
 	return true
 }
 
@@ -71,4 +92,4 @@ func (s *SqrtGCFPrefixStream2) Next() (int64, bool) {
 	return d, true
 }
 
-// sqrt_gcf_prefix_stream2.go v2
+// sqrt_gcf_prefix_stream2.go v3
