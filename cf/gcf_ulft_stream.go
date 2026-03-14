@@ -1,4 +1,4 @@
-// gcf_ulft_stream.go v5
+// gcf_ulft_stream.go v6
 package cf
 
 import "fmt"
@@ -12,11 +12,10 @@ import "fmt"
 //
 // Infinite uncertified GCF emission is intentionally out of scope for now.
 type GCFULFTStream struct {
-	t       ULFT
-	src     GCFSource
-	tailSrc GCFTailSource
-	opts    GCFULFTStreamOptions
-	state   exactCFStreamState
+	t    ULFT
+	src  GCFSource
+	opts GCFULFTStreamOptions
+	exactSingleTailStream
 }
 
 // GCFULFTStreamOptions is intentionally small.
@@ -40,10 +39,12 @@ func NewGCFULFTStream(
 	opts GCFULFTStreamOptions,
 ) *GCFULFTStream {
 	return &GCFULFTStream{
-		t:       t,
-		src:     src,
-		tailSrc: tailSrc,
-		opts:    opts,
+		t:    t,
+		src:  src,
+		opts: opts,
+		exactSingleTailStream: exactSingleTailStream{
+			tailSrc: tailSrc,
+		},
 	}
 }
 
@@ -57,26 +58,24 @@ func NewGCFULFTStreamWithTail(
 	return NewGCFULFTStream(t, src, NewExactTailSource(tail), opts)
 }
 
-func (s *GCFULFTStream) Err() error { return s.state.Err() }
+func (s *GCFULFTStream) Err() error { return s.exactSingleTailStream.Err() }
 
 func (s *GCFULFTStream) Next() (int64, bool) {
-	return s.state.nextFromExactCF(func() (Rational, error) {
-		tail, ok := s.tailSrc.ExactTail()
-		if !ok {
-			return Rational{}, fmt.Errorf("GCFULFTStream: tail evidence not implemented")
-		}
-
-		y, _, err := ApplyComposedGCFULFTToTailExact(
-			s.t,
-			s.src,
-			tail,
-			s.opts.MaxIngestTerms,
-		)
-		if err != nil {
-			return Rational{}, fmt.Errorf("GCFULFTStream: %w", err)
-		}
-		return y, nil
-	})
+	return s.nextFromExactTail(
+		"GCFULFTStream: tail evidence not implemented",
+		func(tail Rational) (Rational, error) {
+			y, _, err := ApplyComposedGCFULFTToTailExact(
+				s.t,
+				s.src,
+				tail,
+				s.opts.MaxIngestTerms,
+			)
+			if err != nil {
+				return Rational{}, fmt.Errorf("GCFULFTStream: %w", err)
+			}
+			return y, nil
+		},
+	)
 }
 
-// gcf_ulft_stream.go v5
+// gcf_ulft_stream.go v6
