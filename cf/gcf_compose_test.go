@@ -292,4 +292,85 @@ func TestEvalGCFWithTailExact_InvalidTermPropagatesError(t *testing.T) {
 	}
 }
 
+func TestULFTIngestGCF_Identity_SingleRewriteMatchesExactEvaluation(t *testing.T) {
+	base := NewULFT(mustBig(1), mustBig(0), mustBig(0), mustBig(1))
+	p := int64(3)
+	q := int64(2)
+	xTail := mustRat(11, 1)
+
+	rewritten, err := base.IngestGCF(p, q)
+	if err != nil {
+		t.Fatalf("IngestGCF failed: %v", err)
+	}
+
+	x, ingested, err := EvalGCFWithTailExact(
+		NewSliceGCF([2]int64{p, q}),
+		xTail,
+		8,
+	)
+	if err != nil {
+		t.Fatalf("EvalGCFWithTailExact failed: %v", err)
+	}
+	if ingested != 1 {
+		t.Fatalf("got ingested=%d want 1", ingested)
+	}
+
+	got, err := rewritten.ApplyRat(xTail)
+	if err != nil {
+		t.Fatalf("rewritten ApplyRat failed: %v", err)
+	}
+	if got.Cmp(x) != 0 {
+		t.Fatalf("got=%v want=%v", got, x)
+	}
+}
+
+func TestULFTIngestGCF_GeneralRewriteMatchesExactEvaluation(t *testing.T) {
+	base := NewULFT(mustBig(2), mustBig(1), mustBig(3), mustBig(4)) // (2x+1)/(3x+4)
+	p := int64(5)
+	q := int64(7)
+	xTail := mustRat(13, 1)
+
+	rewritten, err := base.IngestGCF(p, q)
+	if err != nil {
+		t.Fatalf("IngestGCF failed: %v", err)
+	}
+
+	x, ingested, err := EvalGCFWithTailExact(
+		NewSliceGCF([2]int64{p, q}),
+		xTail,
+		8,
+	)
+	if err != nil {
+		t.Fatalf("EvalGCFWithTailExact failed: %v", err)
+	}
+	if ingested != 1 {
+		t.Fatalf("got ingested=%d want 1", ingested)
+	}
+
+	want, err := base.ApplyRat(x)
+	if err != nil {
+		t.Fatalf("base ApplyRat failed: %v", err)
+	}
+
+	got, err := rewritten.ApplyRat(xTail)
+	if err != nil {
+		t.Fatalf("rewritten ApplyRat failed: %v", err)
+	}
+	if got.Cmp(want) != 0 {
+		t.Fatalf("got=%v want=%v", got, want)
+	}
+}
+
+func TestULFTIngestGCF_RejectsBadQ(t *testing.T) {
+	base := NewULFT(mustBig(1), mustBig(0), mustBig(0), mustBig(1))
+
+	_, err := base.IngestGCF(3, 0)
+	if err == nil {
+		t.Fatalf("expected non-nil error")
+	}
+	if !strings.Contains(err.Error(), "require q>0") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 // EOF gcf_compose_test.go v1
