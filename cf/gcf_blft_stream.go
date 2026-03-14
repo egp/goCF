@@ -18,10 +18,7 @@ type GCFBLFTStream struct {
 	ySrc     GCFSource
 	yTailSrc GCFTailSource
 	opts     GCFBLFTStreamOptions
-	err      error
-	done     bool
-	started  bool
-	exactCF  ContinuedFraction
+	state    exactCFStreamState
 }
 
 // GCFBLFTStreamOptions controls bounded exact ingestion for the binary stream.
@@ -80,65 +77,34 @@ func NewGCFBLFTStreamWithTails(
 	)
 }
 
-func (s *GCFBLFTStream) Err() error { return s.err }
-
-func (s *GCFBLFTStream) initializeExactCF() bool {
-	if s.started {
-		return s.err == nil
-	}
-	s.started = true
-
-	xTail, ok := s.xTailSrc.ExactTail()
-	if !ok {
-		s.err = fmt.Errorf("GCFBLFTStream: x tail evidence not implemented")
-		s.done = true
-		return false
-	}
-
-	yTail, ok := s.yTailSrc.ExactTail()
-	if !ok {
-		s.err = fmt.Errorf("GCFBLFTStream: y tail evidence not implemented")
-		s.done = true
-		return false
-	}
-
-	z, _, _, err := ApplyComposedGCFXYBLFTToTailsExact(
-		s.t,
-		s.xSrc,
-		xTail,
-		s.opts.MaxXIngestTerms,
-		s.ySrc,
-		yTail,
-		s.opts.MaxYIngestTerms,
-	)
-	if err != nil {
-		s.err = fmt.Errorf("GCFBLFTStream: %w", err)
-		s.done = true
-		return false
-	}
-
-	s.exactCF = NewRationalCF(z)
-	return true
-}
+func (s *GCFBLFTStream) Err() error { return s.state.Err() }
 
 func (s *GCFBLFTStream) Next() (int64, bool) {
-	if s.done {
-		return 0, false
-	}
-	if s.err != nil {
-		s.done = true
-		return 0, false
-	}
-	if !s.initializeExactCF() {
-		return 0, false
-	}
+	return s.state.nextFromExactCF(func() (Rational, error) {
+		xTail, ok := s.xTailSrc.ExactTail()
+		if !ok {
+			return Rational{}, fmt.Errorf("GCFBLFTStream: x tail evidence not implemented")
+		}
 
-	d, ok := s.exactCF.Next()
-	if !ok {
-		s.done = true
-		return 0, false
-	}
-	return d, true
+		yTail, ok := s.yTailSrc.ExactTail()
+		if !ok {
+			return Rational{}, fmt.Errorf("GCFBLFTStream: y tail evidence not implemented")
+		}
+
+		z, _, _, err := ApplyComposedGCFXYBLFTToTailsExact(
+			s.t,
+			s.xSrc,
+			xTail,
+			s.opts.MaxXIngestTerms,
+			s.ySrc,
+			yTail,
+			s.opts.MaxYIngestTerms,
+		)
+		if err != nil {
+			return Rational{}, fmt.Errorf("GCFBLFTStream: %w", err)
+		}
+		return z, nil
+	})
 }
 
 // gcf_blft_stream.go v3
