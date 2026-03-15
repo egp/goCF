@@ -1,4 +1,4 @@
-// mvp_numerator_test.go v2
+// mvp_numerator_test.go v3
 package cf
 
 import "testing"
@@ -55,6 +55,25 @@ func TestMVPNumeratorApprox_UsesGCFIngestingUnarySqrtPath(t *testing.T) {
 	}
 }
 
+func TestMVPNumeratorApprox_CurrentDefaultUsesSharperBudgets(t *testing.T) {
+	got, err := MVPNumeratorApproxCurrentDefault()
+	if err != nil {
+		t.Fatalf("MVPNumeratorApproxCurrentDefault failed: %v", err)
+	}
+
+	want, err := MVPNumeratorApproxDefault(
+		MVPDefaultFourOverPiPrefixTerms,
+		MVPDefaultEPrefixTerms,
+	)
+	if err != nil {
+		t.Fatalf("MVPNumeratorApproxDefault failed: %v", err)
+	}
+
+	if got.Cmp(want) != 0 {
+		t.Fatalf("got %v want %v", got, want)
+	}
+}
+
 func TestMVPNumeratorApproxCF_MatchesApprox(t *testing.T) {
 	gotTerms, err := MVPNumeratorApproxTermsDefault(4, 6, 12)
 	if err != nil {
@@ -78,9 +97,9 @@ func TestMVPNumeratorApproxCF_MatchesApprox(t *testing.T) {
 }
 
 func TestMVPNumeratorApprox_IsPositive(t *testing.T) {
-	got, err := MVPNumeratorApproxDefault(4, 6)
+	got, err := MVPNumeratorApproxCurrentDefault()
 	if err != nil {
-		t.Fatalf("MVPNumeratorApproxDefault failed: %v", err)
+		t.Fatalf("MVPNumeratorApproxCurrentDefault failed: %v", err)
 	}
 	if got.Cmp(intRat(0)) <= 0 {
 		t.Fatalf("got %v want positive", got)
@@ -88,9 +107,9 @@ func TestMVPNumeratorApprox_IsPositive(t *testing.T) {
 }
 
 func TestMVPNumeratorApprox_ExceedsOne(t *testing.T) {
-	got, err := MVPNumeratorApproxDefault(4, 6)
+	got, err := MVPNumeratorApproxCurrentDefault()
 	if err != nil {
-		t.Fatalf("MVPNumeratorApproxDefault failed: %v", err)
+		t.Fatalf("MVPNumeratorApproxCurrentDefault failed: %v", err)
 	}
 	if got.Cmp(intRat(1)) <= 0 {
 		t.Fatalf("got %v want > 1", got)
@@ -102,4 +121,4 @@ func TestMVPNumeratorApprox_ExceedsOne(t *testing.T) {
 //
 //	sqrt(3/pi^2 + e)
 //
-// mvp_numerator_test.go v2
+// mvp_numerator_test.go v3

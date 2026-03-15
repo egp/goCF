@@ -1,7 +1,16 @@
-// mvp_numerator.go v2
+// mvp_numerator.go v3
 package cf
 
 import "fmt"
+
+// Default bounded-prefix choices for the current MVP numerator path.
+//
+// These are intentionally centralized so target-level code and tests lock the
+// same chosen approximation budget.
+const (
+	MVPDefaultFourOverPiPrefixTerms = 6
+	MVPDefaultEPrefixTerms          = 8
+)
 
 // MVPNumeratorApprox returns a bounded rational approximation for:
 //
@@ -22,12 +31,13 @@ func MVPNumeratorApprox(
 		return Rational{}, err
 	}
 
-	// The adapted rational CF is finite. Using a bounded prefix equal to the
-	// requested rational source is sufficient for exact ingestion of that value.
+	// The adapted rational CF is finite. Using a bounded prefix comfortably above
+	// the expected rational CF length is sufficient for exact ingestion of that value.
 	return SqrtApproxFromGCFSourceRangeSeed2(src, 64, sqrtPolicy)
 }
 
-// MVPNumeratorApproxDefault uses the default sqrt policy.
+// MVPNumeratorApproxDefault uses the default sqrt policy and the current chosen
+// bounded-prefix budgets for the MVP numerator.
 func MVPNumeratorApproxDefault(
 	fourOverPiPrefixTerms int,
 	ePrefixTerms int,
@@ -35,6 +45,16 @@ func MVPNumeratorApproxDefault(
 	return MVPNumeratorApprox(
 		fourOverPiPrefixTerms,
 		ePrefixTerms,
+		DefaultSqrtPolicy2(),
+	)
+}
+
+// MVPNumeratorApproxCurrentDefault returns the current chosen default numerator
+// approximation for the MVP target.
+func MVPNumeratorApproxCurrentDefault() (Rational, error) {
+	return MVPNumeratorApprox(
+		MVPDefaultFourOverPiPrefixTerms,
+		MVPDefaultEPrefixTerms,
 		DefaultSqrtPolicy2(),
 	)
 }
@@ -105,4 +125,4 @@ func MVPNumeratorApproxTermsDefault(
 //
 //	    sqrt(3/pi^2 + e)
 //
-// mvp_numerator.go v2
+// mvp_numerator.go v3

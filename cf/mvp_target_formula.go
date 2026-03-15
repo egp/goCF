@@ -1,4 +1,4 @@
-// mvp_target_formula.go v1
+// mvp_target_formula.go v2
 package cf
 
 import "fmt"
@@ -53,8 +53,8 @@ func MVPTargetBounds(
 
 func MVPTargetBoundsDefault() (Range, error) {
 	return MVPTargetBounds(
-		4,
-		6,
+		MVPDefaultFourOverPiPrefixTerms,
+		MVPDefaultEPrefixTerms,
 		DefaultSqrtPolicy2(),
 		Degrees(mustRat(69, 1)),
 	)
@@ -81,11 +81,11 @@ func MVPTargetApprox(
 
 func MVPTargetApproxDefault() (Rational, error) {
 	return MVPTargetApprox(
-		4,
-		6,
+		MVPDefaultFourOverPiPrefixTerms,
+		MVPDefaultEPrefixTerms,
 		DefaultSqrtPolicy2(),
 		Degrees(mustRat(69, 1)),
 	)
 }
 
-// mvp_target_formula.go v1
+// mvp_target_formula.go v2

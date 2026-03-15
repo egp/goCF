@@ -1,4 +1,4 @@
-// mvp_target_formula_test.go v5
+// mvp_target_formula_test.go v6
 package cf
 
 import (
@@ -7,9 +7,9 @@ import (
 )
 
 func TestMVPTargetFormula_CurrentShape_AssemblesNumeratorAndDenominator(t *testing.T) {
-	num, err := MVPNumeratorApproxDefault(4, 6)
+	num, err := MVPNumeratorApproxCurrentDefault()
 	if err != nil {
-		t.Fatalf("MVPNumeratorApproxDefault failed: %v", err)
+		t.Fatalf("MVPNumeratorApproxCurrentDefault failed: %v", err)
 	}
 
 	den, err := MVPDenominatorBoundsDefault()
@@ -40,9 +40,9 @@ func TestMVPTargetFormula_DenominatorNowExcludesZero(t *testing.T) {
 }
 
 func TestMVPTargetFormula_CurrentNumeratorAndDenominatorSanity(t *testing.T) {
-	num, err := MVPNumeratorApproxDefault(4, 6)
+	num, err := MVPNumeratorApproxCurrentDefault()
 	if err != nil {
-		t.Fatalf("MVPNumeratorApproxDefault failed: %v", err)
+		t.Fatalf("MVPNumeratorApproxCurrentDefault failed: %v", err)
 	}
 
 	den, err := MVPDenominatorBoundsDefault()
@@ -74,15 +74,36 @@ func TestMVPTargetBoundsDefault_IsInsideAndPositive(t *testing.T) {
 	}
 }
 
+func TestMVPTargetBoundsDefault_UsesCurrentSharperNumeratorBudgets(t *testing.T) {
+	got, err := MVPTargetBoundsDefault()
+	if err != nil {
+		t.Fatalf("MVPTargetBoundsDefault failed: %v", err)
+	}
+
+	want, err := MVPTargetBounds(
+		MVPDefaultFourOverPiPrefixTerms,
+		MVPDefaultEPrefixTerms,
+		DefaultSqrtPolicy2(),
+		Degrees(mustRat(69, 1)),
+	)
+	if err != nil {
+		t.Fatalf("MVPTargetBounds failed: %v", err)
+	}
+
+	if got.Lo.Cmp(want.Lo) != 0 || got.Hi.Cmp(want.Hi) != 0 {
+		t.Fatalf("got %v want %v", got, want)
+	}
+}
+
 func TestMVPTargetBoundsDefault_MatchesNumeratorOverDenominatorConstruction(t *testing.T) {
 	got, err := MVPTargetBoundsDefault()
 	if err != nil {
 		t.Fatalf("MVPTargetBoundsDefault failed: %v", err)
 	}
 
-	num, err := MVPNumeratorApproxDefault(4, 6)
+	num, err := MVPNumeratorApproxCurrentDefault()
 	if err != nil {
-		t.Fatalf("MVPNumeratorApproxDefault failed: %v", err)
+		t.Fatalf("MVPNumeratorApproxCurrentDefault failed: %v", err)
 	}
 	den, err := MVPDenominatorBoundsDefault()
 	if err != nil {
@@ -122,4 +143,4 @@ func TestMVPTargetApproxDefault_CurrentlyReportsBoundedNonPoint(t *testing.T) {
 //
 //	sqrt(3/pi^2 + e) / (tanh(sqrt(5)) - sin(69°))
 //
-// mvp_target_formula_test.go v5
+// mvp_target_formula_test.go v6
