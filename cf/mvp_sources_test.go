@@ -1,4 +1,4 @@
-// mvp_sources_test.go v2
+// mvp_sources_test.go v3
 package cf
 
 import "testing"
@@ -72,6 +72,27 @@ func TestMVPSources_69DegreeSourceWithTailEvaluatesExactly(t *testing.T) {
 	}
 }
 
+func TestMVPThreeOverPiSquaredPlusEAsGCFSource_RoundTripsApproxValue(t *testing.T) {
+	src, err := MVPThreeOverPiSquaredPlusEAsGCFSource(4, 6)
+	if err != nil {
+		t.Fatalf("MVPThreeOverPiSquaredPlusEAsGCFSource failed: %v", err)
+	}
+
+	got, err := GCFSourceConvergent(src, 64)
+	if err != nil {
+		t.Fatalf("GCFSourceConvergent failed: %v", err)
+	}
+
+	want, err := MVPThreeOverPiSquaredPlusEApprox(4, 6)
+	if err != nil {
+		t.Fatalf("MVPThreeOverPiSquaredPlusEApprox failed: %v", err)
+	}
+
+	if got.Cmp(want) != 0 {
+		t.Fatalf("got %v want %v", got, want)
+	}
+}
+
 func TestMVPThreeOverPiSquaredPlusEApprox_RejectsBadBounds(t *testing.T) {
 	if _, err := MVPThreeOverPiSquaredPlusEApprox(0, 4); err == nil {
 		t.Fatalf("expected error for fourOverPiPrefixTerms=0")
@@ -133,4 +154,4 @@ func TestMVPThreeOverPiSquaredPlusEApprox_IsPositiveAndExceedsEApprox(t *testing
 	}
 }
 
-// mvp_sources_test.go v2
+// mvp_sources_test.go v3

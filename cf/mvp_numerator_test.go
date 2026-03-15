@@ -1,4 +1,4 @@
-// mvp_numerator_test.go v1
+// mvp_numerator_test.go v2
 package cf
 
 import "testing"
@@ -12,7 +12,28 @@ func TestMVPNumeratorApprox_RejectsBadBounds(t *testing.T) {
 	}
 }
 
-func TestMVPNumeratorApprox_UsesNumeratorSubexpression(t *testing.T) {
+func TestMVPThreeOverPiSquaredPlusEAsGCFSource_IsUsableByGCFUnaryPath(t *testing.T) {
+	src, err := MVPThreeOverPiSquaredPlusEAsGCFSource(4, 6)
+	if err != nil {
+		t.Fatalf("MVPThreeOverPiSquaredPlusEAsGCFSource failed: %v", err)
+	}
+
+	got, err := SqrtApproxFromGCFSourceRangeSeed2(src, 64, DefaultSqrtPolicy2())
+	if err != nil {
+		t.Fatalf("SqrtApproxFromGCFSourceRangeSeed2 failed: %v", err)
+	}
+
+	want, err := MVPNumeratorApproxDefault(4, 6)
+	if err != nil {
+		t.Fatalf("MVPNumeratorApproxDefault failed: %v", err)
+	}
+
+	if got.Cmp(want) != 0 {
+		t.Fatalf("got %v want %v", got, want)
+	}
+}
+
+func TestMVPNumeratorApprox_UsesGCFIngestingUnarySqrtPath(t *testing.T) {
 	got, err := MVPNumeratorApproxDefault(4, 6)
 	if err != nil {
 		t.Fatalf("MVPNumeratorApproxDefault failed: %v", err)
@@ -22,9 +43,11 @@ func TestMVPNumeratorApprox_UsesNumeratorSubexpression(t *testing.T) {
 	if err != nil {
 		t.Fatalf("MVPThreeOverPiSquaredPlusEApprox failed: %v", err)
 	}
-	want, err := SqrtApproxWithPolicy2(x, DefaultSqrtPolicy2())
+
+	src := AdaptCFToGCF(NewRationalCF(x))
+	want, err := SqrtApproxFromGCFSourceRangeSeed2(src, 64, DefaultSqrtPolicy2())
 	if err != nil {
-		t.Fatalf("SqrtApproxWithPolicy2 failed: %v", err)
+		t.Fatalf("SqrtApproxFromGCFSourceRangeSeed2 failed: %v", err)
 	}
 
 	if got.Cmp(want) != 0 {
@@ -79,4 +102,4 @@ func TestMVPNumeratorApprox_ExceedsOne(t *testing.T) {
 //
 //	sqrt(3/pi^2 + e)
 //
-// mvp_numerator_test.go v1
+// mvp_numerator_test.go v2

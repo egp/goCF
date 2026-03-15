@@ -1,4 +1,4 @@
-// mvp_numerator.go v1
+// mvp_numerator.go v2
 package cf
 
 import "fmt"
@@ -11,17 +11,20 @@ import "fmt"
 //   - choose canonical reciprocal-pi source via MVPReciprocalPiGCFSource()
 //   - choose canonical e source via MVPEGCFSource()
 //   - form bounded rational approximation to 3/pi^2 + e
-//   - apply bounded sqrt approximation under the supplied policy
+//   - route the final sqrt through a GCF-ingesting unary entry point
 func MVPNumeratorApprox(
 	fourOverPiPrefixTerms int,
 	ePrefixTerms int,
 	sqrtPolicy SqrtPolicy2,
 ) (Rational, error) {
-	x, err := MVPThreeOverPiSquaredPlusEApprox(fourOverPiPrefixTerms, ePrefixTerms)
+	src, err := MVPThreeOverPiSquaredPlusEAsGCFSource(fourOverPiPrefixTerms, ePrefixTerms)
 	if err != nil {
 		return Rational{}, err
 	}
-	return SqrtApproxWithPolicy2(x, sqrtPolicy)
+
+	// The adapted rational CF is finite. Using a bounded prefix equal to the
+	// requested rational source is sufficient for exact ingestion of that value.
+	return SqrtApproxFromGCFSourceRangeSeed2(src, 64, sqrtPolicy)
 }
 
 // MVPNumeratorApproxDefault uses the default sqrt policy.
@@ -102,4 +105,4 @@ func MVPNumeratorApproxTermsDefault(
 //
 //	    sqrt(3/pi^2 + e)
 //
-// mvp_numerator.go v1
+// mvp_numerator.go v2
