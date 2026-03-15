@@ -1,4 +1,4 @@
-// sqrt_certified_first_digit_stream_test.go v1
+// sqrt_certified_first_digit_stream_test.go v2
 package cf
 
 import "testing"
@@ -26,7 +26,7 @@ func TestSqrtCertifiedFirstDigitCFStream_FinitePerfectSquare_EmitsExactResult(t 
 	}
 }
 
-func TestSqrtCertifiedFirstDigitCFStream_Sqrt2_CertifiesFirstDigit(t *testing.T) {
+func TestSqrtCertifiedFirstDigitCFStream_Sqrt2_CertifiesFirstTwoDigits(t *testing.T) {
 	s, err := NewSqrtCertifiedFirstDigitCFStream(Sqrt2CF(), 2)
 	if err != nil {
 		t.Fatalf("constructor failed: %v", err)
@@ -37,12 +37,14 @@ func TestSqrtCertifiedFirstDigitCFStream_Sqrt2_CertifiesFirstDigit(t *testing.T)
 		t.Fatalf("stream error: %v", err)
 	}
 
-	want := []int64{1}
+	want := []int64{1, 2}
 	if len(got) != len(want) {
 		t.Fatalf("len(got)=%d want=%d got=%v", len(got), len(want), got)
 	}
-	if got[0] != want[0] {
-		t.Fatalf("got %v want %v", got, want)
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("got[%d]=%d want=%d full=%v", i, got[i], want[i], got)
+		}
 	}
 
 	snap := s.Snapshot()
@@ -79,4 +81,4 @@ func TestSqrtCertifiedFirstDigitCFStream_EmptySourceFails(t *testing.T) {
 	}
 }
 
-// sqrt_certified_first_digit_stream_test.go v1
+// sqrt_certified_first_digit_stream_test.go v2
