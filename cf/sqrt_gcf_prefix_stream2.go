@@ -1,4 +1,4 @@
-// sqrt_gcf_prefix_stream2.go v4
+// sqrt_gcf_prefix_stream2.go v5
 package cf
 
 import "fmt"
@@ -21,6 +21,7 @@ type SqrtGCFPrefixStream2 struct {
 	approx  *Rational
 
 	inputApprox *GCFApprox
+	status      SqrtStreamStatus
 
 	src         GCFSource
 	prefixTerms int
@@ -32,6 +33,7 @@ func NewSqrtGCFPrefixStream2(src GCFSource, prefixTerms int, p SqrtPolicy2) *Sqr
 		src:         src,
 		prefixTerms: prefixTerms,
 		policy:      p,
+		status:      SqrtStreamStatusUnstarted,
 	}
 }
 
@@ -50,15 +52,8 @@ func (s *SqrtGCFPrefixStream2) Snapshot() SqrtApproxStreamSnapshot {
 		gcfInputApproxCopy = &v
 	}
 
-	status := SqrtStreamStatusUnstarted
-	if s.err != nil {
-		status = SqrtStreamStatusFailed
-	} else if s.started {
-		status = SqrtStreamStatusBoundedCollapse
-	}
-
 	return SqrtApproxStreamSnapshot{
-		Status:         status,
+		Status:         s.status,
 		Started:        s.started,
 		PrefixTerms:    s.prefixTerms,
 		Approx:         approxCopy,
@@ -76,6 +71,7 @@ func (s *SqrtGCFPrefixStream2) initExactCF() bool {
 	if err != nil {
 		s.err = fmt.Errorf("SqrtGCFPrefixStream2: %w", err)
 		s.done = true
+		s.status = SqrtStreamStatusFailed
 		return false
 	}
 	s.inputApprox = &a
@@ -84,11 +80,18 @@ func (s *SqrtGCFPrefixStream2) initExactCF() bool {
 	if err != nil {
 		s.err = fmt.Errorf("SqrtGCFPrefixStream2: %w", err)
 		s.done = true
+		s.status = SqrtStreamStatusFailed
 		return false
 	}
 
 	s.approx = &approx
 	s.exactCF = NewRationalCF(approx)
+
+	if a.Range != nil && a.Range.Lo.Cmp(a.Range.Hi) == 0 {
+		s.status = SqrtStreamStatusExactInput
+	} else {
+		s.status = SqrtStreamStatusBoundedCollapse
+	}
 	return true
 }
 
@@ -112,4 +115,4 @@ func (s *SqrtGCFPrefixStream2) Next() (int64, bool) {
 	return d, true
 }
 
-// sqrt_gcf_prefix_stream2.go v4
+// sqrt_gcf_prefix_stream2.go v5

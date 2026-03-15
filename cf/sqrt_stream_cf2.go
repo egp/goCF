@@ -1,4 +1,4 @@
-// sqrt_stream_cf2.go v5
+// sqrt_stream_cf2.go v6
 package cf
 
 import "fmt"
@@ -21,6 +21,7 @@ type SqrtCFPrefixStream2 struct {
 	approx  *Rational
 
 	inputApprox *CFApprox
+	status      SqrtStreamStatus
 
 	src         ContinuedFraction
 	prefixTerms int
@@ -32,6 +33,7 @@ func NewSqrtCFPrefixStream2(src ContinuedFraction, prefixTerms int, p SqrtPolicy
 		src:         src,
 		prefixTerms: prefixTerms,
 		policy:      p,
+		status:      SqrtStreamStatusUnstarted,
 	}
 }
 
@@ -50,15 +52,8 @@ func (s *SqrtCFPrefixStream2) Snapshot() SqrtApproxStreamSnapshot {
 		cfInputApproxCopy = &v
 	}
 
-	status := SqrtStreamStatusUnstarted
-	if s.err != nil {
-		status = SqrtStreamStatusFailed
-	} else if s.started {
-		status = SqrtStreamStatusBoundedCollapse
-	}
-
 	return SqrtApproxStreamSnapshot{
-		Status:        status,
+		Status:        s.status,
 		Started:       s.started,
 		PrefixTerms:   s.prefixTerms,
 		Approx:        approxCopy,
@@ -76,6 +71,7 @@ func (s *SqrtCFPrefixStream2) initExactCF() bool {
 	if err != nil {
 		s.err = fmt.Errorf("SqrtCFPrefixStream2: %w", err)
 		s.done = true
+		s.status = SqrtStreamStatusFailed
 		return false
 	}
 	s.inputApprox = &a
@@ -84,11 +80,18 @@ func (s *SqrtCFPrefixStream2) initExactCF() bool {
 	if err != nil {
 		s.err = fmt.Errorf("SqrtCFPrefixStream2: %w", err)
 		s.done = true
+		s.status = SqrtStreamStatusFailed
 		return false
 	}
 
 	s.approx = &approx
 	s.exactCF = NewRationalCF(approx)
+
+	if a.Range.Lo.Cmp(a.Range.Hi) == 0 {
+		s.status = SqrtStreamStatusExactInput
+	} else {
+		s.status = SqrtStreamStatusBoundedCollapse
+	}
 	return true
 }
 
@@ -112,4 +115,4 @@ func (s *SqrtCFPrefixStream2) Next() (int64, bool) {
 	return d, true
 }
 
-// sqrt_stream_cf2.go v5
+// sqrt_stream_cf2.go v6

@@ -1,4 +1,4 @@
-// sqrt_stream2.go v3
+// sqrt_stream2.go v4
 package cf
 
 import "fmt"
@@ -20,6 +20,7 @@ type SqrtGCFExactTailStream2 struct {
 	started bool
 	exactCF ContinuedFraction
 	approx  *Rational
+	status  SqrtStreamStatus
 
 	src            GCFSource
 	tailSrc        GCFTailSource
@@ -33,6 +34,7 @@ func NewSqrtGCFExactTailStream2(src GCFSource, tailSrc GCFTailSource, maxIngestT
 		tailSrc:        tailSrc,
 		maxIngestTerms: maxIngestTerms,
 		policy:         p,
+		status:         SqrtStreamStatusUnstarted,
 	}
 }
 
@@ -49,15 +51,8 @@ func (s *SqrtGCFExactTailStream2) Snapshot() SqrtApproxStreamSnapshot {
 		approxCopy = &v
 	}
 
-	status := SqrtStreamStatusUnstarted
-	if s.err != nil {
-		status = SqrtStreamStatusFailed
-	} else if s.started {
-		status = SqrtStreamStatusBoundedCollapse
-	}
-
 	return SqrtApproxStreamSnapshot{
-		Status:      status,
+		Status:      s.status,
 		Started:     s.started,
 		PrefixTerms: s.maxIngestTerms,
 		Approx:      approxCopy,
@@ -74,18 +69,34 @@ func (s *SqrtGCFExactTailStream2) initExactCF() bool {
 	if !ok {
 		s.err = fmt.Errorf("SqrtGCFExactTailStream2: tail evidence not implemented")
 		s.done = true
+		s.status = SqrtStreamStatusFailed
 		return false
 	}
 
-	approx, err := SqrtApproxFromGCFWithTail2(s.src, tail, s.maxIngestTerms, s.policy)
+	x, _, err := EvalGCFWithTailExact(s.src, tail, s.maxIngestTerms)
 	if err != nil {
 		s.err = fmt.Errorf("SqrtGCFExactTailStream2: %w", err)
 		s.done = true
+		s.status = SqrtStreamStatusFailed
+		return false
+	}
+
+	approx, err := sqrtApproxWithPolicyCanonical(x, s.policy)
+	if err != nil {
+		s.err = fmt.Errorf("SqrtGCFExactTailStream2: %w", err)
+		s.done = true
+		s.status = SqrtStreamStatusFailed
 		return false
 	}
 
 	s.approx = &approx
 	s.exactCF = NewRationalCF(approx)
+
+	if root, ok, err := SqrtCoreRationalExact(x); err == nil && ok && root.Cmp(approx) == 0 {
+		s.status = SqrtStreamStatusExactInput
+	} else {
+		s.status = SqrtStreamStatusBoundedCollapse
+	}
 	return true
 }
 
@@ -120,4 +131,4 @@ func NewSqrtGCFStreamWithTail2(src GCFSource, tail Rational, maxIngestTerms int,
 	return NewSqrtGCFExactTailStreamWithTail2(src, tail, maxIngestTerms, p)
 }
 
-// sqrt_stream2.go v3
+// sqrt_stream2.go v4
