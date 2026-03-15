@@ -1,13 +1,7 @@
-// reciprocal_stream_gcf_exact_tail.go v1
+// reciprocal_stream_gcf_exact_tail.go v2
 package cf
 
 import "fmt"
-
-type ReciprocalApproxStreamSnapshot struct {
-	Started     bool
-	PrefixTerms int
-	Approx      *Rational
-}
 
 type ReciprocalApproxStream interface {
 	ContinuedFraction
@@ -122,4 +116,4 @@ func (s *ReciprocalGCFExactTailStream2) Next() (int64, bool) {
 	return d, true
 }
 
-// reciprocal_stream_gcf_exact_tail.go v1
+// reciprocal_stream_gcf_exact_tail.go v2
