@@ -319,6 +319,9 @@ Use the no-client window to improve the external API deliberately.
 - Simplify exported surface around canonical abstractions
 - Merge/remove obsolete tests after coverage is preserved
 - Update user-facing docs only after the API shape stabilizes
+- Add explicit support for both degree and radian angle semantics in trig APIs.
+  - MVP currently fixes denominator work on degree input for sin(69°).
+  - Later generalize trig entry points so callers can choose degrees or radians explicitly.
 
 ### Exit criteria
 - Public API matches the actual architecture.

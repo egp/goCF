@@ -1,4 +1,4 @@
-// mvp_denominator.go v1
+// mvp_denominator.go v2
 package cf
 
 import "fmt"
@@ -10,7 +10,8 @@ import "fmt"
 // Current status:
 //   - degree-aware angle semantics are now fixed
 //   - denominator evaluator shape is frozen
-//   - tanh and sin approximation kernels are not implemented yet
+//   - tanh approximation kernel is not implemented yet
+//   - sin approximation currently supports only a narrow exact degree subset
 func MVPDenominatorApprox(
 	sqrt5Policy SqrtPolicy2,
 	angle Angle,
@@ -22,7 +23,12 @@ func MVPDenominatorApprox(
 		return Rational{}, fmt.Errorf("MVPDenominatorApprox: angle must be expressed in degrees")
 	}
 
-	return Rational{}, fmt.Errorf("MVPDenominatorApprox: not implemented")
+	_, err := SinApproxDegrees(angle)
+	if err != nil {
+		return Rational{}, err
+	}
+
+	return Rational{}, fmt.Errorf("MVPDenominatorApprox: tanh kernel not implemented")
 }
 
 func MVPDenominatorApproxDefault() (Rational, error) {
@@ -39,4 +45,4 @@ func MVPDenominatorApproxDefault() (Rational, error) {
 //
 //	    tanh(sqrt(5)) - sin(69°)
 //
-// mvp_denominator.go v1
+// mvp_denominator.go v2
