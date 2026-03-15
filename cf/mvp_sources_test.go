@@ -1,4 +1,4 @@
-// mvp_sources_test.go v1
+// mvp_sources_test.go v2
 package cf
 
 import "testing"
@@ -52,6 +52,22 @@ func TestMVPSources_EUsesECFGSource(t *testing.T) {
 		{1, 1},
 	}
 	if !equalPQ(got, want) {
+		t.Fatalf("got %v want %v", got, want)
+	}
+}
+
+func TestMVPSources_69DegreeSourceWithTailEvaluatesExactly(t *testing.T) {
+	got, _, err := EvalGCFWithTailExact(
+		MVP69DegreeGCFSource(),
+		MVP69DegreeTail(),
+		1,
+	)
+	if err != nil {
+		t.Fatalf("EvalGCFWithTailExact failed: %v", err)
+	}
+
+	want := mustRat(69, 1)
+	if got.Cmp(want) != 0 {
 		t.Fatalf("got %v want %v", got, want)
 	}
 }
@@ -117,4 +133,4 @@ func TestMVPThreeOverPiSquaredPlusEApprox_IsPositiveAndExceedsEApprox(t *testing
 	}
 }
 
-// mvp_sources_test.go v1
+// mvp_sources_test.go v2

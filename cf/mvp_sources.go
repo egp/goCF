@@ -1,4 +1,4 @@
-// mvp_sources.go v1
+// mvp_sources.go v2
 package cf
 
 import "fmt"
@@ -19,6 +19,20 @@ func MVPReciprocalPiGCFSource() GCFSource {
 // MVPEGCFSource returns the canonical MVP source for e.
 func MVPEGCFSource() GCFSource {
 	return NewECFGSource()
+}
+
+// MVP69DegreeGCFSource returns a GCF prefix source that, together with
+// MVP69DegreeTail(), evaluates exactly to 69.
+//
+// Construction:
+//   - 68 + 1/1 = 69
+func MVP69DegreeGCFSource() GCFSource {
+	return NewSliceGCF([2]int64{68, 1})
+}
+
+// MVP69DegreeTail returns the exact tail used with MVP69DegreeGCFSource().
+func MVP69DegreeTail() Rational {
+	return mustRat(1, 1)
 }
 
 // MVPThreeOverPiSquaredPlusEApprox returns a bounded-prefix rational approximation
@@ -70,4 +84,4 @@ func MVPThreeOverPiSquaredPlusEApprox(fourOverPiPrefixTerms, ePrefixTerms int) (
 	return sum, nil
 }
 
-// mvp_sources.go v1
+// mvp_sources.go v2

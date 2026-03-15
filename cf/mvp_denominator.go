@@ -1,4 +1,4 @@
-// mvp_denominator.go v4
+// mvp_denominator.go v5
 package cf
 
 import "fmt"
@@ -9,8 +9,8 @@ import "fmt"
 //
 // Current status:
 //   - degree-aware angle semantics are fixed
-//   - sin has a bounded certified degree path
-//   - tanh(sqrt(5)) has a conservative certified range
+//   - sin is now routed through a GCF+exact-tail unary entry point
+//   - tanh(sqrt(5)) is now routed through a GCF-ingesting metadata-driven unary entry point
 func MVPDenominatorBounds(
 	sqrt5Policy SqrtPolicy2,
 	angle Angle,
@@ -24,9 +24,16 @@ func MVPDenominatorBounds(
 		return Range{}, fmt.Errorf("MVPDenominatorBounds: angle must be expressed in degrees")
 	}
 
-	tanhR := TanhBoundsSqrt5()
+	tanhR, err := TanhBoundsSpecialFromGCF2(AdaptCFToGCF(Sqrt5CF()))
+	if err != nil {
+		return Range{}, err
+	}
 
-	sinR, err := SinBoundsDegrees(angle)
+	sinR, err := SinBoundsDegreesFromGCFWithTail2(
+		MVP69DegreeGCFSource(),
+		MVP69DegreeTail(),
+		1,
+	)
 	if err != nil {
 		return Range{}, err
 	}
@@ -86,4 +93,4 @@ func MVPDenominatorApproxDefault() (Rational, error) {
 //
 //	    tanh(sqrt(5)) - sin(69°)
 //
-// mvp_denominator.go v4
+// mvp_denominator.go v5

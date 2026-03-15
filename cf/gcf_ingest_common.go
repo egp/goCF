@@ -1,4 +1,4 @@
-// gcf_ingest_common.go v1
+// gcf_ingest_common.go v2
 package cf
 
 import "fmt"
@@ -24,17 +24,17 @@ func ingestGCFBounded(
 	ingested := 0
 
 	for {
+		p, q, ok := src.NextPQ()
+		if !ok {
+			return ingested, nil
+		}
+
 		if maxIngestTerms >= 0 && ingested >= maxIngestTerms {
 			return ingested, fmt.Errorf(
 				"%s: exceeded MaxIngestTerms=%d before source exhaustion",
 				context,
 				maxIngestTerms,
 			)
-		}
-
-		p, q, ok := src.NextPQ()
-		if !ok {
-			return ingested, nil
 		}
 
 		if err := ingest(p, q); err != nil {
@@ -44,4 +44,4 @@ func ingestGCFBounded(
 	}
 }
 
-// gcf_ingest_common.go v1
+// gcf_ingest_common.go v2
