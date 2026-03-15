@@ -1,4 +1,4 @@
-// sqrt_stream_api.go v3
+// sqrt_stream_api.go v4
 package cf
 
 import "fmt"
@@ -13,11 +13,11 @@ import "fmt"
 // Future work:
 //   - stronger progressive certification
 //   - less collapse, more direct operator behavior
-func SqrtStream(src ContinuedFraction, prefixTerms int, p SqrtPolicy) (ContinuedFraction, error) {
+func SqrtStream(src ContinuedFraction, prefixTerms int, p SqrtPolicy) (SqrtApproxStream, error) {
 	if prefixTerms <= 0 {
 		return nil, fmt.Errorf("SqrtStream: prefixTerms must be > 0, got %d", prefixTerms)
 	}
 	return NewSqrtCFPrefixStream2(src, prefixTerms, sqrtPolicy2FromOld(p)), nil
 }
 
-// sqrt_stream_api.go v3
+// sqrt_stream_api.go v4
