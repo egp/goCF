@@ -1,26 +1,23 @@
-// reciprocal_exact_collapse_common.go v1
+// reciprocal_exact_collapse_common.go v2
 package cf
 
 type reciprocalExactCollapseCore struct {
-	err     error
-	done    bool
-	started bool
+	state   unaryStreamState
 	exactCF ContinuedFraction
 	approx  *Rational
 }
 
-func (c *reciprocalExactCollapseCore) Err() error { return c.err }
+func (c *reciprocalExactCollapseCore) Err() error { return c.state.Err() }
 
 func (c *reciprocalExactCollapseCore) init(eval func() (Rational, error)) bool {
-	if c.started {
-		return c.err == nil
+	if c.state.started {
+		return c.state.err == nil
 	}
-	c.started = true
+	c.state.started = true
 
 	x, err := eval()
 	if err != nil {
-		c.err = err
-		c.done = true
+		c.state.Fail(err)
 		return false
 	}
 
@@ -30,11 +27,11 @@ func (c *reciprocalExactCollapseCore) init(eval func() (Rational, error)) bool {
 }
 
 func (c *reciprocalExactCollapseCore) Next(eval func() (Rational, error)) (int64, bool) {
-	if c.done {
+	if c.state.done {
 		return 0, false
 	}
-	if c.err != nil {
-		c.done = true
+	if c.state.err != nil {
+		c.state.Exhaust()
 		return 0, false
 	}
 	if !c.init(eval) {
@@ -43,10 +40,10 @@ func (c *reciprocalExactCollapseCore) Next(eval func() (Rational, error)) (int64
 
 	d, ok := c.exactCF.Next()
 	if !ok {
-		c.done = true
+		c.state.Exhaust()
 		return 0, false
 	}
 	return d, true
 }
 
-// reciprocal_exact_collapse_common.go v1
+// reciprocal_exact_collapse_common.go v2

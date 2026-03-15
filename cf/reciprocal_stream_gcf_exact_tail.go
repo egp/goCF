@@ -1,4 +1,4 @@
-// reciprocal_stream_gcf_exact_tail.go v4
+// reciprocal_stream_gcf_exact_tail.go v5
 package cf
 
 import "fmt"
@@ -50,7 +50,7 @@ func (s *ReciprocalGCFExactTailStream2) Snapshot() ReciprocalApproxStreamSnapsho
 		approxCopy = &v
 	}
 	return ReciprocalApproxStreamSnapshot{
-		Started:        s.core.started,
+		Started:        s.core.state.started,
 		Approx:         approxCopy,
 		MaxIngestTerms: s.maxIngestTerms,
 		ConsumedTerms:  s.consumedTerms,
@@ -84,4 +84,4 @@ func (s *ReciprocalGCFExactTailStream2) Next() (int64, bool) {
 	return s.core.Next(s.evalReciprocal)
 }
 
-// reciprocal_stream_gcf_exact_tail.go v4
+// reciprocal_stream_gcf_exact_tail.go v5

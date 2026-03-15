@@ -1,4 +1,4 @@
-// sqrt_certified_gcf_stream.go v3
+// sqrt_certified_gcf_stream.go v4
 package cf
 
 import "fmt"
@@ -17,9 +17,7 @@ import "fmt"
 //   - carry transformed remainder state without replay
 //   - tighter linkage to diagonal / transform-driven machinery
 type SqrtCertifiedGCFPrefixStream struct {
-	err     error
-	done    bool
-	started bool
+	state unaryStreamState
 
 	src            GCFSource
 	maxPrefixTerms int
@@ -65,7 +63,7 @@ func NewSqrtCertifiedGCFPrefixStream(src GCFSource, maxPrefixTerms int) (SqrtApp
 	}, nil
 }
 
-func (s *SqrtCertifiedGCFPrefixStream) Err() error { return s.err }
+func (s *SqrtCertifiedGCFPrefixStream) Err() error { return s.state.Err() }
 
 func (s *SqrtCertifiedGCFPrefixStream) Snapshot() SqrtApproxStreamSnapshot {
 	var approxCopy *Rational
@@ -82,7 +80,7 @@ func (s *SqrtCertifiedGCFPrefixStream) Snapshot() SqrtApproxStreamSnapshot {
 
 	return SqrtApproxStreamSnapshot{
 		Status:         s.status,
-		Started:        s.started,
+		Started:        s.state.started,
 		PrefixTerms:    s.ingested,
 		Approx:         approxCopy,
 		GCFInputApprox: gcfApproxCopy,
@@ -154,7 +152,6 @@ func (s *SqrtCertifiedGCFPrefixStream) rebuildEmitterFromCurrentRange() (bool, e
 		return false, err
 	}
 
-	// Re-establish the already certified prefix and verify it is stable.
 	for i, want := range s.emitted {
 		got, ok := e.Next()
 		if !ok {
@@ -168,9 +165,6 @@ func (s *SqrtCertifiedGCFPrefixStream) rebuildEmitterFromCurrentRange() (bool, e
 		return false, err
 	}
 
-	// Critical: only report "available" if a NEW digit beyond the existing
-	// certified prefix is now available. Otherwise the caller must refine/ingest
-	// instead of rebuilding the same exhausted emitter forever.
 	d, ok := e.Next()
 	if err := e.Err(); err != nil {
 		return false, err
@@ -186,22 +180,18 @@ func (s *SqrtCertifiedGCFPrefixStream) rebuildEmitterFromCurrentRange() (bool, e
 }
 
 func (s *SqrtCertifiedGCFPrefixStream) ensureReady() bool {
-	if s.started {
-		return s.err == nil
+	if !s.state.Begin() {
+		return false
 	}
-
-	s.started = true
 
 	if !s.b.HasValue() {
 		if err := s.ingestOne(); err != nil {
-			s.err = fmt.Errorf("SqrtCertifiedGCFPrefixStream: %w", err)
-			s.done = true
+			s.state.Fail(fmt.Errorf("SqrtCertifiedGCFPrefixStream: %w", err))
 			s.status = SqrtStreamStatusFailed
 			return false
 		}
 		if !s.b.HasValue() {
-			s.err = fmt.Errorf("SqrtCertifiedGCFPrefixStream: empty source")
-			s.done = true
+			s.state.Fail(fmt.Errorf("SqrtCertifiedGCFPrefixStream: empty source"))
 			s.status = SqrtStreamStatusFailed
 			return false
 		}
@@ -227,8 +217,7 @@ func (s *SqrtCertifiedGCFPrefixStream) ensureAvailableDigit() bool {
 				return true
 			}
 			if err := s.emitter.Err(); err != nil {
-				s.err = fmt.Errorf("SqrtCertifiedGCFPrefixStream: %w", err)
-				s.done = true
+				s.state.Fail(fmt.Errorf("SqrtCertifiedGCFPrefixStream: %w", err))
 				s.status = SqrtStreamStatusFailed
 				return false
 			}
@@ -237,8 +226,7 @@ func (s *SqrtCertifiedGCFPrefixStream) ensureAvailableDigit() bool {
 
 		available, err := s.rebuildEmitterFromCurrentRange()
 		if err != nil {
-			s.err = fmt.Errorf("SqrtCertifiedGCFPrefixStream: %w", err)
-			s.done = true
+			s.state.Fail(fmt.Errorf("SqrtCertifiedGCFPrefixStream: %w", err))
 			s.status = SqrtStreamStatusFailed
 			return false
 		}
@@ -250,17 +238,16 @@ func (s *SqrtCertifiedGCFPrefixStream) ensureAvailableDigit() bool {
 		}
 
 		if s.ingested >= s.maxPrefixTerms {
-			s.done = true
+			s.state.Exhaust()
 			return false
 		}
 		if s.srcDone {
-			s.done = true
+			s.state.Exhaust()
 			return false
 		}
 
 		if err := s.ingestOne(); err != nil {
-			s.err = fmt.Errorf("SqrtCertifiedGCFPrefixStream: %w", err)
-			s.done = true
+			s.state.Fail(fmt.Errorf("SqrtCertifiedGCFPrefixStream: %w", err))
 			s.status = SqrtStreamStatusFailed
 			return false
 		}
@@ -268,11 +255,11 @@ func (s *SqrtCertifiedGCFPrefixStream) ensureAvailableDigit() bool {
 }
 
 func (s *SqrtCertifiedGCFPrefixStream) Next() (int64, bool) {
-	if s.done {
+	if s.state.done {
 		return 0, false
 	}
-	if s.err != nil {
-		s.done = true
+	if s.state.err != nil {
+		s.state.Exhaust()
 		return 0, false
 	}
 	if !s.ensureAvailableDigit() {
@@ -282,7 +269,7 @@ func (s *SqrtCertifiedGCFPrefixStream) Next() (int64, bool) {
 	if s.exactCF != nil {
 		d, ok := s.exactCF.Next()
 		if !ok {
-			s.done = true
+			s.state.Exhaust()
 			return 0, false
 		}
 		return d, true
@@ -294,8 +281,8 @@ func (s *SqrtCertifiedGCFPrefixStream) Next() (int64, bool) {
 		return d, true
 	}
 
-	s.done = true
+	s.state.Exhaust()
 	return 0, false
 }
 
-// sqrt_certified_gcf_stream.go v3
+// sqrt_certified_gcf_stream.go v4

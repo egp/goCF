@@ -1,4 +1,4 @@
-// reciprocal_stream_gcf_prefix.go v2
+// reciprocal_stream_gcf_prefix.go v3
 package cf
 
 import "fmt"
@@ -44,7 +44,7 @@ func (s *ReciprocalGCFPrefixStream2) Snapshot() ReciprocalApproxStreamSnapshot {
 		gcfInputApproxCopy = &v
 	}
 	return ReciprocalApproxStreamSnapshot{
-		Started:        s.core.started,
+		Started:        s.core.state.started,
 		Approx:         approxCopy,
 		GCFInputApprox: gcfInputApproxCopy,
 		PrefixTerms:    s.prefixTerms,
@@ -79,4 +79,4 @@ func (s *ReciprocalGCFPrefixStream2) Next() (int64, bool) {
 	return s.core.Next(s.evalReciprocal)
 }
 
-// reciprocal_stream_gcf_prefix.go v2
+// reciprocal_stream_gcf_prefix.go v3
