@@ -462,4 +462,11 @@ type TailRangeBoundedGCFSource interface {
 	TailRange() Range
 }
 
+func (a *CFGCFAdapter) Radicand() (int64, bool) {
+	if qr, ok := a.src.(QuadraticRadicalSource); ok {
+		return qr.Radicand()
+	}
+	return 0, false
+}
+
 // sources.go v18
