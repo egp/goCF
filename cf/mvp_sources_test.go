@@ -1,4 +1,4 @@
-// mvp_sources_test.go v5
+// mvp_sources_test.go v7
 package cf
 
 import "testing"
@@ -72,6 +72,24 @@ func TestMVPSources_69DegreeSourceWithTailEvaluatesExactly(t *testing.T) {
 	}
 }
 
+func TestMVPFourOverPiApproxWithSource_BrounckerPath(t *testing.T) {
+	brounckerSrc := func() GCFSource { return NewBrouncker4OverPiGCFSource() }
+
+	got, err := MVPFourOverPiApproxWithSource(brounckerSrc, 4)
+	if err != nil {
+		t.Fatalf("MVPFourOverPiApproxWithSource failed: %v", err)
+	}
+
+	want, err := GCFSourceConvergent(NewBrouncker4OverPiGCFSource(), 4)
+	if err != nil {
+		t.Fatalf("GCFSourceConvergent failed: %v", err)
+	}
+
+	if got.Cmp(want) != 0 {
+		t.Fatalf("got %v want %v", got, want)
+	}
+}
+
 func TestMVPThreeOverPiSquaredPlusEAsGCFSource_RoundTripsApproxValue(t *testing.T) {
 	src, err := MVPThreeOverPiSquaredPlusEAsGCFSource(4, 6)
 	if err != nil {
@@ -135,6 +153,28 @@ func TestMVPThreeOverPiSquaredPlusEApprox_UsesCanonicalSources(t *testing.T) {
 	}
 }
 
+func TestMVPThreeOverPiSquaredPlusEApprox_AlternateFourOverPiSourceHookWorks(t *testing.T) {
+	brounckerSrc := func() GCFSource { return NewBrouncker4OverPiGCFSource() }
+
+	got, err := MVPThreeOverPiSquaredPlusEApproxWithFourOverPiSource(
+		brounckerSrc,
+		4,
+		6,
+	)
+	if err != nil {
+		t.Fatalf("MVPThreeOverPiSquaredPlusEApproxWithFourOverPiSource failed: %v", err)
+	}
+
+	want, err := MVPThreeOverPiSquaredPlusEApprox(4, 6)
+	if err != nil {
+		t.Fatalf("MVPThreeOverPiSquaredPlusEApprox failed: %v", err)
+	}
+
+	if got.Cmp(want) != 0 {
+		t.Fatalf("got %v want %v", got, want)
+	}
+}
+
 func TestMVPThreeOverPiSquaredPlusEApprox_IsPositiveAndExceedsEApprox(t *testing.T) {
 	got, err := MVPThreeOverPiSquaredPlusEApprox(4, 6)
 	if err != nil {
@@ -154,4 +194,4 @@ func TestMVPThreeOverPiSquaredPlusEApprox_IsPositiveAndExceedsEApprox(t *testing
 	}
 }
 
-// mvp_sources_test.go v5
+// mvp_sources_test.go v7

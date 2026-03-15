@@ -1,4 +1,4 @@
-// mvp_sources.go v6
+// mvp_sources.go v7
 package cf
 
 import "fmt"
@@ -35,29 +35,48 @@ func MVP69DegreeTail() Rational {
 	return mustRat(1, 1)
 }
 
-// MVPThreeOverPiSquaredPlusEApprox returns a bounded-prefix rational approximation
-// for:
+// MVPFourOverPiApproxWithSource returns a bounded rational approximation of 4/pi
+// using the supplied source factory and bounded prefix.
+func MVPFourOverPiApproxWithSource(
+	srcFn func() GCFSource,
+	fourOverPiPrefixTerms int,
+) (Rational, error) {
+	if fourOverPiPrefixTerms <= 0 {
+		return Rational{}, fmt.Errorf(
+			"MVPFourOverPiApproxWithSource: fourOverPiPrefixTerms must be > 0, got %d",
+			fourOverPiPrefixTerms,
+		)
+	}
+	return GCFSourceConvergent(srcFn(), fourOverPiPrefixTerms)
+}
+
+// MVPThreeOverPiSquaredPlusEApproxWithFourOverPiSource returns a bounded-prefix
+// rational approximation for:
 //
 //	3/pi^2 + e
 //
-// using the current canonical MVP sources:
+// using a supplied 4/pi source:
 //
 //	(3/16) * (4/pi)^2 + e
-func MVPThreeOverPiSquaredPlusEApprox(fourOverPiPrefixTerms, ePrefixTerms int) (Rational, error) {
+func MVPThreeOverPiSquaredPlusEApproxWithFourOverPiSource(
+	fourOverPiSrcFn func() GCFSource,
+	fourOverPiPrefixTerms int,
+	ePrefixTerms int,
+) (Rational, error) {
 	if fourOverPiPrefixTerms <= 0 {
 		return Rational{}, fmt.Errorf(
-			"MVPThreeOverPiSquaredPlusEApprox: fourOverPiPrefixTerms must be > 0, got %d",
+			"MVPThreeOverPiSquaredPlusEApproxWithFourOverPiSource: fourOverPiPrefixTerms must be > 0, got %d",
 			fourOverPiPrefixTerms,
 		)
 	}
 	if ePrefixTerms <= 0 {
 		return Rational{}, fmt.Errorf(
-			"MVPThreeOverPiSquaredPlusEApprox: ePrefixTerms must be > 0, got %d",
+			"MVPThreeOverPiSquaredPlusEApproxWithFourOverPiSource: ePrefixTerms must be > 0, got %d",
 			ePrefixTerms,
 		)
 	}
 
-	fourOverPi, err := GCFSourceConvergent(MVPReciprocalPiGCFSource(), fourOverPiPrefixTerms)
+	fourOverPi, err := MVPFourOverPiApproxWithSource(fourOverPiSrcFn, fourOverPiPrefixTerms)
 	if err != nil {
 		return Rational{}, err
 	}
@@ -84,4 +103,20 @@ func MVPThreeOverPiSquaredPlusEApprox(fourOverPiPrefixTerms, ePrefixTerms int) (
 	return sum, nil
 }
 
-// mvp_sources.go v6
+// MVPThreeOverPiSquaredPlusEApprox returns a bounded-prefix rational approximation
+// for:
+//
+//	3/pi^2 + e
+//
+// using the current canonical MVP sources:
+//
+//	(3/16) * (4/pi)^2 + e
+func MVPThreeOverPiSquaredPlusEApprox(fourOverPiPrefixTerms, ePrefixTerms int) (Rational, error) {
+	return MVPThreeOverPiSquaredPlusEApproxWithFourOverPiSource(
+		MVPReciprocalPiGCFSource,
+		fourOverPiPrefixTerms,
+		ePrefixTerms,
+	)
+}
+
+// mvp_sources.go v7
