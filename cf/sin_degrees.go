@@ -1,4 +1,4 @@
-// sin_degrees.go v2
+// sin_degrees.go v3
 package cf
 
 import "fmt"
@@ -6,16 +6,30 @@ import "fmt"
 // SinBoundsDegrees returns a conservative inside range for sin(theta),
 // where theta must be expressed in degrees.
 //
-// Current v2 support:
+// Current v3 support:
 //   - exact point ranges for 0°, 30°, 90°, 180°
-//   - conservative bounded range for 69°
+//   - tightened conservative bounded range for 69°
 //
 // Current 69° rule:
+//
+// Lower bound:
 //   - 69° is in the first quadrant
 //   - sin is increasing on [0°,90°]
-//   - therefore sin(69°) is strictly between sin(30°)=1/2 and sin(90°)=1
+//   - so sin(69°) > sin(60°) = √3/2 > 6/7
 //
-// This is intentionally conservative and should be tightened later.
+// Upper bound:
+//
+//   - on [0,π], sin is concave, so it lies below its tangent lines
+//
+//   - at 60° = π/3, with x = 69° = 23π/60:
+//
+//     sin(x) <= sin(π/3) + cos(π/3)(x - π/3)
+//     = √3/2 + (1/2)(π/20)
+//     = √3/2 + π/40
+//
+//   - using √3/2 < 7/8 and π < 22/7:
+//
+//     sin(69°) < 7/8 + 11/140 = 267/280
 func SinBoundsDegrees(theta Angle) (Range, error) {
 	if err := theta.Validate(); err != nil {
 		return Range{}, err
@@ -32,7 +46,7 @@ func SinBoundsDegrees(theta Angle) (Range, error) {
 	case x.Cmp(mustRat(30, 1)) == 0:
 		return NewRange(mustRat(1, 2), mustRat(1, 2), true, true), nil
 	case x.Cmp(mustRat(69, 1)) == 0:
-		return NewRange(mustRat(1, 2), mustRat(1, 1), true, true), nil
+		return NewRange(mustRat(6, 7), mustRat(267, 280), true, true), nil
 	case x.Cmp(mustRat(90, 1)) == 0:
 		return NewRange(mustRat(1, 1), mustRat(1, 1), true, true), nil
 	case x.Cmp(mustRat(180, 1)) == 0:
@@ -55,4 +69,4 @@ func SinApproxDegrees(theta Angle) (Rational, error) {
 	return r.Lo, nil
 }
 
-// sin_degrees.go v2
+// sin_degrees.go v3

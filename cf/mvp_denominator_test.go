@@ -1,4 +1,4 @@
-// mvp_denominator_test.go v4
+// mvp_denominator_test.go v5
 package cf
 
 import (
@@ -12,9 +12,12 @@ func TestMVPDenominatorBoundsDefault_UsesDegreesByDefault(t *testing.T) {
 		t.Fatalf("MVPDenominatorBoundsDefault failed: %v", err)
 	}
 
-	want := NewRange(mustRat(-1, 1), mustRat(1, 2), true, true)
+	want := NewRange(mustRat(3, 3080), mustRat(1, 7), true, true)
 	if got.Lo.Cmp(want.Lo) != 0 || got.Hi.Cmp(want.Hi) != 0 {
 		t.Fatalf("got %v want %v", got, want)
+	}
+	if got.Contains(intRat(0)) {
+		t.Fatalf("got %v want zero excluded", got)
 	}
 }
 
@@ -31,7 +34,7 @@ func TestMVPDenominatorBounds_RejectsRadiansForMVP(t *testing.T) {
 	}
 }
 
-func TestMVPDenominatorBounds_Accepts69DegreeBound(t *testing.T) {
+func TestMVPDenominatorBounds_Accepts69DegreeBoundAndExcludesZero(t *testing.T) {
 	got, err := MVPDenominatorBounds(
 		DefaultSqrtPolicy2(),
 		Degrees(mustRat(69, 1)),
@@ -40,9 +43,12 @@ func TestMVPDenominatorBounds_Accepts69DegreeBound(t *testing.T) {
 		t.Fatalf("MVPDenominatorBounds failed: %v", err)
 	}
 
-	want := NewRange(mustRat(-1, 1), mustRat(1, 2), true, true)
+	want := NewRange(mustRat(3, 3080), mustRat(1, 7), true, true)
 	if got.Lo.Cmp(want.Lo) != 0 || got.Hi.Cmp(want.Hi) != 0 {
 		t.Fatalf("got %v want %v", got, want)
+	}
+	if got.Contains(intRat(0)) {
+		t.Fatalf("got %v want zero excluded", got)
 	}
 }
 
@@ -61,4 +67,4 @@ func TestMVPDenominatorApprox_CurrentlyReportsBoundedNonPoint(t *testing.T) {
 //
 //	tanh(sqrt(5)) - sin(69°)
 //
-// mvp_denominator_test.go v4
+// mvp_denominator_test.go v5
