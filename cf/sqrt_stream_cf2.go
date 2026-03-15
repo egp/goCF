@@ -25,12 +25,6 @@ type SqrtCFPrefixStream2 struct {
 	policy      SqrtPolicy2
 }
 
-type SqrtCFPrefixStream2Snapshot struct {
-	Started     bool
-	PrefixTerms int
-	Approx      *Rational
-}
-
 func NewSqrtCFPrefixStream2(src ContinuedFraction, prefixTerms int, p SqrtPolicy2) *SqrtCFPrefixStream2 {
 	return &SqrtCFPrefixStream2{
 		src:         src,
@@ -41,13 +35,13 @@ func NewSqrtCFPrefixStream2(src ContinuedFraction, prefixTerms int, p SqrtPolicy
 
 func (s *SqrtCFPrefixStream2) Err() error { return s.err }
 
-func (s *SqrtCFPrefixStream2) Snapshot() SqrtCFPrefixStream2Snapshot {
+func (s *SqrtCFPrefixStream2) Snapshot() SqrtApproxStreamSnapshot {
 	var approxCopy *Rational
 	if s.approx != nil {
 		v := *s.approx
 		approxCopy = &v
 	}
-	return SqrtCFPrefixStream2Snapshot{
+	return SqrtApproxStreamSnapshot{
 		Started:     s.started,
 		PrefixTerms: s.prefixTerms,
 		Approx:      approxCopy,
