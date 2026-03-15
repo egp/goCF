@@ -1,4 +1,4 @@
-// mvp_target_formula_test.go v4
+// mvp_target_formula_test.go v5
 package cf
 
 import (
@@ -54,7 +54,7 @@ func TestMVPTargetFormula_CurrentNumeratorAndDenominatorSanity(t *testing.T) {
 		t.Fatalf("numerator got %v want > 1", num)
 	}
 
-	wantDen := NewRange(mustRat(29, 1540), mustRat(1, 15), true, true)
+	wantDen := NewRange(mustRat(11, 280), mustRat(7, 150), true, true)
 	if den.Lo.Cmp(wantDen.Lo) != 0 || den.Hi.Cmp(wantDen.Hi) != 0 {
 		t.Fatalf("denominator got %v want %v", den, wantDen)
 	}
@@ -122,4 +122,4 @@ func TestMVPTargetApproxDefault_CurrentlyReportsBoundedNonPoint(t *testing.T) {
 //
 //	sqrt(3/pi^2 + e) / (tanh(sqrt(5)) - sin(69°))
 //
-// mvp_target_formula_test.go v4
+// mvp_target_formula_test.go v5

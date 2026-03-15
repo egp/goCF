@@ -1,4 +1,4 @@
-// mvp_denominator_test.go v6
+// mvp_denominator_test.go v7
 package cf
 
 import (
@@ -12,7 +12,7 @@ func TestMVPDenominatorBoundsDefault_UsesDegreesByDefault(t *testing.T) {
 		t.Fatalf("MVPDenominatorBoundsDefault failed: %v", err)
 	}
 
-	want := NewRange(mustRat(29, 1540), mustRat(1, 15), true, true)
+	want := NewRange(mustRat(11, 280), mustRat(7, 150), true, true)
 	if got.Lo.Cmp(want.Lo) != 0 || got.Hi.Cmp(want.Hi) != 0 {
 		t.Fatalf("got %v want %v", got, want)
 	}
@@ -43,7 +43,7 @@ func TestMVPDenominatorBounds_Accepts69DegreeBoundAndExcludesZero(t *testing.T) 
 		t.Fatalf("MVPDenominatorBounds failed: %v", err)
 	}
 
-	want := NewRange(mustRat(29, 1540), mustRat(1, 15), true, true)
+	want := NewRange(mustRat(11, 280), mustRat(7, 150), true, true)
 	if got.Lo.Cmp(want.Lo) != 0 || got.Hi.Cmp(want.Hi) != 0 {
 		t.Fatalf("got %v want %v", got, want)
 	}
@@ -67,4 +67,4 @@ func TestMVPDenominatorApprox_CurrentlyReportsBoundedNonPoint(t *testing.T) {
 //
 //	tanh(sqrt(5)) - sin(69°)
 //
-// mvp_denominator_test.go v6
+// mvp_denominator_test.go v7

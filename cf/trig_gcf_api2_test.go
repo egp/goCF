@@ -59,7 +59,7 @@ func TestTanhBoundsSpecialFromGCF2_AdaptedSqrt5CF(t *testing.T) {
 		t.Fatalf("TanhBoundsSpecialFromGCF2 failed: %v", err)
 	}
 
-	want := NewRange(mustRat(21, 22), mustRat(1, 1), true, true)
+	want := NewRange(mustRat(39, 40), mustRat(49, 50), true, true)
 	if got.Lo.Cmp(want.Lo) != 0 || got.Hi.Cmp(want.Hi) != 0 {
 		t.Fatalf("got %v want %v", got, want)
 	}
