@@ -1,4 +1,4 @@
-// mvp_sources.go v4
+// mvp_sources.go v6
 package cf
 
 import "fmt"
@@ -84,4 +84,4 @@ func MVPThreeOverPiSquaredPlusEApprox(fourOverPiPrefixTerms, ePrefixTerms int) (
 	return sum, nil
 }
 
-// mvp_sources.go v4
+// mvp_sources.go v6

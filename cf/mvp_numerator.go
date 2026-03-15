@@ -1,4 +1,4 @@
-// mvp_numerator.go v3
+// mvp_numerator.go v4
 package cf
 
 import "fmt"
@@ -10,6 +10,10 @@ import "fmt"
 const (
 	MVPDefaultFourOverPiPrefixTerms = 6
 	MVPDefaultEPrefixTerms          = 8
+
+	// Temporary bridge budget for the finite adapted source produced by
+	// MVPThreeOverPiSquaredPlusEAsGCFSource.
+	MVPNumeratorBridgePrefixTerms = 64
 )
 
 // MVPNumeratorApprox returns a bounded rational approximation for:
@@ -21,6 +25,7 @@ const (
 //   - choose canonical e source via MVPEGCFSource()
 //   - form bounded rational approximation to 3/pi^2 + e
 //   - route the final sqrt through a GCF-ingesting unary entry point
+//   - use an explicit temporary finite bridge for the numerator subexpression
 func MVPNumeratorApprox(
 	fourOverPiPrefixTerms int,
 	ePrefixTerms int,
@@ -31,9 +36,10 @@ func MVPNumeratorApprox(
 		return Rational{}, err
 	}
 
-	// The adapted rational CF is finite. Using a bounded prefix comfortably above
-	// the expected rational CF length is sufficient for exact ingestion of that value.
-	return SqrtApproxFromGCFSourceRangeSeed2(src, 64, sqrtPolicy)
+	// Temporary MVP exception:
+	// the numerator subexpression is currently bridged through a finite adapted
+	// rational source before entering the GCF-ingesting unary sqrt path.
+	return SqrtApproxFromGCFSourceRangeSeed2(src, MVPNumeratorBridgePrefixTerms, sqrtPolicy)
 }
 
 // MVPNumeratorApproxDefault uses the default sqrt policy and the current chosen
@@ -125,4 +131,4 @@ func MVPNumeratorApproxTermsDefault(
 //
 //	    sqrt(3/pi^2 + e)
 //
-// mvp_numerator.go v3
+// mvp_numerator.go v4

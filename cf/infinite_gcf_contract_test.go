@@ -1,4 +1,4 @@
-// infinite_gcf_contract_test.go v3
+// infinite_gcf_contract_test.go v4
 package cf
 
 import (
@@ -58,7 +58,10 @@ func TestInfiniteGCFContract_CurrentAngleException_IsExplicitFiniteExactTail(t *
 }
 
 func TestInfiniteGCFContract_CurrentNumeratorBridge_IsFiniteByDesign(t *testing.T) {
-	src, err := MVPThreeOverPiSquaredPlusEAsGCFSource(4, 6)
+	src, err := MVPThreeOverPiSquaredPlusEAsGCFSource(
+		MVPDefaultFourOverPiPrefixTerms,
+		MVPDefaultEPrefixTerms,
+	)
 	if err != nil {
 		t.Fatalf("MVPThreeOverPiSquaredPlusEAsGCFSource failed: %v", err)
 	}
@@ -66,6 +69,12 @@ func TestInfiniteGCFContract_CurrentNumeratorBridge_IsFiniteByDesign(t *testing.
 	_, exhausted := readUntilExhaustionPQ(src, 128)
 	if !exhausted {
 		t.Fatalf("expected current numerator bridge to be finite within 128 terms")
+	}
+}
+
+func TestInfiniteGCFContract_CurrentNumeratorBridge_BudgetIsExplicit(t *testing.T) {
+	if MVPNumeratorBridgePrefixTerms <= 0 {
+		t.Fatalf("got MVPNumeratorBridgePrefixTerms=%d want > 0", MVPNumeratorBridgePrefixTerms)
 	}
 }
 
@@ -86,7 +95,9 @@ func TestInfiniteGCFContract_CurrentMVPTargetStillWorksDespiteExceptions(t *test
 //
 // 1. Canonical mathematical sources are infinite/algorithmic.
 // 2. Some MVP helpers still rely on explicit finite/exact-tail exceptions.
-// 3. Post-MVP goal: retire those exceptions and move prod ingestion toward
+// 3. The numerator path currently uses an explicit temporary finite bridge and
+//    an explicit bridge-prefix budget.
+// 4. Post-MVP goal: retire those exceptions and move prod ingestion toward
 //    infinite-GCF-only operator plumbing.
 //
-// infinite_gcf_contract_test.go v3
+// infinite_gcf_contract_test.go v4
