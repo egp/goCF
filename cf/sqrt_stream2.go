@@ -1,10 +1,10 @@
-// sqrt_stream2.go v2
+// sqrt_stream2.go v3
 package cf
 
 import "fmt"
 
-// SqrtGCFStream2 is the new-path sqrt stream over a bounded GCF prefix plus
-// tail evidence.
+// SqrtGCFExactTailStream2 is the new-path sqrt stream over a bounded GCF prefix
+// plus exact tail evidence.
 //
 // Current milestone:
 //   - bounded ingestion of a GCFSource
@@ -14,11 +14,12 @@ import "fmt"
 // Future work:
 //   - stronger tail evidence
 //   - true progressive certification instead of exact collapse first
-type SqrtGCFStream2 struct {
+type SqrtGCFExactTailStream2 struct {
 	err     error
 	done    bool
 	started bool
 	exactCF ContinuedFraction
+	approx  *Rational
 
 	src            GCFSource
 	tailSrc        GCFTailSource
@@ -26,8 +27,8 @@ type SqrtGCFStream2 struct {
 	policy         SqrtPolicy2
 }
 
-func NewSqrtGCFStream2(src GCFSource, tailSrc GCFTailSource, maxIngestTerms int, p SqrtPolicy2) *SqrtGCFStream2 {
-	return &SqrtGCFStream2{
+func NewSqrtGCFExactTailStream2(src GCFSource, tailSrc GCFTailSource, maxIngestTerms int, p SqrtPolicy2) *SqrtGCFExactTailStream2 {
+	return &SqrtGCFExactTailStream2{
 		src:            src,
 		tailSrc:        tailSrc,
 		maxIngestTerms: maxIngestTerms,
@@ -35,13 +36,26 @@ func NewSqrtGCFStream2(src GCFSource, tailSrc GCFTailSource, maxIngestTerms int,
 	}
 }
 
-func NewSqrtGCFStreamWithTail2(src GCFSource, tail Rational, maxIngestTerms int, p SqrtPolicy2) *SqrtGCFStream2 {
-	return NewSqrtGCFStream2(src, NewExactTailSource(tail), maxIngestTerms, p)
+func NewSqrtGCFExactTailStreamWithTail2(src GCFSource, tail Rational, maxIngestTerms int, p SqrtPolicy2) *SqrtGCFExactTailStream2 {
+	return NewSqrtGCFExactTailStream2(src, NewExactTailSource(tail), maxIngestTerms, p)
 }
 
-func (s *SqrtGCFStream2) Err() error { return s.err }
+func (s *SqrtGCFExactTailStream2) Err() error { return s.err }
 
-func (s *SqrtGCFStream2) initExactCF() bool {
+func (s *SqrtGCFExactTailStream2) Snapshot() SqrtApproxStreamSnapshot {
+	var approxCopy *Rational
+	if s.approx != nil {
+		v := *s.approx
+		approxCopy = &v
+	}
+	return SqrtApproxStreamSnapshot{
+		Started:     s.started,
+		PrefixTerms: s.maxIngestTerms,
+		Approx:      approxCopy,
+	}
+}
+
+func (s *SqrtGCFExactTailStream2) initExactCF() bool {
 	if s.started {
 		return s.err == nil
 	}
@@ -49,23 +63,24 @@ func (s *SqrtGCFStream2) initExactCF() bool {
 
 	tail, ok := s.tailSrc.ExactTail()
 	if !ok {
-		s.err = fmt.Errorf("SqrtGCFStream2: tail evidence not implemented")
+		s.err = fmt.Errorf("SqrtGCFExactTailStream2: tail evidence not implemented")
 		s.done = true
 		return false
 	}
 
-	cf, err := SqrtApproxCFFromGCFWithTail2(s.src, tail, s.maxIngestTerms, s.policy)
+	approx, err := SqrtApproxFromGCFWithTail2(s.src, tail, s.maxIngestTerms, s.policy)
 	if err != nil {
-		s.err = fmt.Errorf("SqrtGCFStream2: %w", err)
+		s.err = fmt.Errorf("SqrtGCFExactTailStream2: %w", err)
 		s.done = true
 		return false
 	}
 
-	s.exactCF = cf
+	s.approx = &approx
+	s.exactCF = NewRationalCF(approx)
 	return true
 }
 
-func (s *SqrtGCFStream2) Next() (int64, bool) {
+func (s *SqrtGCFExactTailStream2) Next() (int64, bool) {
 	if s.done {
 		return 0, false
 	}
@@ -85,4 +100,15 @@ func (s *SqrtGCFStream2) Next() (int64, bool) {
 	return d, true
 }
 
-// sqrt_stream2.go v2
+// Legacy transitional aliases retained for now.
+type SqrtGCFStream2 = SqrtGCFExactTailStream2
+
+func NewSqrtGCFStream2(src GCFSource, tailSrc GCFTailSource, maxIngestTerms int, p SqrtPolicy2) *SqrtGCFStream2 {
+	return NewSqrtGCFExactTailStream2(src, tailSrc, maxIngestTerms, p)
+}
+
+func NewSqrtGCFStreamWithTail2(src GCFSource, tail Rational, maxIngestTerms int, p SqrtPolicy2) *SqrtGCFStream2 {
+	return NewSqrtGCFExactTailStreamWithTail2(src, tail, maxIngestTerms, p)
+}
+
+// sqrt_stream2.go v3
