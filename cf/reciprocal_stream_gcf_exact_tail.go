@@ -1,4 +1,4 @@
-// reciprocal_stream_gcf_exact_tail.go v5
+// reciprocal_stream_gcf_exact_tail.go v6
 package cf
 
 import "fmt"
@@ -43,6 +43,14 @@ func NewReciprocalGCFExactTailStreamWithTail2(src GCFSource, tail Rational, maxI
 
 func (s *ReciprocalGCFExactTailStream2) Err() error { return s.core.Err() }
 
+func (s *ReciprocalGCFExactTailStream2) unaryClass() unaryStreamClass {
+	return unaryStreamClass{
+		Operator: unaryOperatorReciprocal,
+		Input:    unaryInputGCFExact,
+		Progress: unaryProgressExactCollapse,
+	}
+}
+
 func (s *ReciprocalGCFExactTailStream2) Snapshot() ReciprocalApproxStreamSnapshot {
 	var approxCopy *Rational
 	if s.core.approx != nil {
@@ -84,4 +92,4 @@ func (s *ReciprocalGCFExactTailStream2) Next() (int64, bool) {
 	return s.core.Next(s.evalReciprocal)
 }
 
-// reciprocal_stream_gcf_exact_tail.go v5
+// reciprocal_stream_gcf_exact_tail.go v6

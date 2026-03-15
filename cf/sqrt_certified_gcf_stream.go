@@ -1,4 +1,4 @@
-// sqrt_certified_gcf_stream.go v4
+// sqrt_certified_gcf_stream.go v5
 package cf
 
 import "fmt"
@@ -64,6 +64,14 @@ func NewSqrtCertifiedGCFPrefixStream(src GCFSource, maxPrefixTerms int) (SqrtApp
 }
 
 func (s *SqrtCertifiedGCFPrefixStream) Err() error { return s.state.Err() }
+
+func (s *SqrtCertifiedGCFPrefixStream) unaryClass() unaryStreamClass {
+	return unaryStreamClass{
+		Operator: unaryOperatorSqrt,
+		Input:    unaryInputGCFPrefix,
+		Progress: unaryProgressProgressiveCertified,
+	}
+}
 
 func (s *SqrtCertifiedGCFPrefixStream) Snapshot() SqrtApproxStreamSnapshot {
 	var approxCopy *Rational
@@ -285,4 +293,4 @@ func (s *SqrtCertifiedGCFPrefixStream) Next() (int64, bool) {
 	return 0, false
 }
 
-// sqrt_certified_gcf_stream.go v4
+// sqrt_certified_gcf_stream.go v5

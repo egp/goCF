@@ -1,4 +1,4 @@
-// unary_stream_contract_test.go v1
+// unary_stream_contract_test.go v2
 package cf
 
 import "testing"
@@ -28,6 +28,19 @@ func TestUnaryStreamContract_ReciprocalPrefix_BeforeStart(t *testing.T) {
 	if s.Err() != nil {
 		t.Fatalf("expected nil Err before start, got %v", s.Err())
 	}
+
+	gotClass, ok := classifyUnaryStream(s)
+	if !ok {
+		t.Fatalf("expected reciprocal prefix stream to be classified")
+	}
+	wantClass := unaryStreamClass{
+		Operator: unaryOperatorReciprocal,
+		Input:    unaryInputGCFPrefix,
+		Progress: unaryProgressExactCollapse,
+	}
+	if gotClass != wantClass {
+		t.Fatalf("got class %+v want %+v", gotClass, wantClass)
+	}
 }
 
 func TestUnaryStreamContract_ReciprocalPrefix_AfterStart(t *testing.T) {
@@ -53,6 +66,9 @@ func TestUnaryStreamContract_ReciprocalPrefix_AfterStart(t *testing.T) {
 	}
 	if snap.ConsumedTerms != 2 {
 		t.Fatalf("got ConsumedTerms=%d want 2", snap.ConsumedTerms)
+	}
+	if classifyReciprocalSnapshot(snap) != s.(*ReciprocalGCFPrefixStream2).unaryClass() {
+		t.Fatalf("snapshot classification drifted from stream classification")
 	}
 }
 
@@ -82,6 +98,19 @@ func TestUnaryStreamContract_ReciprocalExactTail_BeforeStart(t *testing.T) {
 	if s.Err() != nil {
 		t.Fatalf("expected nil Err before start, got %v", s.Err())
 	}
+
+	gotClass, ok := classifyUnaryStream(s)
+	if !ok {
+		t.Fatalf("expected reciprocal exact-tail stream to be classified")
+	}
+	wantClass := unaryStreamClass{
+		Operator: unaryOperatorReciprocal,
+		Input:    unaryInputGCFExact,
+		Progress: unaryProgressExactCollapse,
+	}
+	if gotClass != wantClass {
+		t.Fatalf("got class %+v want %+v", gotClass, wantClass)
+	}
 }
 
 func TestUnaryStreamContract_ReciprocalExactTail_AfterStart(t *testing.T) {
@@ -108,6 +137,9 @@ func TestUnaryStreamContract_ReciprocalExactTail_AfterStart(t *testing.T) {
 	}
 	if snap.ConsumedTerms != 2 {
 		t.Fatalf("got ConsumedTerms=%d want 2", snap.ConsumedTerms)
+	}
+	if classifyReciprocalSnapshot(snap) != s.(*ReciprocalGCFExactTailStream2).unaryClass() {
+		t.Fatalf("snapshot classification drifted from stream classification")
 	}
 }
 
@@ -136,6 +168,19 @@ func TestUnaryStreamContract_SqrtCertifiedPrefix_BeforeStart(t *testing.T) {
 	if s.Err() != nil {
 		t.Fatalf("expected nil Err before start, got %v", s.Err())
 	}
+
+	gotClass, ok := classifyUnaryStream(s)
+	if !ok {
+		t.Fatalf("expected sqrt certified stream to be classified")
+	}
+	wantClass := unaryStreamClass{
+		Operator: unaryOperatorSqrt,
+		Input:    unaryInputGCFPrefix,
+		Progress: unaryProgressProgressiveCertified,
+	}
+	if gotClass != wantClass {
+		t.Fatalf("got class %+v want %+v", gotClass, wantClass)
+	}
 }
 
 func TestUnaryStreamContract_SqrtCertifiedPrefix_AfterStart(t *testing.T) {
@@ -161,6 +206,9 @@ func TestUnaryStreamContract_SqrtCertifiedPrefix_AfterStart(t *testing.T) {
 	}
 	if snap.GCFInputApprox == nil {
 		t.Fatalf("expected non-nil GCFInputApprox after start")
+	}
+	if classifySqrtSnapshot(snap) != s.(*SqrtCertifiedGCFPrefixStream).unaryClass() {
+		t.Fatalf("snapshot classification drifted from stream classification")
 	}
 }
 
@@ -196,4 +244,4 @@ func TestUnaryStreamContract_ExhaustionIsStable(t *testing.T) {
 	}
 }
 
-// unary_stream_contract_test.go v1
+// unary_stream_contract_test.go v2

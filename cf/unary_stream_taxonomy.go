@@ -1,4 +1,4 @@
-// unary_stream_taxonomy.go v1
+// unary_stream_taxonomy.go v2
 package cf
 
 type unaryOperatorKind string
@@ -29,6 +29,18 @@ type unaryStreamClass struct {
 	Operator unaryOperatorKind
 	Input    unaryInputKind
 	Progress unaryProgressKind
+}
+
+type unaryClassifiedStream interface {
+	unaryClass() unaryStreamClass
+}
+
+func classifyUnaryStream(stream any) (unaryStreamClass, bool) {
+	s, ok := stream.(unaryClassifiedStream)
+	if !ok {
+		return unaryStreamClass{}, false
+	}
+	return s.unaryClass(), true
 }
 
 func classifyReciprocalSnapshot(s ReciprocalApproxStreamSnapshot) unaryStreamClass {
@@ -77,4 +89,4 @@ func classifySqrtSnapshot(s SqrtApproxStreamSnapshot) unaryStreamClass {
 	}
 }
 
-// unary_stream_taxonomy.go v1
+// unary_stream_taxonomy.go v2
