@@ -1,4 +1,4 @@
-// mvp_sources.go v2
+// mvp_sources.go v4
 package cf
 
 import "fmt"
@@ -21,7 +21,7 @@ func MVPEGCFSource() GCFSource {
 	return NewECFGSource()
 }
 
-// MVP69DegreeGCFSource returns a GCF prefix source that, together with
+// MVP69DegreeGCFSource returns a finite GCF prefix source that, together with
 // MVP69DegreeTail(), evaluates exactly to 69.
 //
 // Construction:
@@ -84,4 +84,4 @@ func MVPThreeOverPiSquaredPlusEApprox(fourOverPiPrefixTerms, ePrefixTerms int) (
 	return sum, nil
 }
 
-// mvp_sources.go v2
+// mvp_sources.go v4

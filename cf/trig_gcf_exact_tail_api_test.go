@@ -1,4 +1,4 @@
-// trig_gcf_exact_tail_api_test.go v2
+// trig_gcf_exact_tail_api_test.go v3
 package cf
 
 import (
@@ -6,26 +6,26 @@ import (
 	"testing"
 )
 
-func TestSinBoundsDegreesFromGCFWithTail2_69Angle(t *testing.T) {
+func TestSinBoundsDegreesFromGCFWithTail2_ArbitraryExactAngleStillWorks(t *testing.T) {
 	got, err := SinBoundsDegreesFromGCFWithTail2(
-		MVP69DegreeGCFSource(),
-		MVP69DegreeTail(),
+		NewSliceGCF([2]int64{29, 1}),
+		mustRat(1, 1),
 		1,
 	)
 	if err != nil {
 		t.Fatalf("SinBoundsDegreesFromGCFWithTail2 failed: %v", err)
 	}
 
-	want := NewRange(mustRat(14, 15), mustRat(131, 140), true, true)
+	want := NewRange(mustRat(1, 2), mustRat(1, 2), true, true)
 	if got.Lo.Cmp(want.Lo) != 0 || got.Hi.Cmp(want.Hi) != 0 {
 		t.Fatalf("got %v want %v", got, want)
 	}
 }
 
-func TestSinApproxDegreesFromGCFWithTail2_69IsStillBoundedNonPoint(t *testing.T) {
+func TestSinApproxDegreesFromGCFWithTail2_BoundedNonPointStillReportsAsSuch(t *testing.T) {
 	_, err := SinApproxDegreesFromGCFWithTail2(
-		MVP69DegreeGCFSource(),
-		MVP69DegreeTail(),
+		NewSliceGCF([2]int64{68, 1}),
+		mustRat(1, 1),
 		1,
 	)
 	if err == nil {
@@ -36,4 +36,4 @@ func TestSinApproxDegreesFromGCFWithTail2_69IsStillBoundedNonPoint(t *testing.T)
 	}
 }
 
-// trig_gcf_exact_tail_api_test.go v2
+// trig_gcf_exact_tail_api_test.go v3

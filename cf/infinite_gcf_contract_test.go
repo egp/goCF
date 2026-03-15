@@ -1,4 +1,4 @@
-// infinite_gcf_contract_test.go v1
+// infinite_gcf_contract_test.go v3
 package cf
 
 import (
@@ -41,7 +41,7 @@ func TestInfiniteGCFContract_SinPrefixEntryRejectsNonExactInfiniteAngle(t *testi
 	}
 }
 
-func TestInfiniteGCFContract_CurrentAngleException_IsExplicitExactTail(t *testing.T) {
+func TestInfiniteGCFContract_CurrentAngleException_IsExplicitFiniteExactTail(t *testing.T) {
 	got, _, err := EvalGCFWithTailExact(
 		MVP69DegreeGCFSource(),
 		MVP69DegreeTail(),
@@ -89,4 +89,4 @@ func TestInfiniteGCFContract_CurrentMVPTargetStillWorksDespiteExceptions(t *test
 // 3. Post-MVP goal: retire those exceptions and move prod ingestion toward
 //    infinite-GCF-only operator plumbing.
 //
-// infinite_gcf_contract_test.go v1
+// infinite_gcf_contract_test.go v3
