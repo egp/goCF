@@ -1,4 +1,4 @@
-// mvp_denominator_test.go v3
+// mvp_denominator_test.go v4
 package cf
 
 import (
@@ -6,18 +6,20 @@ import (
 	"testing"
 )
 
-func TestMVPDenominatorApproxDefault_UsesDegreesByDefault(t *testing.T) {
-	_, err := MVPDenominatorApproxDefault()
-	if err == nil {
-		t.Fatalf("expected stub error")
+func TestMVPDenominatorBoundsDefault_UsesDegreesByDefault(t *testing.T) {
+	got, err := MVPDenominatorBoundsDefault()
+	if err != nil {
+		t.Fatalf("MVPDenominatorBoundsDefault failed: %v", err)
 	}
-	if !strings.Contains(err.Error(), "tanh kernel not implemented") {
-		t.Fatalf("unexpected error: %v", err)
+
+	want := NewRange(mustRat(-1, 1), mustRat(1, 2), true, true)
+	if got.Lo.Cmp(want.Lo) != 0 || got.Hi.Cmp(want.Hi) != 0 {
+		t.Fatalf("got %v want %v", got, want)
 	}
 }
 
-func TestMVPDenominatorApprox_RejectsRadiansForMVP(t *testing.T) {
-	_, err := MVPDenominatorApprox(
+func TestMVPDenominatorBounds_RejectsRadiansForMVP(t *testing.T) {
+	_, err := MVPDenominatorBounds(
 		DefaultSqrtPolicy2(),
 		Radians(mustRat(69, 1)),
 	)
@@ -29,15 +31,27 @@ func TestMVPDenominatorApprox_RejectsRadiansForMVP(t *testing.T) {
 	}
 }
 
-func TestMVPDenominatorApprox_Accepts69DegreeSinBoundAndStopsAtTanh(t *testing.T) {
-	_, err := MVPDenominatorApprox(
+func TestMVPDenominatorBounds_Accepts69DegreeBound(t *testing.T) {
+	got, err := MVPDenominatorBounds(
 		DefaultSqrtPolicy2(),
 		Degrees(mustRat(69, 1)),
 	)
-	if err == nil {
-		t.Fatalf("expected stub error")
+	if err != nil {
+		t.Fatalf("MVPDenominatorBounds failed: %v", err)
 	}
-	if !strings.Contains(err.Error(), "tanh kernel not implemented") {
+
+	want := NewRange(mustRat(-1, 1), mustRat(1, 2), true, true)
+	if got.Lo.Cmp(want.Lo) != 0 || got.Hi.Cmp(want.Hi) != 0 {
+		t.Fatalf("got %v want %v", got, want)
+	}
+}
+
+func TestMVPDenominatorApprox_CurrentlyReportsBoundedNonPoint(t *testing.T) {
+	_, err := MVPDenominatorApproxDefault()
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	if !strings.Contains(err.Error(), "bounded non-point result") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
@@ -47,4 +61,4 @@ func TestMVPDenominatorApprox_Accepts69DegreeSinBoundAndStopsAtTanh(t *testing.T
 //
 //	tanh(sqrt(5)) - sin(69°)
 //
-// mvp_denominator_test.go v3
+// mvp_denominator_test.go v4
