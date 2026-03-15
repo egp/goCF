@@ -1,13 +1,14 @@
-// binary_stream_taxonomy.go v1
+// binary_stream_taxonomy.go v2
 package cf
 
 type binaryOperatorKind string
 
 const (
-	binaryOperatorAdd binaryOperatorKind = "add"
-	binaryOperatorSub binaryOperatorKind = "sub"
-	binaryOperatorMul binaryOperatorKind = "mul"
-	binaryOperatorDiv binaryOperatorKind = "div"
+	binaryOperatorUnknown binaryOperatorKind = "unknown"
+	binaryOperatorAdd     binaryOperatorKind = "add"
+	binaryOperatorSub     binaryOperatorKind = "sub"
+	binaryOperatorMul     binaryOperatorKind = "mul"
+	binaryOperatorDiv     binaryOperatorKind = "div"
 )
 
 type binaryInputKind string

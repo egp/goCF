@@ -107,4 +107,12 @@ func (s *GCFBLFTStream) Next() (int64, bool) {
 	})
 }
 
+func (s *GCFBLFTStream) binaryClass() binaryStreamClass {
+	return binaryStreamClass{
+		Operator: binaryOperatorUnknown,
+		Input:    binaryInputGCF,
+		Progress: binaryProgressExactCollapse,
+	}
+}
+
 // gcf_blft_stream.go v3

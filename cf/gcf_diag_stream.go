@@ -68,4 +68,12 @@ func (s *GCFDiagStream) Next() (int64, bool) {
 	)
 }
 
+func (s *GCFDiagStream) binaryClass() binaryStreamClass {
+	return binaryStreamClass{
+		Operator: binaryOperatorUnknown,
+		Input:    binaryInputGCF,
+		Progress: binaryProgressExactCollapse,
+	}
+}
+
 // gcf_diag_stream.go v3

@@ -1,4 +1,4 @@
-// blft_stream.go v12
+// blft_stream.go v13
 package cf
 
 import "fmt"
@@ -97,6 +97,14 @@ func NewBLFTStream(t BLFT, xs, ys ContinuedFraction, opts BLFTStreamOptions) *BL
 }
 
 func (s *BLFTStream) Err() error { return s.err }
+
+func (s *BLFTStream) binaryClass() binaryStreamClass {
+	return binaryStreamClass{
+		Operator: binaryOperatorUnknown,
+		Input:    binaryInputCF,
+		Progress: binaryProgressProgressiveCertified,
+	}
+}
 
 // annotateErrBLFT appends a best-effort fingerprint context to err.
 func annotateErrBLFT(err error, t BLFT, rx, ry Range) error {
@@ -559,4 +567,4 @@ func (s *BLFTStream) emitDigitBLFT(d int64) (BLFT, error) {
 	return NewBLFT(A2, B2, C2, D2, E2, F2, G2, H2), nil
 }
 
-// blft_stream.go v12
+// blft_stream.go v13

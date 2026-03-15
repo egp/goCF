@@ -281,4 +281,12 @@ func diagDenomZeroAt(t DiagBLFT, x Rational) (bool, error) {
 	return den.Sign() == 0, nil
 }
 
+func (s *DiagBLFTStream) binaryClass() binaryStreamClass {
+	return binaryStreamClass{
+		Operator: binaryOperatorUnknown,
+		Input:    binaryInputCF,
+		Progress: binaryProgressProgressiveCertified,
+	}
+}
+
 // diag_stream.go v5
