@@ -147,15 +147,6 @@
   - compatibility wrappers / bounded stream surfaces
 - New work should target the canonical/internal layers first, then expose wrapper APIs as needed.
 
-## Suggested next-chat bootstrap
-Ask for current contents of:
-- the current canonical sqrt stream / sqrt operator files
-- any newly added sqrt stream tests
-- the current `DiagBLFT` / diagonal-stream related files if the next step will involve progressive certification
 
-Then focus on:
-- actual sqrt operator progress
-- bounded, test-first baby steps
-- not another large refactoring wave first
 
 # EOF MasterPlan.md

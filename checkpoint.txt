@@ -1,62 +1,44 @@
-# checkpoint_sqrt_bootstrap.txt
+Prompt 1:
+We are continuing a Go continued-fraction arithmetic project. The current bottleneck is not broad refactoring; it is finishing general sqrt as a real operator. Read the attached MasterPlan.md carefully and help me continue from there. Focus on the critical path, not cleanup.
 
-Status:
-- Major sqrt migration/refactor is largely done.
-- New canonical/internal sqrt path exists and old public APIs mostly delegate to it.
-- Full suite is green and fast.
+Prompt 2:
+Current state summary:
+- proof-safe sqrt enclosure engine exists
+- unary reciprocal operator exists for GCF exact-tail and bounded-prefix modes
+- CF-side certified-progressive sqrt stream exists
+- GCF-side certified-progressive sqrt stream draft currently hangs on:
+  TestSqrtCertifiedGCFPrefixStream_Sqrt2_RefinesAndContinues
+We need to diagnose and strengthen GCF unfinished-tail enclosure / progress guarantees.
 
-Canonical/new-path files added:
-- sqrt_core_exact.go
-- sqrt_seed_range.go
-- sqrt_api2.go
-- sqrt_source_api2.go
-- sqrt_source_prefix_api2.go
-- sqrt_gcf_api2.go
-- sqrt_gcf_range_seed_api2.go
-- sqrt_gcf_tail_api2.go
-- sqrt_midpoint_api2.go
-- sqrt_canonical_api.go
-- sqrt_canonical_source_api.go
-- sqrt_stream2.go
-- sqrt_gcf_prefix_stream2.go
-- sqrt_stream_cf2.go
+Prompt 3:
+Please start by asking me for the current contents of the files most relevant to the GCF progressive sqrt hang, rather than guessing. Likely candidates include:
+- gcf_bounder.go
+- gcf_approx.go
+- sqrt_certified_gcf_stream.go
+- any GCF progressive sqrt tests
+- any tail-evidence / tail-range helpers used by GCF sources
 
-Key new capabilities:
-- bounded sqrt over GCF exact-tail input
-- bounded sqrt over GCF prefix input
-- bounded sqrt over CF prefix input
-- canonical exact/Newton/seed/range layers
+Prompt 4:
+My preferred working style:
+- bigger steps when possible
+- but do not guess stale code
+- for small files, provide full replacement files
+- for larger files, provide complete replacement functions
+- mathematical correctness first
+- run full suite often because `go test ./cf` is fast
 
-Legacy status:
-- many old sqrt functions now wrap canonical code
-- old Newton/range implementation bodies retired
-- several obsolete old sqrt tests retired
-- remaining legacy tests mostly serve compatibility/public-surface coverage
+Prompt 5:
+Please keep the focus on the critical path to general sqrt:
+1. stabilize GCF unfinished-tail enclosure / progress guarantees
+2. finish multi-digit progressive GCF sqrt
+3. replace replay-on-refinement with persistent transformed remainder state
+4. move toward diagonal / transform-driven sqrt
+Only after that should we revisit naming cleanup, wrapper retirement, and docs.
 
-Important semantic note:
-- bounded prefix streams currently collapse to a bounded rational approximation first, then stream CF terms from that rational
-- they are not yet true progressively certifying sqrt streams
+Prompt 6:
+Important architectural note:
+Unary reciprocal (ingest GCF, emit reciprocal) is now considered part of the critical support path to general sqrt, not an end-of-project extra. Keep that in mind when reasoning about sqrt remainder/update.
 
-Recommended next step:
-- stop refactoring
-- make real sqrt progress:
-  1. add a stub for the next operator-shaped sqrt milestone
-  2. add focused failing tests
-  3. implement the smallest passing version
-
-Most likely next target:
-- a more genuine transform/diagonal-aware sqrt stream with stronger progressive certification semantics than the current exact-collapse streams
-
-If context is needed next:
-- ask for current contents of:
-  - sqrt_stream2.go
-  - sqrt_gcf_prefix_stream2.go
-  - sqrt_stream_cf2.go
-  - diag_blft.go
-  - diag_stream.go
-  - any new sqrt stream tests
-
-Reminder:
-- user prefers baby steps
-- user prefers complete small-file replacements, complete-function replacements for larger files
-- full test suite is cheap; usually just run `go test ./cf`
+Prompt 7:
+First task in the new chat:
+help me diagnose why the GCF progressive sqrt stream hangs instead of certifying and progressing on adapted sqrt(2). I want a dependency-aware, mathematically grounded fix, not another surface-level patch.
