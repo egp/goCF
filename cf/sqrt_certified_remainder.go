@@ -1,7 +1,29 @@
-// sqrt_certified_remainder.go v1
+// sqrt_certified_remainder.go v2
 package cf
 
 import "fmt"
+
+// ShiftRangeByInt translates an inside range by subtracting d.
+//
+//	out = r - d
+func ShiftRangeByInt(r Range, d int64) (Range, error) {
+	if !r.IsInside() {
+		return Range{}, fmt.Errorf("ShiftRangeByInt: requires inside range; got %v", r)
+	}
+
+	dd := intRat(d)
+
+	lo, err := r.Lo.Sub(dd)
+	if err != nil {
+		return Range{}, err
+	}
+	hi, err := r.Hi.Sub(dd)
+	if err != nil {
+		return Range{}, err
+	}
+
+	return NewRange(lo, hi, r.IncLo, r.IncHi), nil
+}
 
 // CertifiedRemainderRange maps a certified-output range for z into the range for
 // the continued-fraction remainder z' = 1 / (z - d).
@@ -20,38 +42,31 @@ func CertifiedRemainderRange(r Range, d int64) (Range, error) {
 		return Range{}, err
 	}
 	if loFloor != d || hiFloor != d {
-		return Range{}, fmt.Errorf("CertifiedRemainderRange: range does not certify digit %d; got floor bounds (%d,%d)", d, loFloor, hiFloor)
+		return Range{}, fmt.Errorf(
+			"CertifiedRemainderRange: range does not certify digit %d; got floor bounds (%d,%d)",
+			d, loFloor, hiFloor,
+		)
 	}
 
-	dd := intRat(d)
-
-	loShift, err := r.Lo.Sub(dd)
-	if err != nil {
-		return Range{}, err
-	}
-	hiShift, err := r.Hi.Sub(dd)
-	if err != nil {
-		return Range{}, err
-	}
-
-	if loShift.Cmp(intRat(0)) <= 0 {
-		return Range{}, fmt.Errorf("CertifiedRemainderRange: lower shifted endpoint not strictly positive: %v", loShift)
-	}
-	if hiShift.Cmp(intRat(0)) <= 0 {
-		return Range{}, fmt.Errorf("CertifiedRemainderRange: upper shifted endpoint not strictly positive: %v", hiShift)
-	}
-
-	// Reciprocal reverses order on positive reals.
-	hiRecip, err := intRat(1).Div(hiShift)
-	if err != nil {
-		return Range{}, err
-	}
-	loRecip, err := intRat(1).Div(loShift)
+	shifted, err := ShiftRangeByInt(r, d)
 	if err != nil {
 		return Range{}, err
 	}
 
-	return NewRange(hiRecip, loRecip, r.IncHi, r.IncLo), nil
+	if shifted.Lo.Cmp(intRat(0)) <= 0 {
+		return Range{}, fmt.Errorf(
+			"CertifiedRemainderRange: lower shifted endpoint not strictly positive: %v",
+			shifted.Lo,
+		)
+	}
+	if shifted.Hi.Cmp(intRat(0)) <= 0 {
+		return Range{}, fmt.Errorf(
+			"CertifiedRemainderRange: upper shifted endpoint not strictly positive: %v",
+			shifted.Hi,
+		)
+	}
+
+	return ReciprocalRangeConservative(shifted)
 }
 
-// sqrt_certified_remainder.go v1
+// sqrt_certified_remainder.go v2
