@@ -1,7 +1,8 @@
-// sqrt_stream_snapshot.go v2
+// sqrt_stream_snapshot.go v3
 package cf
 
 type SqrtApproxStreamSnapshot struct {
+	Status      SqrtStreamStatus
 	Started     bool
 	PrefixTerms int
 	Approx      *Rational
@@ -11,4 +12,4 @@ type SqrtApproxStreamSnapshot struct {
 	GCFInputApprox *GCFApprox
 }
 
-// sqrt_stream_snapshot.go v2
+// sqrt_stream_snapshot.go v3

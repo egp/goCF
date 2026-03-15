@@ -50,7 +50,15 @@ func (s *SqrtGCFPrefixStream2) Snapshot() SqrtApproxStreamSnapshot {
 		gcfInputApproxCopy = &v
 	}
 
+	status := SqrtStreamStatusUnstarted
+	if s.err != nil {
+		status = SqrtStreamStatusFailed
+	} else if s.started {
+		status = SqrtStreamStatusBoundedCollapse
+	}
+
 	return SqrtApproxStreamSnapshot{
+		Status:         status,
 		Started:        s.started,
 		PrefixTerms:    s.prefixTerms,
 		Approx:         approxCopy,

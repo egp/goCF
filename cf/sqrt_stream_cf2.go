@@ -50,7 +50,15 @@ func (s *SqrtCFPrefixStream2) Snapshot() SqrtApproxStreamSnapshot {
 		cfInputApproxCopy = &v
 	}
 
+	status := SqrtStreamStatusUnstarted
+	if s.err != nil {
+		status = SqrtStreamStatusFailed
+	} else if s.started {
+		status = SqrtStreamStatusBoundedCollapse
+	}
+
 	return SqrtApproxStreamSnapshot{
+		Status:        status,
 		Started:       s.started,
 		PrefixTerms:   s.prefixTerms,
 		Approx:        approxCopy,

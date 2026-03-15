@@ -48,7 +48,16 @@ func (s *SqrtGCFExactTailStream2) Snapshot() SqrtApproxStreamSnapshot {
 		v := *s.approx
 		approxCopy = &v
 	}
+
+	status := SqrtStreamStatusUnstarted
+	if s.err != nil {
+		status = SqrtStreamStatusFailed
+	} else if s.started {
+		status = SqrtStreamStatusBoundedCollapse
+	}
+
 	return SqrtApproxStreamSnapshot{
+		Status:      status,
 		Started:     s.started,
 		PrefixTerms: s.maxIngestTerms,
 		Approx:      approxCopy,
