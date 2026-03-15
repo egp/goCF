@@ -1,7 +1,16 @@
-// sqrt_range_conservative.go v2
+// sqrt_range_conservative.go v4
 package cf
 
-import "fmt"
+import (
+	"fmt"
+	"math/big"
+)
+
+const sqrtBoundScaleBits = 16
+
+func sqrtBoundScale() *big.Int {
+	return new(big.Int).Lsh(big.NewInt(1), sqrtBoundScaleBits)
+}
 
 // SqrtLowerBoundRational returns a rational lower bound L such that
 //
@@ -10,8 +19,7 @@ import "fmt"
 // Current implementation:
 //   - rejects negative input
 //   - exact-square fast path
-//   - zero fast path
-//   - otherwise not yet implemented
+//   - proof-safe scaled integer lower bracket for non-squares
 func SqrtLowerBoundRational(x Rational) (Rational, error) {
 	if x.Cmp(intRat(0)) < 0 {
 		return Rational{}, fmt.Errorf("SqrtLowerBoundRational: negative input %v", x)
@@ -27,7 +35,19 @@ func SqrtLowerBoundRational(x Rational) (Rational, error) {
 		return intRat(0), nil
 	}
 
-	return Rational{}, fmt.Errorf("SqrtLowerBoundRational: non-square input not implemented")
+	n, d := x.ratNumDen() // x = n/d, d > 0
+
+	k := sqrtBoundScale()
+	k2 := new(big.Int).Mul(k, k)
+
+	// sqrt(x) = sqrt(n*d) / d
+	// so floor(sqrt(n*d)*k) / (d*k) is a lower bound
+	nd := new(big.Int).Mul(n, d)
+	scaled := new(big.Int).Mul(nd, k2)
+	a := new(big.Int).Sqrt(scaled)
+
+	den := new(big.Int).Mul(d, k)
+	return newRationalBig(a, den)
 }
 
 // SqrtUpperBoundRational returns a rational upper bound U such that
@@ -37,8 +57,7 @@ func SqrtLowerBoundRational(x Rational) (Rational, error) {
 // Current implementation:
 //   - rejects negative input
 //   - exact-square fast path
-//   - zero fast path
-//   - otherwise not yet implemented
+//   - proof-safe scaled integer upper bracket for non-squares
 func SqrtUpperBoundRational(x Rational) (Rational, error) {
 	if x.Cmp(intRat(0)) < 0 {
 		return Rational{}, fmt.Errorf("SqrtUpperBoundRational: negative input %v", x)
@@ -54,16 +73,25 @@ func SqrtUpperBoundRational(x Rational) (Rational, error) {
 		return intRat(0), nil
 	}
 
-	return Rational{}, fmt.Errorf("SqrtUpperBoundRational: non-square input not implemented")
+	n, d := x.ratNumDen() // x = n/d, d > 0
+
+	k := sqrtBoundScale()
+	k2 := new(big.Int).Mul(k, k)
+
+	nd := new(big.Int).Mul(n, d)
+	scaled := new(big.Int).Mul(nd, k2)
+	a := new(big.Int).Sqrt(scaled)
+	a2 := new(big.Int).Mul(a, a)
+	if a2.Cmp(scaled) < 0 {
+		a = new(big.Int).Add(a, big.NewInt(1))
+	}
+
+	den := new(big.Int).Mul(d, k)
+	return newRationalBig(a, den)
 }
 
 // SqrtRangeConservative returns a proof-safe enclosure for sqrt(x) over a
 // nonnegative inside range r.
-//
-// Current implementation:
-//   - rejects outside / negative ranges
-//   - exact-endpoint fast path only
-//   - otherwise not yet implemented
 func SqrtRangeConservative(r Range) (Range, error) {
 	if !r.IsInside() {
 		return Range{}, fmt.Errorf("SqrtRangeConservative: requires inside range; got %v", r)
@@ -84,4 +112,4 @@ func SqrtRangeConservative(r Range) (Range, error) {
 	return NewRange(lo, hi, r.IncLo, r.IncHi), nil
 }
 
-// sqrt_range_conservative.go v2
+// sqrt_range_conservative.go v4
