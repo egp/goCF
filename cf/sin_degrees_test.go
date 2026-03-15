@@ -1,4 +1,4 @@
-// sin_degrees_test.go v1
+// sin_degrees_test.go v2
 package cf
 
 import (
@@ -31,6 +31,31 @@ func TestSinApproxDegrees_ExactTable(t *testing.T) {
 	}
 }
 
+func TestSinBoundsDegrees_69IsConservativeInsideRange(t *testing.T) {
+	got, err := SinBoundsDegrees(Degrees(mustRat(69, 1)))
+	if err != nil {
+		t.Fatalf("SinBoundsDegrees failed: %v", err)
+	}
+
+	want := NewRange(mustRat(1, 2), mustRat(1, 1), true, true)
+	if got.Lo.Cmp(want.Lo) != 0 || got.Hi.Cmp(want.Hi) != 0 {
+		t.Fatalf("got %v want %v", got, want)
+	}
+	if !got.IsInside() {
+		t.Fatalf("expected inside range, got %v", got)
+	}
+}
+
+func TestSinApproxDegrees_69IsCurrentlyBoundedNotPoint(t *testing.T) {
+	_, err := SinApproxDegrees(Degrees(mustRat(69, 1)))
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	if !strings.Contains(err.Error(), "bounded non-point result") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestSinApproxDegrees_RejectsRadians(t *testing.T) {
 	_, err := SinApproxDegrees(Radians(mustRat(1, 1)))
 	if err == nil {
@@ -41,14 +66,14 @@ func TestSinApproxDegrees_RejectsRadians(t *testing.T) {
 	}
 }
 
-func TestSinApproxDegrees_UnsupportedDegreeIsStub(t *testing.T) {
-	_, err := SinApproxDegrees(Degrees(mustRat(69, 1)))
+func TestSinBoundsDegrees_RejectsRadians(t *testing.T) {
+	_, err := SinBoundsDegrees(Radians(mustRat(1, 1)))
 	if err == nil {
 		t.Fatalf("expected error")
 	}
-	if !strings.Contains(err.Error(), "not implemented") {
+	if !strings.Contains(err.Error(), "degrees") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
-// sin_degrees_test.go v1
+// sin_degrees_test.go v2
