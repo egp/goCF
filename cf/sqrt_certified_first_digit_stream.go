@@ -1,4 +1,4 @@
-// sqrt_certified_first_digit_stream.go v2
+// sqrt_certified_first_digit_stream.go v3
 package cf
 
 import "fmt"
@@ -7,14 +7,14 @@ import "fmt"
 // sqrt stream milestone.
 //
 // Current milestone:
-//   - refine input CF prefix until the first sqrt digit is certified from
-//     SqrtRangeConservative
-//   - for non-exact inputs, certify and emit up to two digits using remainder
-//     range propagation
+//   - refine input CF prefix until sqrt(x) is enclosed conservatively
+//   - certify and emit as many continued-fraction digits as possible from that
+//     conservative sqrt range using generic range certification
 //   - if the input is exact and has exact rational sqrt, emit the full exact CF
 //
 // Future work:
-//   - general repeated certified-digit loop
+//   - when no further digits are certifiable, refine input and continue instead
+//     of stopping
 //   - tighter linkage to transform/diagonal state
 type SqrtCertifiedFirstDigitCFStream struct {
 	err     error
@@ -31,6 +31,7 @@ type SqrtCertifiedFirstDigitCFStream struct {
 	status  SqrtStreamStatus
 	approx  *Rational
 	exactCF ContinuedFraction
+
 	emitted []int64
 	emitPos int
 }
@@ -74,31 +75,6 @@ func (s *SqrtCertifiedFirstDigitCFStream) ingestOne() error {
 		return err
 	}
 	s.ingested++
-	return nil
-}
-
-func (s *SqrtCertifiedFirstDigitCFStream) certifyDigitsFromRange(yr Range) error {
-	a0lo, a0hi, err := yr.FloorBounds()
-	if err != nil {
-		return err
-	}
-	if a0lo != a0hi {
-		return fmt.Errorf("uncertified first digit")
-	}
-	s.emitted = append(s.emitted, a0lo)
-
-	r1, err := CertifiedRemainderRange(yr, a0lo)
-	if err != nil {
-		return nil // first digit still useful; second digit not yet available
-	}
-
-	a1lo, a1hi, err := r1.FloorBounds()
-	if err != nil {
-		return nil
-	}
-	if a1lo == a1hi {
-		s.emitted = append(s.emitted, a1lo)
-	}
 	return nil
 }
 
@@ -169,12 +145,20 @@ func (s *SqrtCertifiedFirstDigitCFStream) init() bool {
 				}
 			}
 
-			if err := s.certifyDigitsFromRange(yr); err != nil {
+			digits, _, err := CertifyCFDigitsFromRange(yr, 32)
+			if err != nil {
 				s.err = fmt.Errorf("SqrtCertifiedFirstDigitCFStream: %w", err)
 				s.done = true
 				s.status = SqrtStreamStatusFailed
 				return false
 			}
+			if len(digits) == 0 {
+				s.err = fmt.Errorf("SqrtCertifiedFirstDigitCFStream: certified first digit disappeared unexpectedly")
+				s.done = true
+				s.status = SqrtStreamStatusFailed
+				return false
+			}
+			s.emitted = digits
 			return true
 		}
 
@@ -235,4 +219,4 @@ func (s *SqrtCertifiedFirstDigitCFStream) Next() (int64, bool) {
 	return 0, false
 }
 
-// sqrt_certified_first_digit_stream.go v2
+// sqrt_certified_first_digit_stream.go v3
