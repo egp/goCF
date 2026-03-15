@@ -1,4 +1,4 @@
-// reciprocal_stream_gcf_exact_tail.go v3
+// reciprocal_stream_gcf_exact_tail.go v4
 package cf
 
 import "fmt"
@@ -21,11 +21,7 @@ type ReciprocalApproxStream interface {
 //   - richer tail evidence
 //   - progressive certification
 type ReciprocalGCFExactTailStream2 struct {
-	err     error
-	done    bool
-	started bool
-	exactCF ContinuedFraction
-	approx  *Rational
+	core reciprocalExactCollapseCore
 
 	src            GCFSource
 	tailSrc        GCFTailSource
@@ -45,79 +41,47 @@ func NewReciprocalGCFExactTailStreamWithTail2(src GCFSource, tail Rational, maxI
 	return NewReciprocalGCFExactTailStream2(src, NewExactTailSource(tail), maxIngestTerms)
 }
 
-func (s *ReciprocalGCFExactTailStream2) Err() error { return s.err }
+func (s *ReciprocalGCFExactTailStream2) Err() error { return s.core.Err() }
 
 func (s *ReciprocalGCFExactTailStream2) Snapshot() ReciprocalApproxStreamSnapshot {
 	var approxCopy *Rational
-	if s.approx != nil {
-		v := *s.approx
+	if s.core.approx != nil {
+		v := *s.core.approx
 		approxCopy = &v
 	}
 	return ReciprocalApproxStreamSnapshot{
-		Started:        s.started,
+		Started:        s.core.started,
 		Approx:         approxCopy,
 		MaxIngestTerms: s.maxIngestTerms,
 		ConsumedTerms:  s.consumedTerms,
 	}
 }
 
-func (s *ReciprocalGCFExactTailStream2) initExactCF() bool {
-	if s.started {
-		return s.err == nil
-	}
-	s.started = true
-
+func (s *ReciprocalGCFExactTailStream2) evalReciprocal() (Rational, error) {
 	tail, ok := s.tailSrc.ExactTail()
 	if !ok {
-		s.err = fmt.Errorf("ReciprocalGCFExactTailStream2: tail evidence not implemented")
-		s.done = true
-		return false
+		return Rational{}, fmt.Errorf("ReciprocalGCFExactTailStream2: tail evidence not implemented")
 	}
 
 	x, consumed, err := EvalGCFWithTailExact(s.src, tail, s.maxIngestTerms)
 	if err != nil {
-		s.err = fmt.Errorf("ReciprocalGCFExactTailStream2: %w", err)
-		s.done = true
-		return false
+		return Rational{}, fmt.Errorf("ReciprocalGCFExactTailStream2: %w", err)
 	}
 	s.consumedTerms = consumed
 
 	if x.Cmp(intRat(0)) == 0 {
-		s.err = fmt.Errorf("ReciprocalGCFExactTailStream2: reciprocal of zero")
-		s.done = true
-		return false
+		return Rational{}, fmt.Errorf("ReciprocalGCFExactTailStream2: reciprocal of zero")
 	}
 
 	recip, err := intRat(1).Div(x)
 	if err != nil {
-		s.err = fmt.Errorf("ReciprocalGCFExactTailStream2: %w", err)
-		s.done = true
-		return false
+		return Rational{}, fmt.Errorf("ReciprocalGCFExactTailStream2: %w", err)
 	}
-
-	s.approx = &recip
-	s.exactCF = NewRationalCF(recip)
-	return true
+	return recip, nil
 }
 
 func (s *ReciprocalGCFExactTailStream2) Next() (int64, bool) {
-	if s.done {
-		return 0, false
-	}
-	if s.err != nil {
-		s.done = true
-		return 0, false
-	}
-	if !s.initExactCF() {
-		return 0, false
-	}
-
-	d, ok := s.exactCF.Next()
-	if !ok {
-		s.done = true
-		return 0, false
-	}
-	return d, true
+	return s.core.Next(s.evalReciprocal)
 }
 
-// reciprocal_stream_gcf_exact_tail.go v3
+// reciprocal_stream_gcf_exact_tail.go v4

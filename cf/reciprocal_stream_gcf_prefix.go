@@ -1,4 +1,4 @@
-// reciprocal_stream_gcf_prefix.go v1
+// reciprocal_stream_gcf_prefix.go v2
 package cf
 
 import "fmt"
@@ -15,11 +15,7 @@ import "fmt"
 //   - use unfinished-tail range information more aggressively
 //   - progressive certification
 type ReciprocalGCFPrefixStream2 struct {
-	err     error
-	done    bool
-	started bool
-	exactCF ContinuedFraction
-	approx  *Rational
+	core reciprocalExactCollapseCore
 
 	inputApprox *GCFApprox
 
@@ -34,12 +30,12 @@ func NewReciprocalGCFPrefixStream2(src GCFSource, prefixTerms int) *ReciprocalGC
 	}
 }
 
-func (s *ReciprocalGCFPrefixStream2) Err() error { return s.err }
+func (s *ReciprocalGCFPrefixStream2) Err() error { return s.core.Err() }
 
 func (s *ReciprocalGCFPrefixStream2) Snapshot() ReciprocalApproxStreamSnapshot {
 	var approxCopy *Rational
-	if s.approx != nil {
-		v := *s.approx
+	if s.core.approx != nil {
+		v := *s.core.approx
 		approxCopy = &v
 	}
 	var gcfInputApproxCopy *GCFApprox
@@ -48,7 +44,7 @@ func (s *ReciprocalGCFPrefixStream2) Snapshot() ReciprocalApproxStreamSnapshot {
 		gcfInputApproxCopy = &v
 	}
 	return ReciprocalApproxStreamSnapshot{
-		Started:        s.started,
+		Started:        s.core.started,
 		Approx:         approxCopy,
 		GCFInputApprox: gcfInputApproxCopy,
 		PrefixTerms:    s.prefixTerms,
@@ -61,56 +57,26 @@ func (s *ReciprocalGCFPrefixStream2) Snapshot() ReciprocalApproxStreamSnapshot {
 	}
 }
 
-func (s *ReciprocalGCFPrefixStream2) initExactCF() bool {
-	if s.started {
-		return s.err == nil
-	}
-	s.started = true
-
+func (s *ReciprocalGCFPrefixStream2) evalReciprocal() (Rational, error) {
 	a, err := GCFApproxFromPrefix(s.src, s.prefixTerms)
 	if err != nil {
-		s.err = fmt.Errorf("ReciprocalGCFPrefixStream2: %w", err)
-		s.done = true
-		return false
+		return Rational{}, fmt.Errorf("ReciprocalGCFPrefixStream2: %w", err)
 	}
 	s.inputApprox = &a
 
 	if a.Convergent.Cmp(intRat(0)) == 0 {
-		s.err = fmt.Errorf("ReciprocalGCFPrefixStream2: reciprocal of zero")
-		s.done = true
-		return false
+		return Rational{}, fmt.Errorf("ReciprocalGCFPrefixStream2: reciprocal of zero")
 	}
 
 	recip, err := intRat(1).Div(a.Convergent)
 	if err != nil {
-		s.err = fmt.Errorf("ReciprocalGCFPrefixStream2: %w", err)
-		s.done = true
-		return false
+		return Rational{}, fmt.Errorf("ReciprocalGCFPrefixStream2: %w", err)
 	}
-
-	s.approx = &recip
-	s.exactCF = NewRationalCF(recip)
-	return true
+	return recip, nil
 }
 
 func (s *ReciprocalGCFPrefixStream2) Next() (int64, bool) {
-	if s.done {
-		return 0, false
-	}
-	if s.err != nil {
-		s.done = true
-		return 0, false
-	}
-	if !s.initExactCF() {
-		return 0, false
-	}
-
-	d, ok := s.exactCF.Next()
-	if !ok {
-		s.done = true
-		return 0, false
-	}
-	return d, true
+	return s.core.Next(s.evalReciprocal)
 }
 
-// reciprocal_stream_gcf_prefix.go v1
+// reciprocal_stream_gcf_prefix.go v2
