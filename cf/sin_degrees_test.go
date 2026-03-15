@@ -1,4 +1,4 @@
-// sin_degrees_test.go v3
+// sin_degrees_test.go v4
 package cf
 
 import (
@@ -31,13 +31,13 @@ func TestSinApproxDegrees_ExactTable(t *testing.T) {
 	}
 }
 
-func TestSinBoundsDegrees_69IsTightenedConservativeInsideRange(t *testing.T) {
+func TestSinBoundsDegrees_69IsFurtherTightenedConservativeInsideRange(t *testing.T) {
 	got, err := SinBoundsDegrees(Degrees(mustRat(69, 1)))
 	if err != nil {
 		t.Fatalf("SinBoundsDegrees failed: %v", err)
 	}
 
-	want := NewRange(mustRat(6, 7), mustRat(267, 280), true, true)
+	want := NewRange(mustRat(14, 15), mustRat(131, 140), true, true)
 	if got.Lo.Cmp(want.Lo) != 0 || got.Hi.Cmp(want.Hi) != 0 {
 		t.Fatalf("got %v want %v", got, want)
 	}
@@ -76,4 +76,4 @@ func TestSinBoundsDegrees_RejectsRadians(t *testing.T) {
 	}
 }
 
-// sin_degrees_test.go v3
+// sin_degrees_test.go v4

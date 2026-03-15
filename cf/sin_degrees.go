@@ -1,4 +1,4 @@
-// sin_degrees.go v3
+// sin_degrees.go v4
 package cf
 
 import "fmt"
@@ -6,30 +6,34 @@ import "fmt"
 // SinBoundsDegrees returns a conservative inside range for sin(theta),
 // where theta must be expressed in degrees.
 //
-// Current v3 support:
+// Current v4 support:
 //   - exact point ranges for 0°, 30°, 90°, 180°
-//   - tightened conservative bounded range for 69°
+//   - further tightened conservative bounded range for 69°
 //
 // Current 69° rule:
 //
-// Lower bound:
-//   - 69° is in the first quadrant
-//   - sin is increasing on [0°,90°]
-//   - so sin(69°) > sin(60°) = √3/2 > 6/7
+// Let x = 69° = 23π/60.
 //
-// Upper bound:
+// Use the standard rational bounds:
 //
-//   - on [0,π], sin is concave, so it lies below its tangent lines
+//	333/106 < π < 355/113
 //
-//   - at 60° = π/3, with x = 69° = 23π/60:
+// hence:
 //
-//     sin(x) <= sin(π/3) + cos(π/3)(x - π/3)
-//     = √3/2 + (1/2)(π/20)
-//     = √3/2 + π/40
+//	L = 23/60 * 333/106 < x < 23/60 * 355/113 = U
 //
-//   - using √3/2 < 7/8 and π < 22/7:
+// with L,U both in (0, π/2).
 //
-//     sin(69°) < 7/8 + 11/140 = 267/280
+// On this interval, the alternating Taylor series for sin has decreasing terms,
+// so:
+//
+//	sin(L) >= L - L^3/6 + L^5/120 - L^7/5040
+//	sin(U) <= U - U^3/6 + U^5/120
+//
+// These yield rigorous numerical bounds tighter than the simple rationals used
+// below. We round outward to the convenient certified enclosure:
+//
+//	sin(69°) in [14/15, 131/140]
 func SinBoundsDegrees(theta Angle) (Range, error) {
 	if err := theta.Validate(); err != nil {
 		return Range{}, err
@@ -46,7 +50,7 @@ func SinBoundsDegrees(theta Angle) (Range, error) {
 	case x.Cmp(mustRat(30, 1)) == 0:
 		return NewRange(mustRat(1, 2), mustRat(1, 2), true, true), nil
 	case x.Cmp(mustRat(69, 1)) == 0:
-		return NewRange(mustRat(6, 7), mustRat(267, 280), true, true), nil
+		return NewRange(mustRat(14, 15), mustRat(131, 140), true, true), nil
 	case x.Cmp(mustRat(90, 1)) == 0:
 		return NewRange(mustRat(1, 1), mustRat(1, 1), true, true), nil
 	case x.Cmp(mustRat(180, 1)) == 0:
@@ -69,4 +73,4 @@ func SinApproxDegrees(theta Angle) (Rational, error) {
 	return r.Lo, nil
 }
 
-// sin_degrees.go v3
+// sin_degrees.go v4
