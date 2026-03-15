@@ -1,4 +1,4 @@
-// sqrt_range_conservative.go v1
+// sqrt_range_conservative.go v2
 package cf
 
 import "fmt"
@@ -7,33 +7,81 @@ import "fmt"
 //
 //	L <= sqrt(x)
 //
-// Current status:
-//   - stub for test-first development
+// Current implementation:
+//   - rejects negative input
+//   - exact-square fast path
+//   - zero fast path
+//   - otherwise not yet implemented
 func SqrtLowerBoundRational(x Rational) (Rational, error) {
-	return Rational{}, fmt.Errorf("SqrtLowerBoundRational: not implemented")
+	if x.Cmp(intRat(0)) < 0 {
+		return Rational{}, fmt.Errorf("SqrtLowerBoundRational: negative input %v", x)
+	}
+
+	if root, ok, err := RationalSqrtExact(x); err != nil {
+		return Rational{}, err
+	} else if ok {
+		return root, nil
+	}
+
+	if x.Cmp(intRat(0)) == 0 {
+		return intRat(0), nil
+	}
+
+	return Rational{}, fmt.Errorf("SqrtLowerBoundRational: non-square input not implemented")
 }
 
 // SqrtUpperBoundRational returns a rational upper bound U such that
 //
 //	sqrt(x) <= U
 //
-// Current status:
-//   - stub for test-first development
+// Current implementation:
+//   - rejects negative input
+//   - exact-square fast path
+//   - zero fast path
+//   - otherwise not yet implemented
 func SqrtUpperBoundRational(x Rational) (Rational, error) {
-	return Rational{}, fmt.Errorf("SqrtUpperBoundRational: not implemented")
+	if x.Cmp(intRat(0)) < 0 {
+		return Rational{}, fmt.Errorf("SqrtUpperBoundRational: negative input %v", x)
+	}
+
+	if root, ok, err := RationalSqrtExact(x); err != nil {
+		return Rational{}, err
+	} else if ok {
+		return root, nil
+	}
+
+	if x.Cmp(intRat(0)) == 0 {
+		return intRat(0), nil
+	}
+
+	return Rational{}, fmt.Errorf("SqrtUpperBoundRational: non-square input not implemented")
 }
 
 // SqrtRangeConservative returns a proof-safe enclosure for sqrt(x) over a
 // nonnegative inside range r.
 //
-// Intended contract:
-//   - if x ∈ r, then sqrt(x) ∈ out
-//   - exact endpoint square roots should be preserved when available
-//
-// Current status:
-//   - stub for test-first development
+// Current implementation:
+//   - rejects outside / negative ranges
+//   - exact-endpoint fast path only
+//   - otherwise not yet implemented
 func SqrtRangeConservative(r Range) (Range, error) {
-	return Range{}, fmt.Errorf("SqrtRangeConservative: not implemented")
+	if !r.IsInside() {
+		return Range{}, fmt.Errorf("SqrtRangeConservative: requires inside range; got %v", r)
+	}
+	if r.Lo.Cmp(intRat(0)) < 0 {
+		return Range{}, fmt.Errorf("SqrtRangeConservative: negative range %v", r)
+	}
+
+	lo, err := SqrtLowerBoundRational(r.Lo)
+	if err != nil {
+		return Range{}, err
+	}
+	hi, err := SqrtUpperBoundRational(r.Hi)
+	if err != nil {
+		return Range{}, err
+	}
+
+	return NewRange(lo, hi, r.IncLo, r.IncHi), nil
 }
 
-// sqrt_range_conservative.go v1
+// sqrt_range_conservative.go v2
