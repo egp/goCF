@@ -1,4 +1,4 @@
-// sqrt_certified_first_digit_stream.go v3
+// sqrt_certified_first_digit_stream.go v5
 package cf
 
 import "fmt"
@@ -8,14 +8,16 @@ import "fmt"
 //
 // Current milestone:
 //   - refine input CF prefix until sqrt(x) is enclosed conservatively
-//   - certify and emit as many continued-fraction digits as possible from that
-//     conservative sqrt range using generic range certification
+//   - maintain a persistent certified remainder-state emitter for the current
+//     sqrt output range
+//   - when current certification runs out, ingest more source terms, rebuild the
+//     emitter from the refined sqrt range, and continue provided the certified
+//     prefix remains stable
 //   - if the input is exact and has exact rational sqrt, emit the full exact CF
 //
 // Future work:
-//   - when no further digits are certifiable, refine input and continue instead
-//     of stopping
 //   - tighter linkage to transform/diagonal state
+//   - avoid rebuilding emitter from scratch after each input refinement
 type SqrtCertifiedFirstDigitCFStream struct {
 	err     error
 	done    bool
@@ -34,6 +36,8 @@ type SqrtCertifiedFirstDigitCFStream struct {
 
 	emitted []int64
 	emitPos int
+
+	emitter *CertifiedCFRangeEmitter
 }
 
 func NewSqrtCertifiedFirstDigitCFStream(src ContinuedFraction, maxPrefixTerms int) (SqrtApproxStream, error) {
@@ -78,101 +82,142 @@ func (s *SqrtCertifiedFirstDigitCFStream) ingestOne() error {
 	return nil
 }
 
-func (s *SqrtCertifiedFirstDigitCFStream) init() bool {
+func (s *SqrtCertifiedFirstDigitCFStream) currentInputRange() (Range, error) {
+	if !s.b.HasValue() {
+		return Range{}, fmt.Errorf("no input value")
+	}
+	if s.srcDone {
+		s.b.Finish()
+	}
+
+	xr, ok, err := s.b.Range()
+	if err != nil {
+		return Range{}, err
+	}
+	if !ok {
+		return Range{}, fmt.Errorf("no input range")
+	}
+	return xr, nil
+}
+
+func (s *SqrtCertifiedFirstDigitCFStream) rebuildEmitterFromCurrentRange() (bool, error) {
+	xr, err := s.currentInputRange()
+	if err != nil {
+		return false, err
+	}
+
+	yr, err := SqrtRangeConservative(xr)
+	if err != nil {
+		return false, err
+	}
+
+	lo, hi, err := yr.FloorBounds()
+	if err != nil {
+		return false, err
+	}
+	if lo != hi {
+		return false, nil
+	}
+
+	s.status = SqrtStreamStatusCertifiedProgressive
+
+	if xr.Lo.Cmp(xr.Hi) == 0 {
+		if root, ok, err := RationalSqrtExact(xr.Lo); err == nil && ok {
+			s.approx = &root
+			if s.exactCF == nil {
+				s.exactCF = NewRationalCF(root)
+			}
+			return true, nil
+		}
+	}
+
+	// Preserve already-emitted prefix by replaying it on a fresh emitter.
+	e, err := NewCertifiedCFRangeEmitter(yr)
+	if err != nil {
+		return false, err
+	}
+	for i, want := range s.emitted {
+		got, ok := e.Next()
+		if !ok {
+			return false, fmt.Errorf("certified prefix shrank at position %d", i)
+		}
+		if got != want {
+			return false, fmt.Errorf("certified prefix changed at %d: got %d want %d", i, got, want)
+		}
+	}
+	s.emitter = e
+	return true, nil
+}
+
+func (s *SqrtCertifiedFirstDigitCFStream) ensureReady() bool {
 	if s.started {
 		return s.err == nil
 	}
 	s.started = true
 
-	for {
+	if !s.b.HasValue() {
+		if err := s.ingestOne(); err != nil {
+			s.err = fmt.Errorf("SqrtCertifiedFirstDigitCFStream: %w", err)
+			s.done = true
+			s.status = SqrtStreamStatusFailed
+			return false
+		}
 		if !s.b.HasValue() {
-			if err := s.ingestOne(); err != nil {
+			s.err = fmt.Errorf("SqrtCertifiedFirstDigitCFStream: empty source")
+			s.done = true
+			s.status = SqrtStreamStatusFailed
+			return false
+		}
+	}
+	return true
+}
+
+func (s *SqrtCertifiedFirstDigitCFStream) ensureAvailableDigit() bool {
+	if !s.ensureReady() {
+		return false
+	}
+	if s.exactCF != nil {
+		return true
+	}
+	if s.emitPos < len(s.emitted) {
+		return true
+	}
+
+	for {
+		if s.emitter != nil {
+			if d, ok := s.emitter.Next(); ok {
+				s.emitted = append(s.emitted, d)
+				return true
+			}
+			if err := s.emitter.Err(); err != nil {
 				s.err = fmt.Errorf("SqrtCertifiedFirstDigitCFStream: %w", err)
 				s.done = true
 				s.status = SqrtStreamStatusFailed
 				return false
 			}
-			if !s.b.HasValue() {
-				s.err = fmt.Errorf("SqrtCertifiedFirstDigitCFStream: empty source")
-				s.done = true
-				s.status = SqrtStreamStatusFailed
-				return false
-			}
+			s.emitter = nil
 		}
 
-		if s.srcDone {
-			s.b.Finish()
-		}
-
-		xr, ok, err := s.b.Range()
+		available, err := s.rebuildEmitterFromCurrentRange()
 		if err != nil {
 			s.err = fmt.Errorf("SqrtCertifiedFirstDigitCFStream: %w", err)
 			s.done = true
 			s.status = SqrtStreamStatusFailed
 			return false
 		}
-		if !ok {
-			s.err = fmt.Errorf("SqrtCertifiedFirstDigitCFStream: no input range")
-			s.done = true
-			s.status = SqrtStreamStatusFailed
-			return false
-		}
-
-		yr, err := SqrtRangeConservative(xr)
-		if err != nil {
-			s.err = fmt.Errorf("SqrtCertifiedFirstDigitCFStream: %w", err)
-			s.done = true
-			s.status = SqrtStreamStatusFailed
-			return false
-		}
-
-		lo, hi, err := yr.FloorBounds()
-		if err != nil {
-			s.err = fmt.Errorf("SqrtCertifiedFirstDigitCFStream: %w", err)
-			s.done = true
-			s.status = SqrtStreamStatusFailed
-			return false
-		}
-
-		if lo == hi {
-			s.status = SqrtStreamStatusCertifiedProgressive
-
-			if xr.Lo.Cmp(xr.Hi) == 0 {
-				if root, ok, err := RationalSqrtExact(xr.Lo); err == nil && ok {
-					s.approx = &root
-					s.exactCF = NewRationalCF(root)
-					return true
-				}
+		if available {
+			if s.exactCF != nil {
+				return true
 			}
-
-			digits, _, err := CertifyCFDigitsFromRange(yr, 32)
-			if err != nil {
-				s.err = fmt.Errorf("SqrtCertifiedFirstDigitCFStream: %w", err)
-				s.done = true
-				s.status = SqrtStreamStatusFailed
-				return false
-			}
-			if len(digits) == 0 {
-				s.err = fmt.Errorf("SqrtCertifiedFirstDigitCFStream: certified first digit disappeared unexpectedly")
-				s.done = true
-				s.status = SqrtStreamStatusFailed
-				return false
-			}
-			s.emitted = digits
-			return true
+			continue
 		}
 
 		if s.ingested >= s.maxPrefixTerms {
-			s.err = fmt.Errorf("SqrtCertifiedFirstDigitCFStream: could not certify first digit within %d terms", s.maxPrefixTerms)
 			s.done = true
-			s.status = SqrtStreamStatusFailed
 			return false
 		}
-
 		if s.srcDone {
-			s.err = fmt.Errorf("SqrtCertifiedFirstDigitCFStream: exhausted source before certifying first digit")
 			s.done = true
-			s.status = SqrtStreamStatusFailed
 			return false
 		}
 
@@ -193,7 +238,7 @@ func (s *SqrtCertifiedFirstDigitCFStream) Next() (int64, bool) {
 		s.done = true
 		return 0, false
 	}
-	if !s.init() {
+	if !s.ensureAvailableDigit() {
 		return 0, false
 	}
 
@@ -209,9 +254,6 @@ func (s *SqrtCertifiedFirstDigitCFStream) Next() (int64, bool) {
 	if s.emitPos < len(s.emitted) {
 		d := s.emitted[s.emitPos]
 		s.emitPos++
-		if s.emitPos >= len(s.emitted) {
-			s.done = true
-		}
 		return d, true
 	}
 
@@ -219,4 +261,4 @@ func (s *SqrtCertifiedFirstDigitCFStream) Next() (int64, bool) {
 	return 0, false
 }
 
-// sqrt_certified_first_digit_stream.go v3
+// sqrt_certified_first_digit_stream.go v5

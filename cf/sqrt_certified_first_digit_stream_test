@@ -1,4 +1,4 @@
-// sqrt_certified_first_digit_stream_test.go v3
+// sqrt_certified_first_digit_stream_test.go v5
 package cf
 
 import "testing"
@@ -26,8 +26,8 @@ func TestSqrtCertifiedFirstDigitCFStream_FinitePerfectSquare_EmitsExactResult(t 
 	}
 }
 
-func TestSqrtCertifiedFirstDigitCFStream_Sqrt2_CertifiesMultipleDigits(t *testing.T) {
-	s, err := NewSqrtCertifiedFirstDigitCFStream(Sqrt2CF(), 64)
+func TestSqrtCertifiedFirstDigitCFStream_Sqrt2_RefinesAndContinues(t *testing.T) {
+	s, err := NewSqrtCertifiedFirstDigitCFStream(Sqrt2CF(), 12)
 	if err != nil {
 		t.Fatalf("constructor failed: %v", err)
 	}
@@ -37,9 +37,7 @@ func TestSqrtCertifiedFirstDigitCFStream_Sqrt2_CertifiesMultipleDigits(t *testin
 		t.Fatalf("stream error: %v", err)
 	}
 
-	// We do not require the full infinite stream yet, but we do require that
-	// the certified-progressive engine emit at least the known prefix [1;2].
-	wantPrefix := []int64{1, 2}
+	wantPrefix := []int64{1, 2, 2, 2}
 	if len(got) < len(wantPrefix) {
 		t.Fatalf("len(got)=%d want at least %d got=%v", len(got), len(wantPrefix), got)
 	}
@@ -52,6 +50,9 @@ func TestSqrtCertifiedFirstDigitCFStream_Sqrt2_CertifiesMultipleDigits(t *testin
 	snap := s.Snapshot()
 	if snap.Status != SqrtStreamStatusCertifiedProgressive {
 		t.Fatalf("got status %q want %q", snap.Status, SqrtStreamStatusCertifiedProgressive)
+	}
+	if snap.PrefixTerms > 12 {
+		t.Fatalf("used too many terms: got %d want <= 12", snap.PrefixTerms)
 	}
 }
 
@@ -80,4 +81,4 @@ func TestSqrtCertifiedFirstDigitCFStream_EmptySourceFails(t *testing.T) {
 	}
 }
 
-// sqrt_certified_first_digit_stream_test.go v3
+// sqrt_certified_first_digit_stream_test.go v5
