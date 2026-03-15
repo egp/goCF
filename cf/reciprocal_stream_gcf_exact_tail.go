@@ -1,4 +1,4 @@
-// reciprocal_stream_gcf_exact_tail.go v2
+// reciprocal_stream_gcf_exact_tail.go v3
 package cf
 
 import "fmt"
@@ -30,6 +30,7 @@ type ReciprocalGCFExactTailStream2 struct {
 	src            GCFSource
 	tailSrc        GCFTailSource
 	maxIngestTerms int
+	consumedTerms  int
 }
 
 func NewReciprocalGCFExactTailStream2(src GCFSource, tailSrc GCFTailSource, maxIngestTerms int) *ReciprocalGCFExactTailStream2 {
@@ -53,9 +54,10 @@ func (s *ReciprocalGCFExactTailStream2) Snapshot() ReciprocalApproxStreamSnapsho
 		approxCopy = &v
 	}
 	return ReciprocalApproxStreamSnapshot{
-		Started:     s.started,
-		PrefixTerms: s.maxIngestTerms,
-		Approx:      approxCopy,
+		Started:        s.started,
+		Approx:         approxCopy,
+		MaxIngestTerms: s.maxIngestTerms,
+		ConsumedTerms:  s.consumedTerms,
 	}
 }
 
@@ -72,12 +74,14 @@ func (s *ReciprocalGCFExactTailStream2) initExactCF() bool {
 		return false
 	}
 
-	x, _, err := EvalGCFWithTailExact(s.src, tail, s.maxIngestTerms)
+	x, consumed, err := EvalGCFWithTailExact(s.src, tail, s.maxIngestTerms)
 	if err != nil {
 		s.err = fmt.Errorf("ReciprocalGCFExactTailStream2: %w", err)
 		s.done = true
 		return false
 	}
+	s.consumedTerms = consumed
+
 	if x.Cmp(intRat(0)) == 0 {
 		s.err = fmt.Errorf("ReciprocalGCFExactTailStream2: reciprocal of zero")
 		s.done = true
@@ -116,4 +120,4 @@ func (s *ReciprocalGCFExactTailStream2) Next() (int64, bool) {
 	return d, true
 }
 
-// reciprocal_stream_gcf_exact_tail.go v2
+// reciprocal_stream_gcf_exact_tail.go v3

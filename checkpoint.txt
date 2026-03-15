@@ -1,5 +1,6 @@
 Prompt 1:
-We are continuing a Go continued-fraction arithmetic project. The current bottleneck is not broad refactoring; it is finishing general sqrt as a real operator. Read the attached MasterPlan.md carefully and help me continue from there. Focus on the critical path, not cleanup.
+We are continuing a Go continued-fraction arithmetic project.
+Most recent work on sqrt, but can be set aside for more important work
 
 Prompt 2:
 Current state summary:
@@ -21,7 +22,7 @@ Please start by asking me for the current contents of the files most relevant to
 Prompt 4:
 My preferred working style:
 - bigger steps when possible
-- but do not guess stale code
+- but do not guess stale code, ask for current copy
 - for small files, provide full replacement files
 - for larger files, provide complete replacement functions
 - mathematical correctness first

@@ -62,8 +62,7 @@ func TestReciprocalExactTailSemanticContract_ExactTailAgreesWithDirectTailEvalua
 		}
 	}
 }
-
-func TestReciprocalGCFExactTailStream2_Snapshot_BeforeStartUsesConfiguredBoundNotConsumedTerms(t *testing.T) {
+func TestReciprocalGCFExactTailStream2_Snapshot_BeforeStartSeparatesConfiguredAndConsumedTerms(t *testing.T) {
 	s := NewReciprocalGCFExactTailStreamWithTail2(
 		NewSliceGCF([2]int64{3, 2}),
 		mustRat(11, 1),
@@ -74,7 +73,10 @@ func TestReciprocalGCFExactTailStream2_Snapshot_BeforeStartUsesConfiguredBoundNo
 	if snap.Started {
 		t.Fatalf("expected Started=false")
 	}
-	if snap.PrefixTerms != 8 {
-		t.Fatalf("got PrefixTerms=%d want 8 current configured bound semantics", snap.PrefixTerms)
+	if snap.MaxIngestTerms != 8 {
+		t.Fatalf("got MaxIngestTerms=%d want 8", snap.MaxIngestTerms)
+	}
+	if snap.ConsumedTerms != 0 {
+		t.Fatalf("got ConsumedTerms=%d want 0 before start", snap.ConsumedTerms)
 	}
 }

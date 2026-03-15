@@ -49,4 +49,18 @@ func TestReciprocalGCFPrefixStream2_Snapshot_AfterStartCarriesInputApprox(t *tes
 	}
 }
 
+func TestReciprocalGCFPrefixStream2_Snapshot_AfterStartCarriesConsumedTerms(t *testing.T) {
+	s := NewReciprocalGCFPrefixStream2(AdaptCFToGCF(Sqrt2CF()), 2)
+
+	_, ok := s.Next()
+	if !ok {
+		t.Fatalf("expected first digit; err=%v", s.Err())
+	}
+
+	snap := s.Snapshot()
+	if snap.ConsumedTerms != 2 {
+		t.Fatalf("got ConsumedTerms=%d want 2", snap.ConsumedTerms)
+	}
+}
+
 // reciprocal_stream_gcf_prefix_snapshot_test.go v1

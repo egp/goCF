@@ -139,4 +139,34 @@ func TestReciprocalGCFExactTailStream_RejectsZeroBound(t *testing.T) {
 	}
 }
 
+func TestReciprocalGCFExactTailStream_AfterStartCarriesConsumedTerms(t *testing.T) {
+	s, err := ReciprocalGCFExactTailStreamWithTail(
+		NewSliceGCF(
+			[2]int64{3, 2},
+			[2]int64{5, 7},
+		),
+		mustRat(11, 1),
+		8,
+	)
+	if err != nil {
+		t.Fatalf("ReciprocalGCFExactTailStreamWithTail failed: %v", err)
+	}
+
+	_, ok := s.Next()
+	if !ok {
+		t.Fatalf("expected first digit; err=%v", s.Err())
+	}
+
+	snap := s.Snapshot()
+	if !snap.Started {
+		t.Fatalf("expected Started=true after start")
+	}
+	if snap.MaxIngestTerms != 8 {
+		t.Fatalf("got MaxIngestTerms=%d want 8", snap.MaxIngestTerms)
+	}
+	if snap.ConsumedTerms != 2 {
+		t.Fatalf("got ConsumedTerms=%d want 2", snap.ConsumedTerms)
+	}
+}
+
 // reciprocal_stream_gcf_exact_tail_test.go v1

@@ -49,9 +49,15 @@ func (s *ReciprocalGCFPrefixStream2) Snapshot() ReciprocalApproxStreamSnapshot {
 	}
 	return ReciprocalApproxStreamSnapshot{
 		Started:        s.started,
-		PrefixTerms:    s.prefixTerms,
 		Approx:         approxCopy,
 		GCFInputApprox: gcfInputApproxCopy,
+		PrefixTerms:    s.prefixTerms,
+		ConsumedTerms: func() int {
+			if s.inputApprox != nil {
+				return s.inputApprox.PrefixTerms
+			}
+			return 0
+		}(),
 	}
 }
 
