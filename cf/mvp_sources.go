@@ -301,13 +301,19 @@ func MVPRadicandDefaultFourOverPiSnapshot(prefixTerms int) (GCFApprox, error) {
 func MVPRadicandDefaultEApproxSnapshot(prefixTerms int) (GCFApprox, error) {
 	return MVPDefaultEApproxSnapshot(prefixTerms)
 }
+
 func MVPRadicandScaledSquareOfFourOverPiApprox(fourOverPi GCFApprox) (GCFApprox, error) {
 	sq, err := fourOverPi.Convergent.Mul(fourOverPi.Convergent)
 	if err != nil {
 		return GCFApprox{}, err
 	}
 
-	scaled, err := mustRat(3, 16).Mul(sq)
+	scale, err := MVPRadicandScaleFactorSnapshot()
+	if err != nil {
+		return GCFApprox{}, err
+	}
+
+	scaled, err := scale.Convergent.Mul(sq)
 	if err != nil {
 		return GCFApprox{}, err
 	}
@@ -319,6 +325,7 @@ func MVPRadicandScaledSquareOfFourOverPiApprox(fourOverPi GCFApprox) (GCFApprox,
 		PrefixTerms: fourOverPi.PrefixTerms,
 	}, nil
 }
+
 func MVPRadicandAssembleFromSnapshots(
 	fourOverPi GCFApprox,
 	eApprox GCFApprox,
@@ -343,6 +350,37 @@ func MVPRadicandAssembleFromSnapshots(
 		Convergent:  sum,
 		Range:       &r,
 		PrefixTerms: prefixTerms,
+	}, nil
+}
+func MVPExactScalarSnapshot(n int64) (GCFApprox, error) {
+	x := mustRat(n, 1)
+	r := NewRange(x, x, true, true)
+	return GCFApprox{
+		Convergent:  x,
+		Range:       &r,
+		PrefixTerms: 1,
+	}, nil
+}
+func MVPRadicandScaleFactorSnapshot() (GCFApprox, error) {
+	three, err := MVPExactScalarSnapshot(3)
+	if err != nil {
+		return GCFApprox{}, err
+	}
+	sixteen, err := MVPExactScalarSnapshot(16)
+	if err != nil {
+		return GCFApprox{}, err
+	}
+
+	x, err := three.Convergent.Div(sixteen.Convergent)
+	if err != nil {
+		return GCFApprox{}, err
+	}
+
+	r := NewRange(x, x, true, true)
+	return GCFApprox{
+		Convergent:  x,
+		Range:       &r,
+		PrefixTerms: 1,
 	}, nil
 }
 

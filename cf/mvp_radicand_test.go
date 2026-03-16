@@ -545,5 +545,88 @@ func TestMVPRadicandSnapshotParts_LambertAssemblyMatchesAlternateApprox(t *testi
 		t.Fatalf("got %v want %v", got.Convergent, want)
 	}
 }
+func TestMVPExactScalarSnapshot_Three_IsExactPointSnapshot(t *testing.T) {
+	got, err := MVPExactScalarSnapshot(3)
+	if err != nil {
+		t.Fatalf("MVPExactScalarSnapshot failed: %v", err)
+	}
+
+	want := mustRat(3, 1)
+	if got.Convergent.Cmp(want) != 0 {
+		t.Fatalf("got %v want %v", got.Convergent, want)
+	}
+	if got.Range == nil {
+		t.Fatalf("expected point range")
+	}
+	if got.Range.Lo.Cmp(want) != 0 || got.Range.Hi.Cmp(want) != 0 {
+		t.Fatalf("got range %v want point %v", *got.Range, want)
+	}
+}
+
+func TestMVPExactScalarSnapshot_Sixteen_IsExactPointSnapshot(t *testing.T) {
+	got, err := MVPExactScalarSnapshot(16)
+	if err != nil {
+		t.Fatalf("MVPExactScalarSnapshot failed: %v", err)
+	}
+
+	want := mustRat(16, 1)
+	if got.Convergent.Cmp(want) != 0 {
+		t.Fatalf("got %v want %v", got.Convergent, want)
+	}
+	if got.Range == nil {
+		t.Fatalf("expected point range")
+	}
+	if got.Range.Lo.Cmp(want) != 0 || got.Range.Hi.Cmp(want) != 0 {
+		t.Fatalf("got range %v want point %v", *got.Range, want)
+	}
+}
+
+func TestMVPRadicandScaleFactorSnapshot_IsThreeSixteenths(t *testing.T) {
+	got, err := MVPRadicandScaleFactorSnapshot()
+	if err != nil {
+		t.Fatalf("MVPRadicandScaleFactorSnapshot failed: %v", err)
+	}
+
+	want := mustRat(3, 16)
+	if got.Convergent.Cmp(want) != 0 {
+		t.Fatalf("got %v want %v", got.Convergent, want)
+	}
+	if got.Range == nil {
+		t.Fatalf("expected point range")
+	}
+	if got.Range.Lo.Cmp(want) != 0 || got.Range.Hi.Cmp(want) != 0 {
+		t.Fatalf("got range %v want point %v", *got.Range, want)
+	}
+}
+
+func TestMVPRadicandScaledSquareOfFourOverPiApprox_UsesExplicitScaleFactorSnapshot(t *testing.T) {
+	fourOverPi, err := MVPDefaultFourOverPiApproxSnapshot(4)
+	if err != nil {
+		t.Fatalf("MVPDefaultFourOverPiApproxSnapshot failed: %v", err)
+	}
+
+	got, err := MVPRadicandScaledSquareOfFourOverPiApprox(fourOverPi)
+	if err != nil {
+		t.Fatalf("MVPRadicandScaledSquareOfFourOverPiApprox failed: %v", err)
+	}
+
+	scale, err := MVPRadicandScaleFactorSnapshot()
+	if err != nil {
+		t.Fatalf("MVPRadicandScaleFactorSnapshot failed: %v", err)
+	}
+
+	sq, err := fourOverPi.Convergent.Mul(fourOverPi.Convergent)
+	if err != nil {
+		t.Fatalf("Mul failed: %v", err)
+	}
+	want, err := scale.Convergent.Mul(sq)
+	if err != nil {
+		t.Fatalf("Mul scale failed: %v", err)
+	}
+
+	if got.Convergent.Cmp(want) != 0 {
+		t.Fatalf("got %v want %v", got.Convergent, want)
+	}
+}
 
 // EOF mvp_radicand_test.go v1
