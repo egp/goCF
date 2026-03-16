@@ -111,6 +111,27 @@ func MVPDefaultFourOverPiApproxFunc() MVPFourOverPiApproxFunc {
 	return MVPFourOverPiApproxBrouncker
 }
 
+type MVPGCFSourceFunc func() GCFSource
+
+func MVPDefaultFourOverPiSourceFunc() MVPGCFSourceFunc {
+	return MVPReciprocalPiGCFSource
+}
+
+func MVPDefaultESourceFunc() MVPGCFSourceFunc {
+	return MVPEGCFSource
+}
+
+func MVPNilSafeGCFSourceFromFunc(srcFn MVPGCFSourceFunc) (GCFSource, error) {
+	if srcFn == nil {
+		return nil, fmt.Errorf("MVPNilSafeGCFSourceFromFunc: nil srcFn")
+	}
+	src := srcFn()
+	if src == nil {
+		return nil, fmt.Errorf("MVPNilSafeGCFSourceFromFunc: nil source")
+	}
+	return src, nil
+}
+
 // MVPThreeOverPiSquaredPlusEApproxWithFourOverPiApprox returns a bounded-prefix
 // rational approximation for:
 //

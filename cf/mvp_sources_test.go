@@ -460,5 +460,76 @@ func TestMVP69DegreeLegacyNamesMatchFiniteExactTailHelpers(t *testing.T) {
 		t.Fatalf("got %v want %v", got, want)
 	}
 }
+func TestMVPDefaultFourOverPiSourceFunc_UsesCanonicalSource(t *testing.T) {
+	src, err := MVPNilSafeGCFSourceFromFunc(MVPDefaultFourOverPiSourceFunc())
+	if err != nil {
+		t.Fatalf("MVPNilSafeGCFSourceFromFunc failed: %v", err)
+	}
+
+	got := collectPQ(src, 4)
+	want := [][2]int64{
+		{1, 1},
+		{2, 9},
+		{2, 25},
+		{2, 49},
+	}
+	if !equalPQ(got, want) {
+		t.Fatalf("got %v want %v", got, want)
+	}
+}
+
+func TestMVPDefaultESourceFunc_UsesCanonicalSource(t *testing.T) {
+	src, err := MVPNilSafeGCFSourceFromFunc(MVPDefaultESourceFunc())
+	if err != nil {
+		t.Fatalf("MVPNilSafeGCFSourceFromFunc failed: %v", err)
+	}
+
+	got := collectPQ(src, 7)
+	want := [][2]int64{
+		{2, 1},
+		{1, 1},
+		{2, 1},
+		{1, 1},
+		{1, 1},
+		{4, 1},
+		{1, 1},
+	}
+	if !equalPQ(got, want) {
+		t.Fatalf("got %v want %v", got, want)
+	}
+}
+
+func TestMVPNilSafeGCFSourceFromFunc_RejectsNil(t *testing.T) {
+	_, err := MVPNilSafeGCFSourceFromFunc(nil)
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+}
+
+func TestMVPThreeOverPiSquaredPlusERadicandSource_CurrentlyMatchesFiniteBridge(t *testing.T) {
+	got, err := MVPThreeOverPiSquaredPlusERadicandSource(4, 6)
+	if err != nil {
+		t.Fatalf("MVPThreeOverPiSquaredPlusERadicandSource failed: %v", err)
+	}
+
+	want, err := MVPThreeOverPiSquaredPlusEFiniteBridgeSource(4, 6)
+	if err != nil {
+		t.Fatalf("MVPThreeOverPiSquaredPlusEFiniteBridgeSource failed: %v", err)
+	}
+
+	gotConv, err := GCFSourceConvergent(got, 64)
+	if err != nil {
+		t.Fatalf("GCFSourceConvergent got failed: %v", err)
+	}
+
+	wantConv, err := GCFSourceConvergent(want, 64)
+	if err != nil {
+		t.Fatalf("GCFSourceConvergent want failed: %v", err)
+	}
+
+	if gotConv.Cmp(wantConv) != 0 {
+		t.Fatalf("got %v want %v", gotConv, wantConv)
+	}
+}
 
 // mvp_sources_test.go v9

@@ -74,6 +74,7 @@ func MVPThreeOverPiSquaredPlusEFiniteBridgeSnapshot(
 
 	return GCFApproxFromPrefix(src, bridgeTerms)
 }
+
 func MVPThreeOverPiSquaredPlusERadicandSource(
 	fourOverPiPrefixTerms int,
 	ePrefixTerms int,
