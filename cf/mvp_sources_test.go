@@ -1,4 +1,4 @@
-// mvp_sources_test.go v8
+// mvp_sources_test.go v9
 package cf
 
 import "testing"
@@ -25,6 +25,12 @@ func equalPQ(got, want [][2]int64) bool {
 		}
 	}
 	return true
+}
+
+func TestMVPSources_DefaultFourOverPiFamilyIsBrouncker(t *testing.T) {
+	if MVPDefaultFourOverPiFamily != MVPFourOverPiFamilyBrouncker {
+		t.Fatalf("got %q want %q", MVPDefaultFourOverPiFamily, MVPFourOverPiFamilyBrouncker)
+	}
 }
 
 func TestMVPSources_ReciprocalPiUsesBrouncker4OverPi(t *testing.T) {
@@ -69,6 +75,55 @@ func TestMVPSources_69DegreeSourceWithTailEvaluatesExactly(t *testing.T) {
 	want := mustRat(69, 1)
 	if got.Cmp(want) != 0 {
 		t.Fatalf("got %v want %v", got, want)
+	}
+}
+
+func TestMVPFourOverPiApproxFuncForFamily_Brouncker(t *testing.T) {
+	fn, err := MVPFourOverPiApproxFuncForFamily(MVPFourOverPiFamilyBrouncker)
+	if err != nil {
+		t.Fatalf("MVPFourOverPiApproxFuncForFamily failed: %v", err)
+	}
+
+	got, err := fn(4)
+	if err != nil {
+		t.Fatalf("brouncker fn failed: %v", err)
+	}
+
+	want, err := MVPFourOverPiApproxBrouncker(4)
+	if err != nil {
+		t.Fatalf("MVPFourOverPiApproxBrouncker failed: %v", err)
+	}
+
+	if got.Cmp(want) != 0 {
+		t.Fatalf("got %v want %v", got, want)
+	}
+}
+
+func TestMVPFourOverPiApproxFuncForFamily_Lambert(t *testing.T) {
+	fn, err := MVPFourOverPiApproxFuncForFamily(MVPFourOverPiFamilyLambert)
+	if err != nil {
+		t.Fatalf("MVPFourOverPiApproxFuncForFamily failed: %v", err)
+	}
+
+	got, err := fn(8)
+	if err != nil {
+		t.Fatalf("lambert fn failed: %v", err)
+	}
+
+	want, err := MVPFourOverPiApproxLambert(8)
+	if err != nil {
+		t.Fatalf("MVPFourOverPiApproxLambert failed: %v", err)
+	}
+
+	if got.Cmp(want) != 0 {
+		t.Fatalf("got %v want %v", got, want)
+	}
+}
+
+func TestMVPFourOverPiApproxFuncForFamily_RejectsUnknown(t *testing.T) {
+	_, err := MVPFourOverPiApproxFuncForFamily(MVPFourOverPiFamily("bogus"))
+	if err == nil {
+		t.Fatalf("expected error")
 	}
 }
 
@@ -245,4 +300,4 @@ func TestMVPThreeOverPiSquaredPlusEApprox_IsPositiveAndExceedsEApprox(t *testing
 	}
 }
 
-// mvp_sources_test.go v8
+// mvp_sources_test.go v9

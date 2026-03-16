@@ -1,7 +1,18 @@
-// mvp_sources.go v8
+// mvp_sources.go v9
 package cf
 
 import "fmt"
+
+// MVPFourOverPiFamily identifies a bounded 4/pi source family for MVP work.
+type MVPFourOverPiFamily string
+
+const (
+	MVPFourOverPiFamilyBrouncker MVPFourOverPiFamily = "brouncker"
+	MVPFourOverPiFamilyLambert   MVPFourOverPiFamily = "lambert"
+)
+
+// MVPDefaultFourOverPiFamily is the canonical 4/pi source family for the MVP path.
+const MVPDefaultFourOverPiFamily = MVPFourOverPiFamilyBrouncker
 
 // MVPReciprocalPiGCFSource returns the canonical MVP source for reciprocal-pi work.
 //
@@ -52,11 +63,8 @@ func MVPFourOverPiApproxBrouncker(prefixTerms int) (Rational, error) {
 }
 
 // MVPFourOverPiApproxLambert returns a bounded rational approximation of 4/pi
-// by first approximating pi/4 from Lambert's GCF with exact tail evidence, then
-// taking the reciprocal exactly.
-//
-// Current Lambert tail rule for pi/4:
-//   - use exact tail 1
+// by first approximating pi/4 from Lambert's GCF prefix machinery, then taking
+// the reciprocal of the convergent exactly.
 func MVPFourOverPiApproxLambert(prefixTerms int) (Rational, error) {
 	if prefixTerms <= 0 {
 		return Rational{}, fmt.Errorf(
@@ -74,6 +82,25 @@ func MVPFourOverPiApproxLambert(prefixTerms int) (Rational, error) {
 	}
 
 	return intRat(1).Div(piOver4Approx.Convergent)
+}
+
+// MVPFourOverPiApproxFuncForFamily returns the 4/pi approximation function for
+// the requested source family.
+func MVPFourOverPiApproxFuncForFamily(family MVPFourOverPiFamily) (MVPFourOverPiApproxFunc, error) {
+	switch family {
+	case MVPFourOverPiFamilyBrouncker:
+		return MVPFourOverPiApproxBrouncker, nil
+	case MVPFourOverPiFamilyLambert:
+		return MVPFourOverPiApproxLambert, nil
+	default:
+		return nil, fmt.Errorf("MVPFourOverPiApproxFuncForFamily: unsupported family %q", family)
+	}
+}
+
+// MVPDefaultFourOverPiApproxFunc returns the canonical 4/pi approximation
+// function for the MVP path.
+func MVPDefaultFourOverPiApproxFunc() MVPFourOverPiApproxFunc {
+	return MVPFourOverPiApproxBrouncker
 }
 
 // MVPThreeOverPiSquaredPlusEApproxWithFourOverPiApprox returns a bounded-prefix
@@ -185,15 +212,13 @@ func MVPThreeOverPiSquaredPlusEApproxWithFourOverPiSource(
 //
 //	3/pi^2 + e
 //
-// using the current canonical MVP sources:
-//
-//	(3/16) * (4/pi)^2 + e
+// using the current canonical MVP source family.
 func MVPThreeOverPiSquaredPlusEApprox(fourOverPiPrefixTerms, ePrefixTerms int) (Rational, error) {
 	return MVPThreeOverPiSquaredPlusEApproxWithFourOverPiApprox(
-		MVPFourOverPiApproxBrouncker,
+		MVPDefaultFourOverPiApproxFunc(),
 		fourOverPiPrefixTerms,
 		ePrefixTerms,
 	)
 }
 
-// mvp_sources.go v8
+// mvp_sources.go v9
