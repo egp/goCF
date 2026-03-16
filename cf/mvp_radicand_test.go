@@ -276,3 +276,80 @@ func TestMVPThreeOverPiSquaredPlusERadicandSource_CurrentlyMatchesFiniteBridge(t
 		t.Fatalf("got %v want %v", gotConv, wantConv)
 	}
 }
+
+func TestMVPThreeOverPiSquaredPlusEFiniteBridgeSourceWithFourOverPiApprox_LambertRoundTripsAlternateApprox(t *testing.T) {
+	src, err := MVPThreeOverPiSquaredPlusEFiniteBridgeSourceWithFourOverPiApprox(
+		MVPFourOverPiApproxLambert,
+		8,
+		6,
+	)
+	if err != nil {
+		t.Fatalf("MVPThreeOverPiSquaredPlusEFiniteBridgeSourceWithFourOverPiApprox failed: %v", err)
+	}
+
+	got, err := GCFSourceConvergent(src, 64)
+	if err != nil {
+		t.Fatalf("GCFSourceConvergent failed: %v", err)
+	}
+
+	want, err := MVPThreeOverPiSquaredPlusEApproxWithFourOverPiApprox(
+		MVPFourOverPiApproxLambert,
+		8,
+		6,
+	)
+	if err != nil {
+		t.Fatalf("MVPThreeOverPiSquaredPlusEApproxWithFourOverPiApprox failed: %v", err)
+	}
+
+	if got.Cmp(want) != 0 {
+		t.Fatalf("got %v want %v", got, want)
+	}
+}
+
+func TestMVPThreeOverPiSquaredPlusEFiniteBridgeSnapshotWithFourOverPiApprox_LambertRoundTripsAlternateApprox(t *testing.T) {
+	got, err := MVPThreeOverPiSquaredPlusEFiniteBridgeSnapshotWithFourOverPiApprox(
+		MVPFourOverPiApproxLambert,
+		8,
+		6,
+		64,
+	)
+	if err != nil {
+		t.Fatalf("MVPThreeOverPiSquaredPlusEFiniteBridgeSnapshotWithFourOverPiApprox failed: %v", err)
+	}
+
+	want, err := MVPThreeOverPiSquaredPlusEApproxWithFourOverPiApprox(
+		MVPFourOverPiApproxLambert,
+		8,
+		6,
+	)
+	if err != nil {
+		t.Fatalf("MVPThreeOverPiSquaredPlusEApproxWithFourOverPiApprox failed: %v", err)
+	}
+
+	if got.Convergent.Cmp(want) != 0 {
+		t.Fatalf("got %v want %v", got.Convergent, want)
+	}
+}
+
+func TestMVPNumeratorApproxFromRadicandApprox_LambertBridgePathIsUsableBySqrt(t *testing.T) {
+	a, err := MVPThreeOverPiSquaredPlusEFiniteBridgeSnapshotWithFourOverPiApprox(
+		MVPFourOverPiApproxLambert,
+		8,
+		6,
+		MVPNumeratorBridgePrefixTerms,
+	)
+	if err != nil {
+		t.Fatalf("MVPThreeOverPiSquaredPlusEFiniteBridgeSnapshotWithFourOverPiApprox failed: %v", err)
+	}
+
+	got, err := MVPNumeratorApproxFromRadicandApprox(a, DefaultSqrtPolicy2())
+	if err != nil {
+		t.Fatalf("MVPNumeratorApproxFromRadicandApprox failed: %v", err)
+	}
+
+	if got.Cmp(intRat(1)) <= 0 {
+		t.Fatalf("got %v want > 1", got)
+	}
+}
+
+// EOF

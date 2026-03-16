@@ -1,4 +1,4 @@
-// mvp_numerator_gcf_bridge.go v1
+// mvp_numerator_gcf_bridge.go v2
 package cf
 
 import "fmt"
@@ -45,11 +45,11 @@ func MVPThreeOverPiSquaredPlusEFiniteBridgeSource(
 	fourOverPiPrefixTerms int,
 	ePrefixTerms int,
 ) (GCFSource, error) {
-	x, err := MVPThreeOverPiSquaredPlusEApprox(fourOverPiPrefixTerms, ePrefixTerms)
-	if err != nil {
-		return nil, err
-	}
-	return AdaptCFToGCF(NewRationalCF(x)), nil
+	return MVPThreeOverPiSquaredPlusEFiniteBridgeSourceWithFourOverPiApprox(
+		MVPDefaultFourOverPiApproxFunc(),
+		fourOverPiPrefixTerms,
+		ePrefixTerms,
+	)
 }
 
 func MVPThreeOverPiSquaredPlusEFiniteBridgeSnapshot(
@@ -57,14 +57,45 @@ func MVPThreeOverPiSquaredPlusEFiniteBridgeSnapshot(
 	ePrefixTerms int,
 	bridgeTerms int,
 ) (GCFApprox, error) {
+	return MVPThreeOverPiSquaredPlusEFiniteBridgeSnapshotWithFourOverPiApprox(
+		MVPDefaultFourOverPiApproxFunc(),
+		fourOverPiPrefixTerms,
+		ePrefixTerms,
+		bridgeTerms,
+	)
+}
+
+func MVPThreeOverPiSquaredPlusEFiniteBridgeSourceWithFourOverPiApprox(
+	fourOverPiFn MVPFourOverPiApproxFunc,
+	fourOverPiPrefixTerms int,
+	ePrefixTerms int,
+) (GCFSource, error) {
+	x, err := MVPThreeOverPiSquaredPlusEApproxWithFourOverPiApprox(
+		fourOverPiFn,
+		fourOverPiPrefixTerms,
+		ePrefixTerms,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return AdaptCFToGCF(NewRationalCF(x)), nil
+}
+
+func MVPThreeOverPiSquaredPlusEFiniteBridgeSnapshotWithFourOverPiApprox(
+	fourOverPiFn MVPFourOverPiApproxFunc,
+	fourOverPiPrefixTerms int,
+	ePrefixTerms int,
+	bridgeTerms int,
+) (GCFApprox, error) {
 	if bridgeTerms <= 0 {
 		return GCFApprox{}, fmt.Errorf(
-			"MVPThreeOverPiSquaredPlusEFiniteBridgeSnapshot: bridgeTerms must be > 0, got %d",
+			"MVPThreeOverPiSquaredPlusEFiniteBridgeSnapshotWithFourOverPiApprox: bridgeTerms must be > 0, got %d",
 			bridgeTerms,
 		)
 	}
 
-	src, err := MVPThreeOverPiSquaredPlusEFiniteBridgeSource(
+	src, err := MVPThreeOverPiSquaredPlusEFiniteBridgeSourceWithFourOverPiApprox(
+		fourOverPiFn,
 		fourOverPiPrefixTerms,
 		ePrefixTerms,
 	)
@@ -97,4 +128,4 @@ func MVPThreeOverPiSquaredPlusERadicandSnapshot(
 	)
 }
 
-// mvp_numerator_gcf_bridge.go v1
+// mvp_numerator_gcf_bridge.go v2
