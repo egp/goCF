@@ -145,4 +145,42 @@ func TestMVPNumeratorApprox_ExceedsOne(t *testing.T) {
 //
 //	sqrt(3/pi^2 + e)
 //
+
+func TestMVPNumeratorRadicandApprox_MatchesExistingSubexpression(t *testing.T) {
+	got, err := MVPNumeratorRadicandApprox(4, 6)
+	if err != nil {
+		t.Fatalf("MVPNumeratorRadicandApprox failed: %v", err)
+	}
+
+	want, err := MVPThreeOverPiSquaredPlusEApprox(4, 6)
+	if err != nil {
+		t.Fatalf("MVPThreeOverPiSquaredPlusEApprox failed: %v", err)
+	}
+
+	if got.Cmp(want) != 0 {
+		t.Fatalf("got %v want %v", got, want)
+	}
+}
+
+func TestMVPNumeratorRadicandBridgeSource_RoundTripsRadicandApprox(t *testing.T) {
+	src, err := MVPNumeratorRadicandBridgeSource(4, 6)
+	if err != nil {
+		t.Fatalf("MVPNumeratorRadicandBridgeSource failed: %v", err)
+	}
+
+	got, err := GCFSourceConvergent(src, MVPNumeratorBridgePrefixTerms)
+	if err != nil {
+		t.Fatalf("GCFSourceConvergent failed: %v", err)
+	}
+
+	want, err := MVPNumeratorRadicandApprox(4, 6)
+	if err != nil {
+		t.Fatalf("MVPNumeratorRadicandApprox failed: %v", err)
+	}
+
+	if got.Cmp(want) != 0 {
+		t.Fatalf("got %v want %v", got, want)
+	}
+}
+
 // mvp_numerator_test.go v4

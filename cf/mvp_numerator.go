@@ -1,4 +1,4 @@
-// mvp_numerator.go v4
+// mvp_numerator.go v5
 package cf
 
 import "fmt"
@@ -12,33 +12,57 @@ const (
 	MVPDefaultEPrefixTerms          = 8
 
 	// Temporary bridge budget for the finite adapted source produced by
-	// MVPThreeOverPiSquaredPlusEAsGCFSource.
+	// MVPNumeratorRadicandBridgeSource.
 	MVPNumeratorBridgePrefixTerms = 64
 )
+
+// MVPNumeratorRadicandApprox returns the bounded rational subexpression
+//
+//	3/pi^2 + e
+//
+// for the numerator path.
+func MVPNumeratorRadicandApprox(
+	fourOverPiPrefixTerms int,
+	ePrefixTerms int,
+) (Rational, error) {
+	return MVPThreeOverPiSquaredPlusEApprox(fourOverPiPrefixTerms, ePrefixTerms)
+}
+
+// MVPNumeratorRadicandBridgeSource returns the temporary finite bridge source for
+// the numerator radicand subexpression.
+//
+// Temporary MVP exception:
+//   - this is the explicit bridge boundary
+//   - post-MVP goal is to replace this with a more source-driven path
+func MVPNumeratorRadicandBridgeSource(
+	fourOverPiPrefixTerms int,
+	ePrefixTerms int,
+) (GCFSource, error) {
+	x, err := MVPNumeratorRadicandApprox(fourOverPiPrefixTerms, ePrefixTerms)
+	if err != nil {
+		return nil, err
+	}
+	return AdaptCFToGCF(NewRationalCF(x)), nil
+}
 
 // MVPNumeratorApprox returns a bounded rational approximation for:
 //
 //	sqrt(3/pi^2 + e)
 //
 // Current MVP construction:
-//   - choose canonical reciprocal-pi source via MVPReciprocalPiGCFSource()
-//   - choose canonical e source via MVPEGCFSource()
 //   - form bounded rational approximation to 3/pi^2 + e
+//   - cross the explicit temporary bridge boundary
 //   - route the final sqrt through a GCF-ingesting unary entry point
-//   - use an explicit temporary finite bridge for the numerator subexpression
 func MVPNumeratorApprox(
 	fourOverPiPrefixTerms int,
 	ePrefixTerms int,
 	sqrtPolicy SqrtPolicy2,
 ) (Rational, error) {
-	src, err := MVPThreeOverPiSquaredPlusEAsGCFSource(fourOverPiPrefixTerms, ePrefixTerms)
+	src, err := MVPNumeratorRadicandBridgeSource(fourOverPiPrefixTerms, ePrefixTerms)
 	if err != nil {
 		return Rational{}, err
 	}
 
-	// Temporary MVP exception:
-	// the numerator subexpression is currently bridged through a finite adapted
-	// rational source before entering the GCF-ingesting unary sqrt path.
 	return SqrtApproxFromGCFSourceRangeSeed2(src, MVPNumeratorBridgePrefixTerms, sqrtPolicy)
 }
 
@@ -131,4 +155,4 @@ func MVPNumeratorApproxTermsDefault(
 //
 //	    sqrt(3/pi^2 + e)
 //
-// mvp_numerator.go v4
+// mvp_numerator.go v5
