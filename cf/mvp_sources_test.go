@@ -1,4 +1,4 @@
-// mvp_sources_test.go v7
+// mvp_sources_test.go v8
 package cf
 
 import "testing"
@@ -69,6 +69,36 @@ func TestMVPSources_69DegreeSourceWithTailEvaluatesExactly(t *testing.T) {
 	want := mustRat(69, 1)
 	if got.Cmp(want) != 0 {
 		t.Fatalf("got %v want %v", got, want)
+	}
+}
+
+func TestMVPFourOverPiApproxBrouncker_MatchesDirectConvergent(t *testing.T) {
+	got, err := MVPFourOverPiApproxBrouncker(4)
+	if err != nil {
+		t.Fatalf("MVPFourOverPiApproxBrouncker failed: %v", err)
+	}
+
+	want, err := GCFSourceConvergent(NewBrouncker4OverPiGCFSource(), 4)
+	if err != nil {
+		t.Fatalf("GCFSourceConvergent failed: %v", err)
+	}
+
+	if got.Cmp(want) != 0 {
+		t.Fatalf("got %v want %v", got, want)
+	}
+}
+
+func TestMVPFourOverPiApproxLambert_IsPositiveAndGreaterThanOne(t *testing.T) {
+	got, err := MVPFourOverPiApproxLambert(8)
+	if err != nil {
+		t.Fatalf("MVPFourOverPiApproxLambert failed: %v", err)
+	}
+
+	if got.Cmp(intRat(1)) <= 0 {
+		t.Fatalf("got %v want > 1", got)
+	}
+	if got.Cmp(intRat(2)) >= 0 {
+		t.Fatalf("got %v want < 2", got)
 	}
 }
 
@@ -154,15 +184,13 @@ func TestMVPThreeOverPiSquaredPlusEApprox_UsesCanonicalSources(t *testing.T) {
 }
 
 func TestMVPThreeOverPiSquaredPlusEApprox_AlternateFourOverPiSourceHookWorks(t *testing.T) {
-	brounckerSrc := func() GCFSource { return NewBrouncker4OverPiGCFSource() }
-
-	got, err := MVPThreeOverPiSquaredPlusEApproxWithFourOverPiSource(
-		brounckerSrc,
+	got, err := MVPThreeOverPiSquaredPlusEApproxWithFourOverPiApprox(
+		MVPFourOverPiApproxBrouncker,
 		4,
 		6,
 	)
 	if err != nil {
-		t.Fatalf("MVPThreeOverPiSquaredPlusEApproxWithFourOverPiSource failed: %v", err)
+		t.Fatalf("MVPThreeOverPiSquaredPlusEApproxWithFourOverPiApprox failed: %v", err)
 	}
 
 	want, err := MVPThreeOverPiSquaredPlusEApprox(4, 6)
@@ -172,6 +200,29 @@ func TestMVPThreeOverPiSquaredPlusEApprox_AlternateFourOverPiSourceHookWorks(t *
 
 	if got.Cmp(want) != 0 {
 		t.Fatalf("got %v want %v", got, want)
+	}
+}
+
+func TestMVPThreeOverPiSquaredPlusEApprox_LambertParityPath_IsPositiveAndExceedsE(t *testing.T) {
+	got, err := MVPThreeOverPiSquaredPlusEApproxWithFourOverPiApprox(
+		MVPFourOverPiApproxLambert,
+		8,
+		6,
+	)
+	if err != nil {
+		t.Fatalf("MVPThreeOverPiSquaredPlusEApproxWithFourOverPiApprox failed: %v", err)
+	}
+
+	eApprox, err := GCFSourceConvergent(NewECFGSource(), 6)
+	if err != nil {
+		t.Fatalf("GCFSourceConvergent e failed: %v", err)
+	}
+
+	if got.Cmp(eApprox) <= 0 {
+		t.Fatalf("got %v want > eApprox %v", got, eApprox)
+	}
+	if got.Cmp(intRat(0)) <= 0 {
+		t.Fatalf("got %v want positive", got)
 	}
 }
 
@@ -194,4 +245,4 @@ func TestMVPThreeOverPiSquaredPlusEApprox_IsPositiveAndExceedsEApprox(t *testing
 	}
 }
 
-// mvp_sources_test.go v7
+// mvp_sources_test.go v8
