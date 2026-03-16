@@ -303,6 +303,12 @@ func (s *GCFStream) tryRefinementsUntilCertified(maxSteps int) (int64, bool, err
 	return 0, false, nil
 }
 
+func (s *GCFStream) isReciprocalStyleTransform() bool {
+	return s.t.A.Sign() == 0 &&
+		s.t.D.Sign() == 0 &&
+		s.t.B.Sign() != 0 &&
+		s.t.C.Sign() != 0
+}
 func (s *GCFStream) currentCertifiedTailDigit() (int64, bool, error) {
 	if !s.ingestedAny {
 		return 0, false, nil
@@ -311,7 +317,6 @@ func (s *GCFStream) currentCertifiedTailDigit() (int64, bool, error) {
 	if r, ok, reusable, err := s.explicitTailImageRange(); err != nil {
 		return 0, false, err
 	} else if ok {
-
 		if s.tailEvidenceOverride != nil && s.tailEvidenceFresh {
 			s.tailEvidenceFresh = false
 			s.traceEvent("tail-evidence/override-fresh")
@@ -323,12 +328,22 @@ func (s *GCFStream) currentCertifiedTailDigit() (int64, bool, error) {
 			if certified {
 				return d, true, nil
 			}
-			// Fresh post-emit/refined override was useful enough to establish an explicit
-			// same-prefix range, but not enough by itself to certify a digit. Continue on
-			// the same source state so candidate/refined evidence can tighten further
-			// before we ingest again.
 		}
-		if !reusable && !s.canEmitFromCurrentPrefixEvidence() {
+
+		if !reusable && !s.canEmitFromCurrentPrefixEvidence() && !s.canTightenSamePrefixWithoutIngest() {
+			return 0, false, nil
+		}
+
+		s.traceEvent("tail-evidence/base")
+		d, certified, err := certifiedFloorDigit(r)
+		if err != nil {
+			return 0, false, err
+		}
+		if certified {
+			return d, true, nil
+		}
+
+		if !reusable && s.canTightenSamePrefixWithoutIngest() {
 			if d, ok, err := s.tryCandidateTailEvidence(); err != nil {
 				return 0, false, err
 			} else if ok {
@@ -339,10 +354,13 @@ func (s *GCFStream) currentCertifiedTailDigit() (int64, bool, error) {
 			} else if ok {
 				return d, true, nil
 			}
+		}
+
+		if !reusable && !s.canEmitFromCurrentPrefixEvidence() {
 			return 0, false, nil
 		}
-		s.traceEvent("tail-evidence/base")
-		return certifiedFloorDigit(r)
+
+		return 0, false, nil
 	}
 
 	if d, ok, err := s.tryCandidateTailEvidence(); err != nil {
@@ -368,6 +386,19 @@ func (s *GCFStream) currentCertifiedTailDigit() (int64, bool, error) {
 	}
 
 	return 0, false, nil
+}
+
+func (s *GCFStream) canTightenSamePrefixWithoutIngest() bool {
+	if s.isReciprocalStyleTransform() {
+		return true
+	}
+	if _, ok := s.src.(CandidateTailEvidenceGCFSource); ok {
+		return true
+	}
+	if _, ok := s.src.(RefinedTailEvidenceGCFSource); ok {
+		return true
+	}
+	return false
 }
 
 // gcf_stream_tail_evidence.go v3
