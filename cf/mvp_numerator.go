@@ -98,7 +98,11 @@ func MVPNumeratorApproxFromRadicandSource(
 		)
 	}
 
-	return SqrtApproxFromGCFSourceRangeSeed2(src, bridgeTerms, sqrtPolicy)
+	a, err := GCFApproxFromPrefix(src, bridgeTerms)
+	if err != nil {
+		return Rational{}, err
+	}
+	return MVPNumeratorApproxFromRadicandApprox(a, sqrtPolicy)
 }
 
 func MVPNumeratorRadicandApproxSnapshot(
@@ -106,6 +110,13 @@ func MVPNumeratorRadicandApproxSnapshot(
 	ePrefixTerms int,
 	bridgeTerms int,
 ) (GCFApprox, error) {
+	if bridgeTerms <= 0 {
+		return GCFApprox{}, fmt.Errorf(
+			"MVPNumeratorRadicandApproxSnapshot: bridgeTerms must be > 0, got %d",
+			bridgeTerms,
+		)
+	}
+
 	return MVPThreeOverPiSquaredPlusERadicandSnapshot(
 		fourOverPiPrefixTerms,
 		ePrefixTerms,

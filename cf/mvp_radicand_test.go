@@ -352,4 +352,72 @@ func TestMVPNumeratorApproxFromRadicandApprox_LambertBridgePathIsUsableBySqrt(t 
 	}
 }
 
+func TestMVPThreeOverPiSquaredPlusERadicandSnapshot_MatchesDirectApproxAsPointSnapshot(t *testing.T) {
+	got, err := MVPThreeOverPiSquaredPlusERadicandSnapshot(4, 6, 64)
+	if err != nil {
+		t.Fatalf("MVPThreeOverPiSquaredPlusERadicandSnapshot failed: %v", err)
+	}
+
+	want, err := MVPThreeOverPiSquaredPlusEApprox(4, 6)
+	if err != nil {
+		t.Fatalf("MVPThreeOverPiSquaredPlusEApprox failed: %v", err)
+	}
+
+	if got.Convergent.Cmp(want) != 0 {
+		t.Fatalf("got %v want %v", got.Convergent, want)
+	}
+	if got.Range == nil {
+		t.Fatalf("expected point range")
+	}
+	if got.Range.Lo.Cmp(want) != 0 || got.Range.Hi.Cmp(want) != 0 {
+		t.Fatalf("got range %v want point %v", *got.Range, want)
+	}
+}
+
+func TestMVPThreeOverPiSquaredPlusERadicandApproxSnapshotWithFourOverPiApprox_LambertMatchesAlternateApprox(t *testing.T) {
+	got, err := MVPThreeOverPiSquaredPlusERadicandApproxSnapshotWithFourOverPiApprox(
+		MVPFourOverPiApproxLambert,
+		8,
+		6,
+	)
+	if err != nil {
+		t.Fatalf("MVPThreeOverPiSquaredPlusERadicandApproxSnapshotWithFourOverPiApprox failed: %v", err)
+	}
+
+	want, err := MVPThreeOverPiSquaredPlusEApproxWithFourOverPiApprox(
+		MVPFourOverPiApproxLambert,
+		8,
+		6,
+	)
+	if err != nil {
+		t.Fatalf("MVPThreeOverPiSquaredPlusEApproxWithFourOverPiApprox failed: %v", err)
+	}
+
+	if got.Convergent.Cmp(want) != 0 {
+		t.Fatalf("got %v want %v", got.Convergent, want)
+	}
+	if got.Range == nil {
+		t.Fatalf("expected point range")
+	}
+	if got.Range.Lo.Cmp(want) != 0 || got.Range.Hi.Cmp(want) != 0 {
+		t.Fatalf("got range %v want point %v", *got.Range, want)
+	}
+}
+
+func TestMVPNumeratorApproxWithBridgeTerms_IgnoresBridgeBudgetOnDirectSnapshotPath(t *testing.T) {
+	got, err := MVPNumeratorApproxWithBridgeTerms(4, 6, DefaultSqrtPolicy2(), 64)
+	if err != nil {
+		t.Fatalf("MVPNumeratorApproxWithBridgeTerms(64) failed: %v", err)
+	}
+
+	want, err := MVPNumeratorApproxWithBridgeTerms(4, 6, DefaultSqrtPolicy2(), 96)
+	if err != nil {
+		t.Fatalf("MVPNumeratorApproxWithBridgeTerms(96) failed: %v", err)
+	}
+
+	if got.Cmp(want) != 0 {
+		t.Fatalf("direct snapshot path should ignore bridge budget: got=%v want=%v", got, want)
+	}
+}
+
 // EOF

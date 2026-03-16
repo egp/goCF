@@ -1,4 +1,4 @@
-// mvp_numerator_gcf_bridge.go v2
+// mvp_numerator_gcf_bridge.go v3
 package cf
 
 import "fmt"
@@ -23,24 +23,26 @@ func MVPThreeOverPiSquaredPlusEAsGCFSource(
 }
 
 // MVPThreeOverPiSquaredPlusEApproxSnapshot is the legacy name for the current
-// finite bridge snapshot for:
+// radicand snapshot for:
 //
 //	3/pi^2 + e
 //
 // Deprecated MVP note:
-//   - prefer MVPThreeOverPiSquaredPlusEFiniteBridgeSnapshot for new code
+//   - prefer MVPThreeOverPiSquaredPlusERadicandApproxSnapshotWithFourOverPiApprox
+//     or MVPNumeratorRadicandApproxSnapshot for new code
 func MVPThreeOverPiSquaredPlusEApproxSnapshot(
 	fourOverPiPrefixTerms int,
 	ePrefixTerms int,
 	bridgeTerms int,
 ) (GCFApprox, error) {
-	return MVPThreeOverPiSquaredPlusEFiniteBridgeSnapshot(
+	return MVPThreeOverPiSquaredPlusERadicandSnapshot(
 		fourOverPiPrefixTerms,
 		ePrefixTerms,
 		bridgeTerms,
 	)
 }
 
+// Legacy finite bridge source retained for compatibility/tests.
 func MVPThreeOverPiSquaredPlusEFiniteBridgeSource(
 	fourOverPiPrefixTerms int,
 	ePrefixTerms int,
@@ -52,19 +54,31 @@ func MVPThreeOverPiSquaredPlusEFiniteBridgeSource(
 	)
 }
 
+// Legacy finite bridge snapshot retained for compatibility/tests.
 func MVPThreeOverPiSquaredPlusEFiniteBridgeSnapshot(
 	fourOverPiPrefixTerms int,
 	ePrefixTerms int,
 	bridgeTerms int,
 ) (GCFApprox, error) {
-	return MVPThreeOverPiSquaredPlusEFiniteBridgeSnapshotWithFourOverPiApprox(
-		MVPDefaultFourOverPiApproxFunc(),
+	if bridgeTerms <= 0 {
+		return GCFApprox{}, fmt.Errorf(
+			"MVPThreeOverPiSquaredPlusEFiniteBridgeSnapshot: bridgeTerms must be > 0, got %d",
+			bridgeTerms,
+		)
+	}
+
+	src, err := MVPThreeOverPiSquaredPlusEFiniteBridgeSource(
 		fourOverPiPrefixTerms,
 		ePrefixTerms,
-		bridgeTerms,
 	)
+	if err != nil {
+		return GCFApprox{}, err
+	}
+
+	return GCFApproxFromPrefix(src, bridgeTerms)
 }
 
+// Legacy family-parameterized finite bridge retained for compatibility/tests.
 func MVPThreeOverPiSquaredPlusEFiniteBridgeSourceWithFourOverPiApprox(
 	fourOverPiFn MVPFourOverPiApproxFunc,
 	fourOverPiPrefixTerms int,
@@ -81,6 +95,7 @@ func MVPThreeOverPiSquaredPlusEFiniteBridgeSourceWithFourOverPiApprox(
 	return AdaptCFToGCF(NewRationalCF(x)), nil
 }
 
+// Legacy family-parameterized finite bridge snapshot retained for compatibility/tests.
 func MVPThreeOverPiSquaredPlusEFiniteBridgeSnapshotWithFourOverPiApprox(
 	fourOverPiFn MVPFourOverPiApproxFunc,
 	fourOverPiPrefixTerms int,
@@ -106,6 +121,30 @@ func MVPThreeOverPiSquaredPlusEFiniteBridgeSnapshotWithFourOverPiApprox(
 	return GCFApproxFromPrefix(src, bridgeTerms)
 }
 
+// New production radicand snapshot path: build a direct point snapshot instead
+// of crossing the temporary finite bridge boundary.
+func MVPThreeOverPiSquaredPlusERadicandApproxSnapshotWithFourOverPiApprox(
+	fourOverPiFn MVPFourOverPiApproxFunc,
+	fourOverPiPrefixTerms int,
+	ePrefixTerms int,
+) (GCFApprox, error) {
+	x, err := MVPThreeOverPiSquaredPlusEApproxWithFourOverPiApprox(
+		fourOverPiFn,
+		fourOverPiPrefixTerms,
+		ePrefixTerms,
+	)
+	if err != nil {
+		return GCFApprox{}, err
+	}
+
+	r := NewRange(x, x, true, true)
+	return GCFApprox{
+		Convergent:  x,
+		Range:       &r,
+		PrefixTerms: 0,
+	}, nil
+}
+
 func MVPThreeOverPiSquaredPlusERadicandSource(
 	fourOverPiPrefixTerms int,
 	ePrefixTerms int,
@@ -121,11 +160,18 @@ func MVPThreeOverPiSquaredPlusERadicandSnapshot(
 	ePrefixTerms int,
 	bridgeTerms int,
 ) (GCFApprox, error) {
-	return MVPThreeOverPiSquaredPlusEFiniteBridgeSnapshot(
+	if bridgeTerms <= 0 {
+		return GCFApprox{}, fmt.Errorf(
+			"MVPThreeOverPiSquaredPlusERadicandSnapshot: bridgeTerms must be > 0, got %d",
+			bridgeTerms,
+		)
+	}
+
+	return MVPThreeOverPiSquaredPlusERadicandApproxSnapshotWithFourOverPiApprox(
+		MVPDefaultFourOverPiApproxFunc(),
 		fourOverPiPrefixTerms,
 		ePrefixTerms,
-		bridgeTerms,
 	)
 }
 
-// mvp_numerator_gcf_bridge.go v2
+// mvp_numerator_gcf_bridge.go v3
