@@ -58,12 +58,33 @@ func MVPNumeratorApprox(
 	ePrefixTerms int,
 	sqrtPolicy SqrtPolicy2,
 ) (Rational, error) {
+	return MVPNumeratorApproxWithBridgeTerms(
+		fourOverPiPrefixTerms,
+		ePrefixTerms,
+		sqrtPolicy,
+		MVPNumeratorBridgePrefixTerms,
+	)
+}
+
+func MVPNumeratorApproxWithBridgeTerms(
+	fourOverPiPrefixTerms int,
+	ePrefixTerms int,
+	sqrtPolicy SqrtPolicy2,
+	bridgeTerms int,
+) (Rational, error) {
+	if bridgeTerms <= 0 {
+		return Rational{}, fmt.Errorf(
+			"MVPNumeratorApproxWithBridgeTerms: bridgeTerms must be > 0, got %d",
+			bridgeTerms,
+		)
+	}
+
 	src, err := MVPNumeratorRadicandBridgeSource(fourOverPiPrefixTerms, ePrefixTerms)
 	if err != nil {
 		return Rational{}, err
 	}
 
-	return SqrtApproxFromGCFSourceRangeSeed2(src, MVPNumeratorBridgePrefixTerms, sqrtPolicy)
+	return SqrtApproxFromGCFSourceRangeSeed2(src, bridgeTerms, sqrtPolicy)
 }
 
 // MVPNumeratorApproxDefault uses the default sqrt policy and the current chosen

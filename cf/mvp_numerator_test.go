@@ -183,4 +183,46 @@ func TestMVPNumeratorRadicandBridgeSource_RoundTripsRadicandApprox(t *testing.T)
 	}
 }
 
+func TestMVPNumeratorRadicandBridgeSource_ConvergentStabilizesAfterExhaustion(t *testing.T) {
+	src1, err := MVPNumeratorRadicandBridgeSource(4, 6)
+	if err != nil {
+		t.Fatalf("MVPNumeratorRadicandBridgeSource failed: %v", err)
+	}
+
+	got64, err := GCFSourceConvergent(src1, 64)
+	if err != nil {
+		t.Fatalf("GCFSourceConvergent(64) failed: %v", err)
+	}
+
+	src2, err := MVPNumeratorRadicandBridgeSource(4, 6)
+	if err != nil {
+		t.Fatalf("MVPNumeratorRadicandBridgeSource failed: %v", err)
+	}
+
+	got96, err := GCFSourceConvergent(src2, 96)
+	if err != nil {
+		t.Fatalf("GCFSourceConvergent(96) failed: %v", err)
+	}
+
+	if got64.Cmp(got96) != 0 {
+		t.Fatalf("bridge convergent not stable: got64=%v got96=%v", got64, got96)
+	}
+}
+
+func TestMVPNumeratorApprox_CurrentBridgeBudgetIsStable(t *testing.T) {
+	got, err := MVPNumeratorApproxWithBridgeTerms(4, 6, DefaultSqrtPolicy2(), 64)
+	if err != nil {
+		t.Fatalf("MVPNumeratorApproxWithBridgeTerms(64) failed: %v", err)
+	}
+
+	want, err := MVPNumeratorApproxWithBridgeTerms(4, 6, DefaultSqrtPolicy2(), 96)
+	if err != nil {
+		t.Fatalf("MVPNumeratorApproxWithBridgeTerms(96) failed: %v", err)
+	}
+
+	if got.Cmp(want) != 0 {
+		t.Fatalf("numerator not stable across bridge budgets: got=%v want=%v", got, want)
+	}
+}
+
 // mvp_numerator_test.go v4
