@@ -10,7 +10,8 @@ import "fmt"
 // Current status:
 //   - degree-aware angle semantics are fixed
 //   - sin is routed through a GCF+exact-tail unary entry point
-//   - tanh(sqrt(5)) is routed through a GCF-ingesting metadata-driven unary entry point
+//   - tanh(sqrt(5)) is routed through a GCF-ingesting metadata-driven unary entry poin
+
 func MVPDenominatorBounds(
 	sqrt5Policy SqrtPolicy2,
 	angle Angle,
@@ -29,10 +30,9 @@ func MVPDenominatorBounds(
 		return Range{}, err
 	}
 
-	sinR, err := SinBoundsDegreesFromGCFWithTail2(
-		MVP69DegreeFiniteExactTailSource(),
-		MVP69DegreeFiniteExactTailTail(),
-		1,
+	sinR, err := SinBoundsDegreesFromGCFPrefix2(
+		MVP69DegreeGCFSource(),
+		2,
 	)
 	if err != nil {
 		return Range{}, err

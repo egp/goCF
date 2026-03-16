@@ -74,14 +74,10 @@ func TestMVPSources_EUsesECFGSource(t *testing.T) {
 	}
 }
 
-func TestMVPSources_69DegreeSourceWithTailEvaluatesExactly(t *testing.T) {
-	got, _, err := EvalGCFWithTailExact(
-		MVP69DegreeGCFSource(),
-		MVP69DegreeTail(),
-		1,
-	)
+func TestMVPSources_69DegreeSource_AsExactFiniteGCFPrefixEvaluatesExactly(t *testing.T) {
+	got, err := GCFSourceConvergent(MVP69DegreeGCFSource(), 2)
 	if err != nil {
-		t.Fatalf("EvalGCFWithTailExact failed: %v", err)
+		t.Fatalf("GCFSourceConvergent failed: %v", err)
 	}
 
 	want := mustRat(69, 1)
@@ -106,23 +102,18 @@ func TestMVP69DegreeFiniteExactTailSourceWithTailEvaluatesExactly(t *testing.T) 
 	}
 }
 
-func TestMVP69DegreeLegacyNamesMatchFiniteExactTailHelpers(t *testing.T) {
-	got, _, err := EvalGCFWithTailExact(
-		MVP69DegreeGCFSource(),
-		MVP69DegreeTail(),
-		1,
-	)
+func TestMVP69DegreeLegacyNamesMatchExactFiniteGCFValue(t *testing.T) {
+	got, err := GCFSourceConvergent(MVP69DegreeGCFSource(), 2)
 	if err != nil {
-		t.Fatalf("EvalGCFWithTailExact legacy failed: %v", err)
+		t.Fatalf("GCFSourceConvergent legacy failed: %v", err)
 	}
 
-	want, _, err := EvalGCFWithTailExact(
-		MVP69DegreeFiniteExactTailSource(),
-		MVP69DegreeFiniteExactTailTail(),
-		1,
-	)
+	want, err := EvaluateFiniteGCF(NewSliceGCF(
+		[2]int64{68, 1},
+		[2]int64{1, 1},
+	))
 	if err != nil {
-		t.Fatalf("EvalGCFWithTailExact finite helper failed: %v", err)
+		t.Fatalf("EvaluateFiniteGCF finite helper failed: %v", err)
 	}
 
 	if got.Cmp(want) != 0 {

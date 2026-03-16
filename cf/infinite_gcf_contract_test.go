@@ -41,14 +41,10 @@ func TestInfiniteGCFContract_SinPrefixEntryRejectsNonExactInfiniteAngle(t *testi
 	}
 }
 
-func TestInfiniteGCFContract_CurrentAngleException_IsExplicitFiniteExactTail(t *testing.T) {
-	got, _, err := EvalGCFWithTailExact(
-		MVP69DegreeGCFSource(),
-		MVP69DegreeTail(),
-		1,
-	)
+func TestInfiniteGCFContract_CurrentAngleConstant_IsExactFiniteGCFPrefix(t *testing.T) {
+	got, err := GCFSourceConvergent(MVP69DegreeGCFSource(), 2)
 	if err != nil {
-		t.Fatalf("EvalGCFWithTailExact failed: %v", err)
+		t.Fatalf("GCFSourceConvergent failed: %v", err)
 	}
 
 	want := mustRat(69, 1)

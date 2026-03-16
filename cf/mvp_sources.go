@@ -38,12 +38,15 @@ func MVPEGCFSource() GCFSource {
 // Construction:
 //   - 68 + 1/1 = 69
 func MVP69DegreeGCFSource() GCFSource {
-	return MVP69DegreeFiniteExactTailSource()
+	return NewSliceGCF(
+		[2]int64{68, 1},
+		[2]int64{1, 1},
+	)
 }
 
 // MVP69DegreeTail returns the exact tail used with MVP69DegreeGCFSource().
 func MVP69DegreeTail() Rational {
-	return MVP69DegreeFiniteExactTailTail()
+	return mustRat(1, 1)
 }
 
 func MVP69DegreeFiniteExactTailSource() GCFSource {
