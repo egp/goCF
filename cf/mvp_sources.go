@@ -132,6 +132,39 @@ func MVPNilSafeGCFSourceFromFunc(srcFn MVPGCFSourceFunc) (GCFSource, error) {
 	return src, nil
 }
 
+func MVPApproxSnapshotFromSourceFunc(
+	srcFn MVPGCFSourceFunc,
+	prefixTerms int,
+) (GCFApprox, error) {
+	if prefixTerms <= 0 {
+		return GCFApprox{}, fmt.Errorf(
+			"MVPApproxSnapshotFromSourceFunc: prefixTerms must be > 0, got %d",
+			prefixTerms,
+		)
+	}
+
+	src, err := MVPNilSafeGCFSourceFromFunc(srcFn)
+	if err != nil {
+		return GCFApprox{}, err
+	}
+
+	return GCFApproxFromPrefix(src, prefixTerms)
+}
+
+func MVPDefaultFourOverPiApproxSnapshot(prefixTerms int) (GCFApprox, error) {
+	return MVPApproxSnapshotFromSourceFunc(
+		MVPDefaultFourOverPiSourceFunc(),
+		prefixTerms,
+	)
+}
+
+func MVPDefaultEApproxSnapshot(prefixTerms int) (GCFApprox, error) {
+	return MVPApproxSnapshotFromSourceFunc(
+		MVPDefaultESourceFunc(),
+		prefixTerms,
+	)
+}
+
 // MVPThreeOverPiSquaredPlusEApproxWithFourOverPiApprox returns a bounded-prefix
 // rational approximation for:
 //
@@ -198,16 +231,11 @@ func MVPFourOverPiApproxWithSource(
 	srcFn func() GCFSource,
 	fourOverPiPrefixTerms int,
 ) (Rational, error) {
-	if srcFn == nil {
-		return Rational{}, fmt.Errorf("MVPFourOverPiApproxWithSource: nil srcFn")
+	a, err := MVPApproxSnapshotFromSourceFunc(srcFn, fourOverPiPrefixTerms)
+	if err != nil {
+		return Rational{}, err
 	}
-	if fourOverPiPrefixTerms <= 0 {
-		return Rational{}, fmt.Errorf(
-			"MVPFourOverPiApproxWithSource: fourOverPiPrefixTerms must be > 0, got %d",
-			fourOverPiPrefixTerms,
-		)
-	}
-	return GCFSourceConvergent(srcFn(), fourOverPiPrefixTerms)
+	return a.Convergent, nil
 }
 
 // MVPThreeOverPiSquaredPlusEApproxWithFourOverPiSource returns a bounded-prefix

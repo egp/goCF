@@ -532,4 +532,84 @@ func TestMVPThreeOverPiSquaredPlusERadicandSource_CurrentlyMatchesFiniteBridge(t
 	}
 }
 
+func TestMVPApproxSnapshotFromSourceFunc_BrounckerPath(t *testing.T) {
+	got, err := MVPApproxSnapshotFromSourceFunc(
+		MVPDefaultFourOverPiSourceFunc(),
+		4,
+	)
+	if err != nil {
+		t.Fatalf("MVPApproxSnapshotFromSourceFunc failed: %v", err)
+	}
+
+	want, err := GCFSourceConvergent(NewBrouncker4OverPiGCFSource(), 4)
+	if err != nil {
+		t.Fatalf("GCFSourceConvergent failed: %v", err)
+	}
+
+	if got.Convergent.Cmp(want) != 0 {
+		t.Fatalf("got %v want %v", got.Convergent, want)
+	}
+}
+
+func TestMVPApproxSnapshotFromSourceFunc_EPath(t *testing.T) {
+	got, err := MVPApproxSnapshotFromSourceFunc(
+		MVPDefaultESourceFunc(),
+		6,
+	)
+	if err != nil {
+		t.Fatalf("MVPApproxSnapshotFromSourceFunc failed: %v", err)
+	}
+
+	want, err := GCFSourceConvergent(NewECFGSource(), 6)
+	if err != nil {
+		t.Fatalf("GCFSourceConvergent failed: %v", err)
+	}
+
+	if got.Convergent.Cmp(want) != 0 {
+		t.Fatalf("got %v want %v", got.Convergent, want)
+	}
+}
+
+func TestMVPApproxSnapshotFromSourceFunc_RejectsBadPrefixTerms(t *testing.T) {
+	_, err := MVPApproxSnapshotFromSourceFunc(
+		MVPDefaultFourOverPiSourceFunc(),
+		0,
+	)
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+}
+
+func TestMVPDefaultFourOverPiApproxSnapshot_MatchesBrounckerConvergent(t *testing.T) {
+	got, err := MVPDefaultFourOverPiApproxSnapshot(4)
+	if err != nil {
+		t.Fatalf("MVPDefaultFourOverPiApproxSnapshot failed: %v", err)
+	}
+
+	want, err := GCFSourceConvergent(NewBrouncker4OverPiGCFSource(), 4)
+	if err != nil {
+		t.Fatalf("GCFSourceConvergent failed: %v", err)
+	}
+
+	if got.Convergent.Cmp(want) != 0 {
+		t.Fatalf("got %v want %v", got.Convergent, want)
+	}
+}
+
+func TestMVPDefaultEApproxSnapshot_MatchesEConvergent(t *testing.T) {
+	got, err := MVPDefaultEApproxSnapshot(6)
+	if err != nil {
+		t.Fatalf("MVPDefaultEApproxSnapshot failed: %v", err)
+	}
+
+	want, err := GCFSourceConvergent(NewECFGSource(), 6)
+	if err != nil {
+		t.Fatalf("GCFSourceConvergent failed: %v", err)
+	}
+
+	if got.Convergent.Cmp(want) != 0 {
+		t.Fatalf("got %v want %v", got.Convergent, want)
+	}
+}
+
 // mvp_sources_test.go v9
