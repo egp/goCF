@@ -380,5 +380,46 @@ func TestMVPThreeOverPiSquaredPlusEFiniteBridgeSnapshot_MatchesLegacySnapshot(t 
 		t.Fatalf("got %v want %v", got.Convergent, want.Convergent)
 	}
 }
+func TestMVPThreeOverPiSquaredPlusEAsGCFSource_LegacyNameMatchesFiniteBridgeSource(t *testing.T) {
+	got, err := MVPThreeOverPiSquaredPlusEAsGCFSource(4, 6)
+	if err != nil {
+		t.Fatalf("MVPThreeOverPiSquaredPlusEAsGCFSource failed: %v", err)
+	}
+
+	want, err := MVPThreeOverPiSquaredPlusEFiniteBridgeSource(4, 6)
+	if err != nil {
+		t.Fatalf("MVPThreeOverPiSquaredPlusEFiniteBridgeSource failed: %v", err)
+	}
+
+	gotConv, err := GCFSourceConvergent(got, 64)
+	if err != nil {
+		t.Fatalf("GCFSourceConvergent got failed: %v", err)
+	}
+
+	wantConv, err := GCFSourceConvergent(want, 64)
+	if err != nil {
+		t.Fatalf("GCFSourceConvergent want failed: %v", err)
+	}
+
+	if gotConv.Cmp(wantConv) != 0 {
+		t.Fatalf("got %v want %v", gotConv, wantConv)
+	}
+}
+
+func TestMVPThreeOverPiSquaredPlusEApproxSnapshot_LegacyNameMatchesFiniteBridgeSnapshot(t *testing.T) {
+	got, err := MVPThreeOverPiSquaredPlusEApproxSnapshot(4, 6, 64)
+	if err != nil {
+		t.Fatalf("MVPThreeOverPiSquaredPlusEApproxSnapshot failed: %v", err)
+	}
+
+	want, err := MVPThreeOverPiSquaredPlusEFiniteBridgeSnapshot(4, 6, 64)
+	if err != nil {
+		t.Fatalf("MVPThreeOverPiSquaredPlusEFiniteBridgeSnapshot failed: %v", err)
+	}
+
+	if got.Convergent.Cmp(want.Convergent) != 0 {
+		t.Fatalf("got %v want %v", got.Convergent, want.Convergent)
+	}
+}
 
 // mvp_sources_test.go v9
