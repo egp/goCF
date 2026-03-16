@@ -30,8 +30,8 @@ func MVPDenominatorBounds(
 	}
 
 	sinR, err := SinBoundsDegreesFromGCFWithTail2(
-		MVP69DegreeGCFSource(),
-		MVP69DegreeTail(),
+		MVP69DegreeFiniteExactTailSource(),
+		MVP69DegreeFiniteExactTailTail(),
 		1,
 	)
 	if err != nil {

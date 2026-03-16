@@ -421,5 +421,44 @@ func TestMVPThreeOverPiSquaredPlusEApproxSnapshot_LegacyNameMatchesFiniteBridgeS
 		t.Fatalf("got %v want %v", got.Convergent, want.Convergent)
 	}
 }
+func TestMVP69DegreeFiniteExactTailSourceWithTailEvaluatesExactly(t *testing.T) {
+	got, _, err := EvalGCFWithTailExact(
+		MVP69DegreeFiniteExactTailSource(),
+		MVP69DegreeFiniteExactTailTail(),
+		1,
+	)
+	if err != nil {
+		t.Fatalf("EvalGCFWithTailExact failed: %v", err)
+	}
+
+	want := mustRat(69, 1)
+	if got.Cmp(want) != 0 {
+		t.Fatalf("got %v want %v", got, want)
+	}
+}
+
+func TestMVP69DegreeLegacyNamesMatchFiniteExactTailHelpers(t *testing.T) {
+	got, _, err := EvalGCFWithTailExact(
+		MVP69DegreeGCFSource(),
+		MVP69DegreeTail(),
+		1,
+	)
+	if err != nil {
+		t.Fatalf("EvalGCFWithTailExact legacy failed: %v", err)
+	}
+
+	want, _, err := EvalGCFWithTailExact(
+		MVP69DegreeFiniteExactTailSource(),
+		MVP69DegreeFiniteExactTailTail(),
+		1,
+	)
+	if err != nil {
+		t.Fatalf("EvalGCFWithTailExact finite helper failed: %v", err)
+	}
+
+	if got.Cmp(want) != 0 {
+		t.Fatalf("got %v want %v", got, want)
+	}
+}
 
 // mvp_sources_test.go v9
