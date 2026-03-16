@@ -1,0 +1,20 @@
+I am continuing work on <project>.
+
+Use only the information in this prompt and in the files/errors I paste next.
+Do not assume any additional project context.
+
+State capsule:
+- project: ...
+- milestone: ...
+- current goal: ...
+- working components: ...
+- known issue: ...
+- constraints: ...
+
+Your role:
+- reason carefully
+- prioritize correctness
+- avoid speculative assumptions
+- work only from pasted files and failures
+
+I will now paste the current task and the relevant files or failing test output.

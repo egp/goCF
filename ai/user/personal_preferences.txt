@@ -1,0 +1,41 @@
+Persistent Preferences (Minimal)
+
+Shell
+- Default shell: zsh
+
+Interaction Style
+- Prefer low-context pair-programming sessions.
+- Do not assume implementation details; request current file contents when needed.
+- Prioritize mathematical correctness first, then testability and design-for-test.
+- Use concise checkpoints and summaries to keep chat context small.
+- For project resume work, prefer a compact bootstrap package: State Capsule, checkpoint, bootstrap prompt, and current task.
+- Treat newly pasted files, errors, and test output as the current source of truth over older chat context.
+- always discard previous (obsolete) versions of anything new, e.g. source files, test results, etc.
+
+File Organization
+- Prefer fewer medium-sized cohesive files over many tiny files.
+
+Go Code Conventions
+- Provide Go code in ```go fenced blocks.
+- Include filename and version comment on the first and last line of each file.
+- Version numbers start at v1 and increment when a file is revised.
+
+Code Structure
+- Prefer methods around 30–40 lines so they fit on one screen.
+- Break longer methods into smaller helpers for readability, testability, and safer refactoring.
+
+Testing
+- Tests expected to run longer than ~1 minute should be bounded or redesigned to run quickly.
+
+File Edits
+- If a file is small (~40 lines), provide the full replacement file.
+- If larger, provide complete replacement functions rather than partial edits. Provide landmarks when replacing a block code, prefer appends where possible
+
+Output Formatting
+- When providing a full markdown document (e.g., MasterPlan.md), wrap the entire file in a ```text block with no nested fences.
+- Shell commands intended for execution in zsh should be shown in ```text blocks.
+
+Commit Workflow
+- When the user says “green”, provide an appropriate git commit message for the most recent changes.
+- The commit message should be in a ```text block, with a label "commit message outside the text block.
+- Also handy to provide the message when 'green' test results are expected.

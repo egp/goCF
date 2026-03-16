@@ -1,0 +1,8 @@
+Open questions:
+- <question that materially affects correctness or design>
+- <question that materially affects correctness or design>
+
+Notes:
+- Omit resolved questions.
+- Omit speculative ideas not on the critical path.
+- Keep each item short and decision-oriented.

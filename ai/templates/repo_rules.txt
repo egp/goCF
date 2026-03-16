@@ -1,0 +1,26 @@
+Repository Rules
+
+General
+- Mathematical correctness first.
+- Prefer testability and design-for-test.
+- Treat newly pasted files, errors, and test output as the current source of truth.
+
+Code Structure
+- Prefer fewer medium-sized cohesive files over many tiny files.
+- Prefer methods around 30–40 lines where practical.
+- Break longer methods into smaller helpers for readability and safer refactoring.
+
+Testing
+- Any test expected to run longer than ~1 minute should be bounded or redesigned to run quickly.
+
+Editing
+- For small files, prefer full-file replacement.
+- For larger files, prefer complete replacement functions rather than partial edits.
+- Provide landmarks when replacing a block of code; prefer appends where possible.
+
+Formatting
+- Shell commands intended for zsh should be shown in ```text blocks.
+- Full markdown documents intended for copy/paste should be shown in a single ```text block with no nested fences.
+
+Commits
+- When work is green, provide an appropriate commit message.

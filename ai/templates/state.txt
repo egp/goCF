@@ -1,0 +1,21 @@
+Project: <project name and one-sentence description>
+
+Milestone: <current milestone or phase>
+
+Goal: <immediate objective of this session>
+
+Working Components:
+- <component>
+- <component>
+
+Known Issues:
+- <bug / failing test / missing feature>
+
+Current Task:
+- <single task to work on next>
+
+Constraints / Invariants:
+- <rule>
+- <rule>
+
+Context rule: treat this capsule and pasted files as the only source of truth.
