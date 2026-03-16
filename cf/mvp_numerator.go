@@ -38,11 +38,7 @@ func MVPNumeratorRadicandBridgeSource(
 	fourOverPiPrefixTerms int,
 	ePrefixTerms int,
 ) (GCFSource, error) {
-	x, err := MVPNumeratorRadicandApprox(fourOverPiPrefixTerms, ePrefixTerms)
-	if err != nil {
-		return nil, err
-	}
-	return AdaptCFToGCF(NewRationalCF(x)), nil
+	return MVPThreeOverPiSquaredPlusEAsGCFSource(fourOverPiPrefixTerms, ePrefixTerms)
 }
 
 // MVPNumeratorApprox returns a bounded rational approximation for:
@@ -72,16 +68,27 @@ func MVPNumeratorApproxWithBridgeTerms(
 	sqrtPolicy SqrtPolicy2,
 	bridgeTerms int,
 ) (Rational, error) {
-	if bridgeTerms <= 0 {
-		return Rational{}, fmt.Errorf(
-			"MVPNumeratorApproxWithBridgeTerms: bridgeTerms must be > 0, got %d",
-			bridgeTerms,
-		)
-	}
-
 	src, err := MVPNumeratorRadicandBridgeSource(fourOverPiPrefixTerms, ePrefixTerms)
 	if err != nil {
 		return Rational{}, err
+	}
+
+	return MVPNumeratorApproxFromRadicandSource(src, sqrtPolicy, bridgeTerms)
+}
+
+func MVPNumeratorApproxFromRadicandSource(
+	src GCFSource,
+	sqrtPolicy SqrtPolicy2,
+	bridgeTerms int,
+) (Rational, error) {
+	if src == nil {
+		return Rational{}, fmt.Errorf("MVPNumeratorApproxFromRadicandSource: nil src")
+	}
+	if bridgeTerms <= 0 {
+		return Rational{}, fmt.Errorf(
+			"MVPNumeratorApproxFromRadicandSource: bridgeTerms must be > 0, got %d",
+			bridgeTerms,
+		)
 	}
 
 	return SqrtApproxFromGCFSourceRangeSeed2(src, bridgeTerms, sqrtPolicy)

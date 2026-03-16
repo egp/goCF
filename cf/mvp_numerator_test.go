@@ -269,4 +269,74 @@ func TestMVPNumeratorApprox_CurrentAndSharperBudgetsAreDistinctButClose(t *testi
 	}
 }
 
+func TestMVPNumeratorRadicandBridgeSource_MatchesCanonicalRadicandSource(t *testing.T) {
+	got, err := MVPNumeratorRadicandBridgeSource(4, 6)
+	if err != nil {
+		t.Fatalf("MVPNumeratorRadicandBridgeSource failed: %v", err)
+	}
+
+	want, err := MVPThreeOverPiSquaredPlusEAsGCFSource(4, 6)
+	if err != nil {
+		t.Fatalf("MVPThreeOverPiSquaredPlusEAsGCFSource failed: %v", err)
+	}
+
+	gotConv, err := GCFSourceConvergent(got, MVPNumeratorBridgePrefixTerms)
+	if err != nil {
+		t.Fatalf("GCFSourceConvergent got failed: %v", err)
+	}
+
+	wantConv, err := GCFSourceConvergent(want, MVPNumeratorBridgePrefixTerms)
+	if err != nil {
+		t.Fatalf("GCFSourceConvergent want failed: %v", err)
+	}
+
+	if gotConv.Cmp(wantConv) != 0 {
+		t.Fatalf("got %v want %v", gotConv, wantConv)
+	}
+}
+
+func TestMVPNumeratorApproxFromRadicandSource_MatchesCurrentPath(t *testing.T) {
+	src, err := MVPThreeOverPiSquaredPlusEAsGCFSource(4, 6)
+	if err != nil {
+		t.Fatalf("MVPThreeOverPiSquaredPlusEAsGCFSource failed: %v", err)
+	}
+
+	got, err := MVPNumeratorApproxFromRadicandSource(
+		src,
+		DefaultSqrtPolicy2(),
+		MVPNumeratorBridgePrefixTerms,
+	)
+	if err != nil {
+		t.Fatalf("MVPNumeratorApproxFromRadicandSource failed: %v", err)
+	}
+
+	want, err := MVPNumeratorApproxDefault(4, 6)
+	if err != nil {
+		t.Fatalf("MVPNumeratorApproxDefault failed: %v", err)
+	}
+
+	if got.Cmp(want) != 0 {
+		t.Fatalf("got %v want %v", got, want)
+	}
+}
+
+func TestMVPNumeratorApproxFromRadicandSource_RejectsNilSource(t *testing.T) {
+	_, err := MVPNumeratorApproxFromRadicandSource(nil, DefaultSqrtPolicy2(), 64)
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+}
+
+func TestMVPNumeratorApproxFromRadicandSource_RejectsBadBridgeTerms(t *testing.T) {
+	src, err := MVPThreeOverPiSquaredPlusEAsGCFSource(4, 6)
+	if err != nil {
+		t.Fatalf("MVPThreeOverPiSquaredPlusEAsGCFSource failed: %v", err)
+	}
+
+	_, err = MVPNumeratorApproxFromRadicandSource(src, DefaultSqrtPolicy2(), 0)
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+}
+
 // mvp_numerator_test.go v4
