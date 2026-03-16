@@ -1,45 +1,72 @@
-Prompt 1:
-We are continuing a Go continued-fraction arithmetic project.
-Most recent work on sqrt, but can be set aside for more important work
+You are helping on a Go library for continued-fraction / generalized-continued-fraction arithmetic.
 
-Prompt 2:
-Current state summary:
-- proof-safe sqrt enclosure engine exists
-- unary reciprocal operator exists for GCF exact-tail and bounded-prefix modes
-- CF-side certified-progressive sqrt stream exists
-- GCF-side certified-progressive sqrt stream draft currently hangs on:
-  TestSqrtCertifiedGCFPrefixStream_Sqrt2_RefinesAndContinues
-We need to diagnose and strengthen GCF unfinished-tail enclosure / progress guarantees.
+Primary objective right now:
+Deliver an MVP for the certified bounded expression
 
-Prompt 3:
-Please start by asking me for the current contents of the files most relevant to the GCF progressive sqrt hang, rather than guessing. Likely candidates include:
-- gcf_bounder.go
-- gcf_approx.go
-- sqrt_certified_gcf_stream.go
-- any GCF progressive sqrt tests
-- any tail-evidence / tail-range helpers used by GCF sources
+    sqrt(3/pi^2 + e) / (tanh(sqrt(5)) - sin(69°))
 
-Prompt 4:
-My preferred working style:
-- bigger steps when possible
-- but do not guess stale code, ask for current copy
-- for small files, provide full replacement files
-- for larger files, provide complete replacement functions
+using CF/GCF-style arithmetic, with regular CF output acceptable.
+
+Working style:
+- Go only
 - mathematical correctness first
-- run full suite often because `go test ./cf` is fast
+- TDD preferred
+- keep bite size small, usually 3–4 files
+- do not assume file contents; ask for current files when needed
+- keep context small
+- prefer production-ready small steps over speculative redesign
+- avoid introducing many tiny files unless clearly justified
+- regular CF can be treated as a subset of GCF, and finite GCF as a degenerate subset of the general ingestion model; however prod ingestion should not rely on source exhaustion except for clearly fenced temporary MVP exceptions
+- any temporary exceptions must be explicit, documented, and tested
 
-Prompt 5:
-Please keep the focus on the critical path to general sqrt:
-1. stabilize GCF unfinished-tail enclosure / progress guarantees
-2. finish multi-digit progressive GCF sqrt
-3. replace replay-on-refinement with persistent transformed remainder state
-4. move toward diagonal / transform-driven sqrt
-Only after that should we revisit naming cleanup, wrapper retirement, and docs.
+Current MVP status:
+- Canonical target path exists and tests are green.
+- Canonical 4/pi family for MVP is Brouncker.
+- Lambert exists as a parity track at the 4/pi approximation layer, not yet lifted into numerator/target APIs.
+- Denominator path is considered acceptable for MVP:
+    tanh(sqrt(5)) - sin(69°)
+  with:
+    * tanh(sqrt(5)) bounded by a GCF-ingesting metadata-driven special path
+    * sin(69°) using an explicit exact-tail angle exception
+- Numerator path exists and is the main remaining architectural compromise:
+    sqrt(3/pi^2 + e)
+  It now has an explicit seam:
+    * MVPNumeratorRadicandApprox(...)
+    * MVPNumeratorRadicandBridgeSource(...)
+    * MVPNumeratorApprox(...)
+  The bridge is temporary and finite by design.
+- Target assembly exists and is bounded/non-point by design.
+- Infinite-contract audit tests exist and explicitly document current exceptions.
 
-Prompt 6:
-Important architectural note:
-Unary reciprocal (ingest GCF, emit reciprocal) is now considered part of the critical support path to general sqrt, not an end-of-project extra. Keep that in mind when reasoning about sqrt remainder/update.
+Important current source/API facts:
+- MVPDefaultFourOverPiFamily = Brouncker
+- MVPDefaultFourOverPiPrefixTerms = 6
+- MVPDefaultEPrefixTerms = 8
+- MVPNumeratorBridgePrefixTerms = 64
+- Canonical source family for 4/pi:
+    * Brouncker is default
+    * Lambert parity available through MVPFourOverPiApproxLambert and MVPThreeOverPiSquaredPlusEApproxWithFourOverPiApprox
+- Current angle exception:
+    * MVP69DegreeGCFSource() + MVP69DegreeTail() gives exact 69 for sin(69°)
+- Current numerator bridge exception:
+    * finite adapted source behind MVPNumeratorRadicandBridgeSource(...)
 
-Prompt 7:
-First task in the new chat:
-help me diagnose why the GCF progressive sqrt stream hangs instead of certifying and progressing on adapted sqrt(2). I want a dependency-aware, mathematically grounded fix, not another surface-level patch.
+What I need from you in this new chat:
+1. First, ask me for the current contents of the relevant files before proposing edits.
+2. Focus on the race to MVP, not broad redesign.
+3. Treat the current narrowed numerator bridge seam as the key decision point.
+4. Prefer tests that help decide whether the seam is acceptable for MVP sign-off or whether one more source-driven replacement step is worthwhile.
+5. Keep Brouncker canonical and Lambert parity-only unless there is a strong reason to lift parity upward.
+6. After each green step, recommend the next highest-leverage MVP step.
+
+Likely next task:
+Add an MVP-readiness test layer that determines whether the current narrowed numerator seam is acceptable for MVP sign-off, versus requiring one more source-driven replacement step before declaring the MVP path done.
+
+When ready, ask me for the current contents of:
+- mvp_numerator.go
+- mvp_numerator_test.go
+- mvp_target_formula.go
+- mvp_target_formula_test.go
+- mvp_sources.go
+- mvp_sources_test.go
+- infinite_gcf_contract_test.go
