@@ -1,9 +1,12 @@
 Repository Rules
 
 General
-- Mathematical correctness first.
+- Mathematical correctness first. Perfomance last.
 - Prefer testability and design-for-test.
-- Treat newly pasted files, errors, and test output as the current source of truth.
+- Add pre- and post-condition checks where helpful.
+- Treat newly pasted files, errors, and test output as the current source of truth and ignore any previous versions.
+- When you ask me to paste a series of files, keep track of which you have and which you need, do not analyze until you have all.
+- It often helps to provide a grep command that will list which files you ant me to paste.
 
 Code Structure
 - Prefer fewer medium-sized cohesive files over many tiny files.
@@ -23,4 +26,4 @@ Formatting
 - Full markdown documents intended for copy/paste should be shown in a single ```text block with no nested fences.
 
 Commits
-- When work is green, provide an appropriate commit message.
+- When work is green, provide an appropriate commit message in a ```text block with the label "commit message" outside the ```text block.

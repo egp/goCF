@@ -1,0 +1,35 @@
+Current milestone: decide whether the narrowed numerator seam is acceptable for MVP sign-off.
+MVP target expression:
+  sqrt(3/pi^2 + e) / (tanh(sqrt(5)) - sin(69°))
+
+Canonical defaults:
+- 4/pi family: Brouncker
+- e source: ECFGSource
+- fourOverPi prefix terms: 6
+- e prefix terms: 8
+- numerator bridge prefix budget: 64
+
+What works:
+- canonical target bound path exists and is green
+- denominator path is acceptable for MVP
+- denominator excludes zero
+- target assembly is bounded/non-point as intended
+- Lambert parity exists at the 4/pi approximation layer
+- audit tests document current exceptions
+
+Current explicit exceptions:
+- exact-tail 69° path: MVP69DegreeGCFSource + MVP69DegreeTail
+- finite numerator bridge behind MVPNumeratorRadicandBridgeSource
+
+Key numerator layering:
+- MVPNumeratorRadicandApprox(...)
+- MVPNumeratorRadicandBridgeSource(...)
+- MVPNumeratorApprox(...)
+
+What is not settled:
+- whether the current narrowed numerator seam is good enough for MVP
+- or whether one more source-driven replacement step is needed
+
+Immediate next step:
+- add MVP-readiness / seam-decision tests, not broad redesign
+- keep Brouncker canonical and Lambert parity-only

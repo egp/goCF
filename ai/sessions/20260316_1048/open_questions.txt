@@ -1,0 +1,4 @@
+- Is the current narrowed numerator bridge seam acceptable for MVP sign-off?
+- Should one more source-driven replacement step be done before declaring the canonical MVP path complete?
+- Should alternate 4/pi family hooks remain subexpression-only until post-MVP?
+- Is the exact-tail 69° path acceptable to keep as an MVP exception?
