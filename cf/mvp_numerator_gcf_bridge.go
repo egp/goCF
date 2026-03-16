@@ -128,21 +128,20 @@ func MVPThreeOverPiSquaredPlusERadicandApproxSnapshotWithFourOverPiApprox(
 	fourOverPiPrefixTerms int,
 	ePrefixTerms int,
 ) (GCFApprox, error) {
-	x, err := MVPThreeOverPiSquaredPlusEApproxWithFourOverPiApprox(
+	fourOverPi, err := MVPApproxSnapshotFromApproxFunc(
 		fourOverPiFn,
 		fourOverPiPrefixTerms,
-		ePrefixTerms,
 	)
 	if err != nil {
 		return GCFApprox{}, err
 	}
 
-	r := NewRange(x, x, true, true)
-	return GCFApprox{
-		Convergent:  x,
-		Range:       &r,
-		PrefixTerms: 0,
-	}, nil
+	eApprox, err := MVPRadicandDefaultEApproxSnapshot(ePrefixTerms)
+	if err != nil {
+		return GCFApprox{}, err
+	}
+
+	return MVPRadicandAssembleFromSnapshots(fourOverPi, eApprox)
 }
 
 func MVPThreeOverPiSquaredPlusERadicandSource(

@@ -268,4 +268,82 @@ func MVPThreeOverPiSquaredPlusEApprox(fourOverPiPrefixTerms, ePrefixTerms int) (
 	)
 }
 
+func MVPApproxSnapshotFromApproxFunc(
+	approxFn MVPFourOverPiApproxFunc,
+	prefixTerms int,
+) (GCFApprox, error) {
+	if approxFn == nil {
+		return GCFApprox{}, fmt.Errorf("MVPApproxSnapshotFromApproxFunc: nil approxFn")
+	}
+	if prefixTerms <= 0 {
+		return GCFApprox{}, fmt.Errorf(
+			"MVPApproxSnapshotFromApproxFunc: prefixTerms must be > 0, got %d",
+			prefixTerms,
+		)
+	}
+
+	x, err := approxFn(prefixTerms)
+	if err != nil {
+		return GCFApprox{}, err
+	}
+
+	r := NewRange(x, x, true, true)
+	return GCFApprox{
+		Convergent:  x,
+		Range:       &r,
+		PrefixTerms: prefixTerms,
+	}, nil
+}
+
+func MVPRadicandDefaultFourOverPiSnapshot(prefixTerms int) (GCFApprox, error) {
+	return MVPApproxSnapshotFromApproxFunc(MVPDefaultFourOverPiApproxFunc(), prefixTerms)
+}
+func MVPRadicandDefaultEApproxSnapshot(prefixTerms int) (GCFApprox, error) {
+	return MVPDefaultEApproxSnapshot(prefixTerms)
+}
+func MVPRadicandScaledSquareOfFourOverPiApprox(fourOverPi GCFApprox) (GCFApprox, error) {
+	sq, err := fourOverPi.Convergent.Mul(fourOverPi.Convergent)
+	if err != nil {
+		return GCFApprox{}, err
+	}
+
+	scaled, err := mustRat(3, 16).Mul(sq)
+	if err != nil {
+		return GCFApprox{}, err
+	}
+
+	r := NewRange(scaled, scaled, true, true)
+	return GCFApprox{
+		Convergent:  scaled,
+		Range:       &r,
+		PrefixTerms: fourOverPi.PrefixTerms,
+	}, nil
+}
+func MVPRadicandAssembleFromSnapshots(
+	fourOverPi GCFApprox,
+	eApprox GCFApprox,
+) (GCFApprox, error) {
+	scaledSq, err := MVPRadicandScaledSquareOfFourOverPiApprox(fourOverPi)
+	if err != nil {
+		return GCFApprox{}, err
+	}
+
+	sum, err := scaledSq.Convergent.Add(eApprox.Convergent)
+	if err != nil {
+		return GCFApprox{}, err
+	}
+
+	r := NewRange(sum, sum, true, true)
+	prefixTerms := fourOverPi.PrefixTerms
+	if eApprox.PrefixTerms < prefixTerms || prefixTerms == 0 {
+		prefixTerms = eApprox.PrefixTerms
+	}
+
+	return GCFApprox{
+		Convergent:  sum,
+		Range:       &r,
+		PrefixTerms: prefixTerms,
+	}, nil
+}
+
 // mvp_sources.go v10

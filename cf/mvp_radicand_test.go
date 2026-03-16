@@ -420,4 +420,130 @@ func TestMVPNumeratorApproxWithBridgeTerms_IgnoresBridgeBudgetOnDirectSnapshotPa
 	}
 }
 
-// EOF
+func TestMVPRadicandSnapshotParts_DefaultFourOverPiSnapshotMatchesCanonicalConvergent(t *testing.T) {
+	got, err := MVPRadicandDefaultFourOverPiSnapshot(4)
+	if err != nil {
+		t.Fatalf("MVPRadicandDefaultFourOverPiSnapshot failed: %v", err)
+	}
+
+	want, err := MVPDefaultFourOverPiApproxSnapshot(4)
+	if err != nil {
+		t.Fatalf("MVPDefaultFourOverPiApproxSnapshot failed: %v", err)
+	}
+
+	if got.Convergent.Cmp(want.Convergent) != 0 {
+		t.Fatalf("got %v want %v", got.Convergent, want.Convergent)
+	}
+}
+
+func TestMVPRadicandSnapshotParts_DefaultESnapshotMatchesCanonicalConvergent(t *testing.T) {
+	got, err := MVPRadicandDefaultEApproxSnapshot(6)
+	if err != nil {
+		t.Fatalf("MVPRadicandDefaultEApproxSnapshot failed: %v", err)
+	}
+
+	want, err := MVPDefaultEApproxSnapshot(6)
+	if err != nil {
+		t.Fatalf("MVPDefaultEApproxSnapshot failed: %v", err)
+	}
+
+	if got.Convergent.Cmp(want.Convergent) != 0 {
+		t.Fatalf("got %v want %v", got.Convergent, want.Convergent)
+	}
+}
+
+func TestMVPRadicandSnapshotParts_ScaledSquareOfFourOverPiMatchesExistingSubexpression(t *testing.T) {
+	fourOverPi, err := MVPDefaultFourOverPiApproxSnapshot(4)
+	if err != nil {
+		t.Fatalf("MVPDefaultFourOverPiApproxSnapshot failed: %v", err)
+	}
+
+	got, err := MVPRadicandScaledSquareOfFourOverPiApprox(fourOverPi)
+	if err != nil {
+		t.Fatalf("MVPRadicandScaledSquareOfFourOverPiApprox failed: %v", err)
+	}
+
+	wantFourOverPi, err := GCFSourceConvergent(NewBrouncker4OverPiGCFSource(), 4)
+	if err != nil {
+		t.Fatalf("GCFSourceConvergent failed: %v", err)
+	}
+	wantSq, err := wantFourOverPi.Mul(wantFourOverPi)
+	if err != nil {
+		t.Fatalf("Mul failed: %v", err)
+	}
+	want, err := mustRat(3, 16).Mul(wantSq)
+	if err != nil {
+		t.Fatalf("Mul scale failed: %v", err)
+	}
+
+	if got.Convergent.Cmp(want) != 0 {
+		t.Fatalf("got %v want %v", got.Convergent, want)
+	}
+}
+
+func TestMVPRadicandSnapshotParts_AssembleMatchesExistingApprox(t *testing.T) {
+	fourOverPi, err := MVPDefaultFourOverPiApproxSnapshot(4)
+	if err != nil {
+		t.Fatalf("MVPDefaultFourOverPiApproxSnapshot failed: %v", err)
+	}
+	eSnap, err := MVPDefaultEApproxSnapshot(6)
+	if err != nil {
+		t.Fatalf("MVPDefaultEApproxSnapshot failed: %v", err)
+	}
+
+	got, err := MVPRadicandAssembleFromSnapshots(fourOverPi, eSnap)
+	if err != nil {
+		t.Fatalf("MVPRadicandAssembleFromSnapshots failed: %v", err)
+	}
+
+	want, err := MVPThreeOverPiSquaredPlusEApprox(4, 6)
+	if err != nil {
+		t.Fatalf("MVPThreeOverPiSquaredPlusEApprox failed: %v", err)
+	}
+
+	if got.Convergent.Cmp(want) != 0 {
+		t.Fatalf("got %v want %v", got.Convergent, want)
+	}
+	if got.Range == nil {
+		t.Fatalf("expected point range")
+	}
+	if got.Range.Lo.Cmp(want) != 0 || got.Range.Hi.Cmp(want) != 0 {
+		t.Fatalf("got range %v want point %v", *got.Range, want)
+	}
+}
+
+func TestMVPRadicandSnapshotParts_LambertAssemblyMatchesAlternateApprox(t *testing.T) {
+	fourOverPiFn, err := MVPFourOverPiApproxFuncForFamily(MVPFourOverPiFamilyLambert)
+	if err != nil {
+		t.Fatalf("MVPFourOverPiApproxFuncForFamily failed: %v", err)
+	}
+
+	fourOverPi, err := MVPApproxSnapshotFromApproxFunc(fourOverPiFn, 8)
+	if err != nil {
+		t.Fatalf("MVPApproxSnapshotFromApproxFunc failed: %v", err)
+	}
+	eSnap, err := MVPDefaultEApproxSnapshot(6)
+	if err != nil {
+		t.Fatalf("MVPDefaultEApproxSnapshot failed: %v", err)
+	}
+
+	got, err := MVPRadicandAssembleFromSnapshots(fourOverPi, eSnap)
+	if err != nil {
+		t.Fatalf("MVPRadicandAssembleFromSnapshots failed: %v", err)
+	}
+
+	want, err := MVPThreeOverPiSquaredPlusEApproxWithFourOverPiApprox(
+		MVPFourOverPiApproxLambert,
+		8,
+		6,
+	)
+	if err != nil {
+		t.Fatalf("MVPThreeOverPiSquaredPlusEApproxWithFourOverPiApprox failed: %v", err)
+	}
+
+	if got.Convergent.Cmp(want) != 0 {
+		t.Fatalf("got %v want %v", got.Convergent, want)
+	}
+}
+
+// EOF mvp_radicand_test.go v1
