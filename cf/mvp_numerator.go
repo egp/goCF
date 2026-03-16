@@ -38,7 +38,7 @@ func MVPNumeratorRadicandBridgeSource(
 	fourOverPiPrefixTerms int,
 	ePrefixTerms int,
 ) (GCFSource, error) {
-	return MVPThreeOverPiSquaredPlusEFiniteBridgeSource(
+	return MVPThreeOverPiSquaredPlusERadicandSource(
 		fourOverPiPrefixTerms,
 		ePrefixTerms,
 	)
@@ -106,7 +106,7 @@ func MVPNumeratorRadicandApproxSnapshot(
 	ePrefixTerms int,
 	bridgeTerms int,
 ) (GCFApprox, error) {
-	return MVPThreeOverPiSquaredPlusEFiniteBridgeSnapshot(
+	return MVPThreeOverPiSquaredPlusERadicandSnapshot(
 		fourOverPiPrefixTerms,
 		ePrefixTerms,
 		bridgeTerms,

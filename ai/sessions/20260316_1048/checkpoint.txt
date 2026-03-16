@@ -1,35 +1,13 @@
-Current milestone: decide whether the narrowed numerator seam is acceptable for MVP sign-off.
-MVP target expression:
-  sqrt(3/pi^2 + e) / (tanh(sqrt(5)) - sin(69°))
-
-Canonical defaults:
-- 4/pi family: Brouncker
-- e source: ECFGSource
-- fourOverPi prefix terms: 6
-- e prefix terms: 8
-- numerator bridge prefix budget: 64
-
-What works:
-- canonical target bound path exists and is green
-- denominator path is acceptable for MVP
-- denominator excludes zero
-- target assembly is bounded/non-point as intended
-- Lambert parity exists at the 4/pi approximation layer
-- audit tests document current exceptions
-
-Current explicit exceptions:
-- exact-tail 69° path: MVP69DegreeGCFSource + MVP69DegreeTail
-- finite numerator bridge behind MVPNumeratorRadicandBridgeSource
-
-Key numerator layering:
-- MVPNumeratorRadicandApprox(...)
-- MVPNumeratorRadicandBridgeSource(...)
-- MVPNumeratorApprox(...)
-
-What is not settled:
-- whether the current narrowed numerator seam is good enough for MVP
-- or whether one more source-driven replacement step is needed
-
-Immediate next step:
-- add MVP-readiness / seam-decision tests, not broad redesign
-- keep Brouncker canonical and Lambert parity-only
+Project: Go continued-fraction / generalized-continued-fraction library targeting MVP evaluation of sqrt(3/pi^2 + e) / (tanh(sqrt(5)) - sin(69°)) using mathematically justified CF/GCF-based reasoning.
+Current milestone: isolate all temporary MVP exceptions behind explicit names and narrow seams before replacing one exception with a more source-driven path.
+Working components: canonical 4/pi path is Brouncker; Lambert retained as parity/alternate approx path at 4/pi layer; numerator path works through explicit finite bridge helpers and GCFApprox snapshot into unary sqrt; denominator path works through explicit finite exact-tail 69° helpers and degree-aware sin/tanh(sqrt(5)) bounds; full target returns a positive inside range.
+Working components: legacy numerator bridge names are compatibility wrappers over explicit finite-bridge helpers.
+Working components: legacy 69° names are compatibility wrappers over explicit finite exact-tail helpers.
+Working components: target-level bridge stability tests are green; current and sharper target budgets overlap and sharper budgets do not widen the target range.
+Known failures: no current failing tests reported; full target is still a bounded non-point result, not a certified point.
+Known limitations: numerator radicand still collapses to a bounded rational before finite bridge adaptation; denominator still relies on an explicit 69° finite exact-tail exception.
+Next immediate task: choose and execute the next real architectural replacement step, likely replacing either the numerator finite bridge or the denominator exact-tail exception with a more source-driven construction.
+Constraints/invariants: Go only; mathematical correctness first; TDD preferred; keep steps small; do not assume file contents—request current files before edits.
+Constraints/invariants: Brouncker remains canonical unless explicitly changed.
+Constraints/invariants: keep context small and avoid broad redesign.
+Constraints/invariants: prefer explicit temporary-exception names; when proposing code changes, specify exact file targets and prefer whole-function replacements or clear append locations.

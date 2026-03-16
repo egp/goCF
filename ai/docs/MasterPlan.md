@@ -3,10 +3,18 @@
 # goCF Master Plan
 
 ## Mission
-Build a mathematically correct, testable continued-fraction arithmetic library with strong GCF support and eventually a real streaming `sqrt` operator that emits certified digits rather than only collapsing bounded approximations to rationals.
+Build a mathematically correct, testable continued-fraction arithmetic library with strong GCF support, robust unary/operator plumbing, and eventually real streaming operators that emit certified digits rather than only collapsing bounded approximations to rationals.
 
 ## Current status
-The project has largely completed the sqrt migration/refactor phase. The remaining work is now primarily operator completion, not cleanup.
+The project has moved from broad sqrt refactor work into MVP target construction and exception isolation for a concrete expression:
+
+    sqrt(3/pi^2 + e) / (tanh(sqrt(5)) - sin(69°))
+
+Current mathematical float estimates for that target are:
+
+- target ≈ 39.66207809377289
+- numerator sqrt(3/pi^2 + e) ≈ 1.738460634983162
+- denominator tanh(sqrt(5)) - sin(69°) ≈ 0.04383180908657702
 
 What is working:
 - exact-tail transform streams for ULFT / DiagBLFT / BLFT
@@ -17,11 +25,17 @@ What is working:
 - unary reciprocal operator for GCF exact-tail and bounded GCF-prefix input
 - CF-side certified-progressive sqrt stream
 - reusable certified CF range certifier/emitter
+- canonical MVP 4/pi family is Brouncker
+- Lambert retained as an alternate/parity approximation path at the 4/pi layer
+- numerator path works through an explicit finite radicand bridge, a GCFApprox snapshot, and unary sqrt ingestion
+- denominator path works through explicit finite exact-tail 69° helpers plus degree-aware sin and tanh(sqrt(5)) bounds
+- full MVP target currently returns a positive inside range
 
 What is not complete:
-- GCF-side certified-progressive sqrt is drafted but currently hangs on adapted `sqrt(2)`
-- progressive streams still rebuild/replay rather than carrying a principled persistent transformed remainder state
-- diagonal / transform-driven sqrt is not yet the main engine
+- numerator radicand 3/pi^2 + e still collapses to a bounded rational before finite bridge adaptation
+- denominator still relies on an explicit finite exact-tail exception for 69°
+- full target is still a bounded non-point result, not a certified point
+- GCF-side certified-progressive sqrt is still not the main production engine for the MVP target path
 - final public naming / wrapper retirement / docs are deferred
 
 ## Completed work
@@ -110,46 +124,63 @@ Reusable components added:
 - `CertifyCFDigitsFromRange`
 - `CertifiedCFRangeEmitter`
 
+### MVP target exception isolation
+The current MVP target path has been narrowed and clarified:
+- canonical radicand seam for the numerator now routes through GCF-facing source/snapshot helpers
+- explicit finite-bridge names now own the current numerator radicand bridge implementation
+- legacy numerator bridge names are compatibility wrappers
+- explicit finite exact-tail names now own the current 69° denominator exception
+- legacy 69° names are compatibility wrappers
+- target-level bridge stability tests are green
+- current and sharper target budgets overlap
+- sharper numerator budgets do not widen the target range
+
 ## Current milestone
-Finish general sqrt as a real operator by stabilizing GCF-side progressive certification and then replacing replay/rebuild logic with a principled persistent transformed remainder state.
+Finish the MVP target path so that every unary/operator entry is GCF-ingesting, all temporary exceptions are explicit and isolated, and the next architectural replacement can target one remaining temporary seam locally.
 
 ## Critical path to completion
 
-1. Stabilize GCF unfinished-tail enclosure / progress guarantees
-2. Finish multi-digit certified-progressive GCF sqrt
-3. Replace replay-on-refinement with persistent transformed remainder state
-4. Drive remainder/update and emission through diagonal / transform machinery
-5. Unify progressive sqrt architecture across CF and GCF input
-6. Finalize unary reciprocal as a polished first-class operator family
-7. Final naming / wrapper retirement / duplicate-test retirement / docs
+1. Keep all unary/operator entry points GCF-ingesting
+2. Preserve explicit naming and isolation of temporary MVP exceptions
+3. Replace either the numerator finite radicand bridge or the denominator 69° finite exact-tail exception with a more source-driven construction
+4. Improve target inspection/output so the MVP target can be reported as:
+   - regular continued fraction terms
+   - approximate rational
+   - approximate float
+5. Advance from bounded non-point target range toward a tighter/certified point result where mathematically justified
+6. Resume broader operator completion and eventual streaming/certified-progressive operator unification
 
 ## Immediate next technical focus
-Diagnose and fix the hang in the GCF progressive sqrt path:
-- `TestSqrtCertifiedGCFPrefixStream_Sqrt2_RefinesAndContinues`
+Choose and execute the next real architectural replacement step:
+- likely replace the numerator finite radicand bridge with a more source-driven radicand construction
+- alternatively replace the denominator 69° exact-tail exception if that path proves more tractable
 
-Most likely root area:
-- unfinished-tail enclosure quality / progress guarantees on the GCF side
-- range refinement may be rebuilding without producing additional certifiable progress
-
-The next fix should target GCF unfinished-tail enclosure/progress behavior, not more surface API patching.
+Also prepare a target-level inspection surface so the current MVP result can be rendered as:
+- RCF terms
+- approximate rational
+- approximate float
 
 ## Known risks / unresolved design questions
-- Is current GCF unfinished-tail metadata/range information strong enough for progressive certification, especially for adapted CF sources?
-- Should GCF progressive sqrt require stronger monotone-progress checks to avoid rebuild loops?
-- How much of the eventual remainder/update engine should live in generic range certifier code vs dedicated diagonal/transform state?
-- When the operator stabilizes, should public names keep legacy wrappers or collapse onto the canonical/internal naming scheme?
+- How quickly can 3/pi^2 + e move from bounded-rational collapse to a more source-driven construction?
+- Is the denominator 69° finite exact-tail exception best retired before or after the numerator bridge?
+- How far should MVP go toward a point result versus accepting a mathematically justified bounded range?
+- When operator stabilizes, should public names keep compatibility wrappers or collapse onto canonical names?
 
 ## Deferred work / future ideas
-- final naming/API cleanup
+- final naming/API cleanup after exception replacement
 - retirement of remaining compatibility wrappers
 - broader documentation rewrite
-- decimal digit emission (low priority)
+- decimal digit emission beyond MVP reporting
 - broader unary-operator family beyond reciprocal/sqrt
+- eventually real streaming sqrt/operator machinery as the main engine rather than bounded-collapse staging
 
 ## Practical guidance
 - Do not restart broad refactoring
 - Prefer mathematically justified fixes over API cosmetics
 - Use the fast full suite (`go test ./cf`) frequently
-- For new work, target the operator path, not wrapper proliferation
+- For new work, target explicit temporary seams, not broad redesign
+- Keep Brouncker canonical unless explicitly changed
+- Keep steps small and test-driven
+- When changing code, prefer whole-function replacements or clearly identified append locations
 
 # EOF MasterPlan.md
