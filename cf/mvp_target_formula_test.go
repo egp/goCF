@@ -212,6 +212,34 @@ func TestMVPTargetBounds_SharperNumeratorBudgetsDoNotWidenRange(t *testing.T) {
 	}
 }
 
+func TestMVPTargetBounds_CurrentBridgeBudgetIsStable(t *testing.T) {
+	got, err := MVPTargetBoundsWithNumeratorBridgeTerms(
+		MVPDefaultFourOverPiPrefixTerms,
+		MVPDefaultEPrefixTerms,
+		DefaultSqrtPolicy2(),
+		Degrees(mustRat(69, 1)),
+		64,
+	)
+	if err != nil {
+		t.Fatalf("MVPTargetBoundsWithNumeratorBridgeTerms(64) failed: %v", err)
+	}
+
+	want, err := MVPTargetBoundsWithNumeratorBridgeTerms(
+		MVPDefaultFourOverPiPrefixTerms,
+		MVPDefaultEPrefixTerms,
+		DefaultSqrtPolicy2(),
+		Degrees(mustRat(69, 1)),
+		96,
+	)
+	if err != nil {
+		t.Fatalf("MVPTargetBoundsWithNumeratorBridgeTerms(96) failed: %v", err)
+	}
+
+	if got.Lo.Cmp(want.Lo) != 0 || got.Hi.Cmp(want.Hi) != 0 {
+		t.Fatalf("target range not stable across bridge budgets: got=%v want=%v", got, want)
+	}
+}
+
 // Full target formula intentionally lives in test code only for now:
 //
 //	sqrt(3/pi^2 + e) / (tanh(sqrt(5)) - sin(69°))

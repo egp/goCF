@@ -11,44 +11,20 @@ import "fmt"
 //   - numerator is a bounded rational point approximation
 //   - denominator is a certified positive inside range
 //   - quotient is enclosed by dividing the numerator point by the denominator range
+
 func MVPTargetBounds(
 	fourOverPiPrefixTerms int,
 	ePrefixTerms int,
 	sqrtPolicy SqrtPolicy2,
 	angle Angle,
 ) (Range, error) {
-	num, err := MVPNumeratorApprox(fourOverPiPrefixTerms, ePrefixTerms, sqrtPolicy)
-	if err != nil {
-		return Range{}, err
-	}
-
-	den, err := MVPDenominatorBounds(sqrtPolicy, angle)
-	if err != nil {
-		return Range{}, err
-	}
-	if den.Contains(intRat(0)) {
-		return Range{}, fmt.Errorf("MVPTargetBounds: denominator range contains 0: %v", den)
-	}
-	if den.Lo.Cmp(intRat(0)) <= 0 || den.Hi.Cmp(intRat(0)) <= 0 {
-		return Range{}, fmt.Errorf("MVPTargetBounds: denominator range must be strictly positive: %v", den)
-	}
-
-	numRange := NewRange(num, num, true, true)
-	recipDen, err := ReciprocalRangeConservative(den)
-	if err != nil {
-		return Range{}, err
-	}
-
-	lo, err := numRange.Lo.Mul(recipDen.Lo)
-	if err != nil {
-		return Range{}, err
-	}
-	hi, err := numRange.Hi.Mul(recipDen.Hi)
-	if err != nil {
-		return Range{}, err
-	}
-
-	return NewRange(lo, hi, true, true), nil
+	return MVPTargetBoundsWithNumeratorBridgeTerms(
+		fourOverPiPrefixTerms,
+		ePrefixTerms,
+		sqrtPolicy,
+		angle,
+		MVPNumeratorBridgePrefixTerms,
+	)
 }
 
 func MVPTargetBoundsDefault() (Range, error) {
@@ -77,6 +53,52 @@ func MVPTargetApprox(
 		return Rational{}, fmt.Errorf("MVPTargetApprox: bounded non-point result")
 	}
 	return r.Lo, nil
+}
+
+func MVPTargetBoundsWithNumeratorBridgeTerms(
+	fourOverPiPrefixTerms int,
+	ePrefixTerms int,
+	sqrtPolicy SqrtPolicy2,
+	angle Angle,
+	bridgeTerms int,
+) (Range, error) {
+	num, err := MVPNumeratorApproxWithBridgeTerms(
+		fourOverPiPrefixTerms,
+		ePrefixTerms,
+		sqrtPolicy,
+		bridgeTerms,
+	)
+	if err != nil {
+		return Range{}, err
+	}
+
+	den, err := MVPDenominatorBounds(sqrtPolicy, angle)
+	if err != nil {
+		return Range{}, err
+	}
+	if den.Contains(intRat(0)) {
+		return Range{}, fmt.Errorf("MVPTargetBoundsWithNumeratorBridgeTerms: denominator range contains 0: %v", den)
+	}
+	if den.Lo.Cmp(intRat(0)) <= 0 || den.Hi.Cmp(intRat(0)) <= 0 {
+		return Range{}, fmt.Errorf("MVPTargetBoundsWithNumeratorBridgeTerms: denominator range must be strictly positive: %v", den)
+	}
+
+	numRange := NewRange(num, num, true, true)
+	recipDen, err := ReciprocalRangeConservative(den)
+	if err != nil {
+		return Range{}, err
+	}
+
+	lo, err := numRange.Lo.Mul(recipDen.Lo)
+	if err != nil {
+		return Range{}, err
+	}
+	hi, err := numRange.Hi.Mul(recipDen.Hi)
+	if err != nil {
+		return Range{}, err
+	}
+
+	return NewRange(lo, hi, true, true), nil
 }
 
 func MVPTargetApproxDefault() (Rational, error) {
