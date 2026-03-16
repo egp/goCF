@@ -44,4 +44,26 @@ func MVPThreeOverPiSquaredPlusEApproxSnapshot(
 	return GCFApproxFromPrefix(src, bridgeTerms)
 }
 
+func MVPThreeOverPiSquaredPlusEFiniteBridgeSource(
+	fourOverPiPrefixTerms int,
+	ePrefixTerms int,
+) (GCFSource, error) {
+	return MVPThreeOverPiSquaredPlusEAsGCFSource(
+		fourOverPiPrefixTerms,
+		ePrefixTerms,
+	)
+}
+
+func MVPThreeOverPiSquaredPlusEFiniteBridgeSnapshot(
+	fourOverPiPrefixTerms int,
+	ePrefixTerms int,
+	bridgeTerms int,
+) (GCFApprox, error) {
+	return MVPThreeOverPiSquaredPlusEApproxSnapshot(
+		fourOverPiPrefixTerms,
+		ePrefixTerms,
+		bridgeTerms,
+	)
+}
+
 // mvp_numerator_gcf_bridge.go v1

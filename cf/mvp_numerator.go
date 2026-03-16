@@ -38,7 +38,10 @@ func MVPNumeratorRadicandBridgeSource(
 	fourOverPiPrefixTerms int,
 	ePrefixTerms int,
 ) (GCFSource, error) {
-	return MVPThreeOverPiSquaredPlusEAsGCFSource(fourOverPiPrefixTerms, ePrefixTerms)
+	return MVPThreeOverPiSquaredPlusEFiniteBridgeSource(
+		fourOverPiPrefixTerms,
+		ePrefixTerms,
+	)
 }
 
 // MVPNumeratorApprox returns a bounded rational approximation for:
@@ -103,7 +106,7 @@ func MVPNumeratorRadicandApproxSnapshot(
 	ePrefixTerms int,
 	bridgeTerms int,
 ) (GCFApprox, error) {
-	return MVPThreeOverPiSquaredPlusEApproxSnapshot(
+	return MVPThreeOverPiSquaredPlusEFiniteBridgeSnapshot(
 		fourOverPiPrefixTerms,
 		ePrefixTerms,
 		bridgeTerms,
