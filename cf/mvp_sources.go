@@ -1,4 +1,4 @@
-// mvp_sources.go v9
+// mvp_sources.go v10
 package cf
 
 import "fmt"
@@ -32,29 +32,16 @@ func MVPEGCFSource() GCFSource {
 	return NewECFGSource()
 }
 
-// MVP69DegreeGCFSource returns a finite GCF prefix source that, together with
-// MVP69DegreeTail(), evaluates exactly to 69.
+// MVP69DegreeGCFSource returns the canonical exact finite GCF source for 69°.
 //
 // Construction:
 //   - 68 + 1/1 = 69
+//   - encoded directly as a finite two-term GCF
 func MVP69DegreeGCFSource() GCFSource {
 	return NewSliceGCF(
 		[2]int64{68, 1},
 		[2]int64{1, 1},
 	)
-}
-
-// MVP69DegreeTail returns the exact tail used with MVP69DegreeGCFSource().
-func MVP69DegreeTail() Rational {
-	return mustRat(1, 1)
-}
-
-func MVP69DegreeFiniteExactTailSource() GCFSource {
-	return NewSliceGCF([2]int64{68, 1})
-}
-
-func MVP69DegreeFiniteExactTailTail() Rational {
-	return mustRat(1, 1)
 }
 
 // MVPFourOverPiApproxFunc is a subexpression-level hook that returns a bounded
@@ -281,4 +268,4 @@ func MVPThreeOverPiSquaredPlusEApprox(fourOverPiPrefixTerms, ePrefixTerms int) (
 	)
 }
 
-// mvp_sources.go v9
+// mvp_sources.go v10
