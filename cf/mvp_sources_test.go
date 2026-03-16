@@ -300,4 +300,43 @@ func TestMVPThreeOverPiSquaredPlusEApprox_IsPositiveAndExceedsEApprox(t *testing
 	}
 }
 
+func TestMVPThreeOverPiSquaredPlusEApproxSnapshot_RoundTripsApproxValue(t *testing.T) {
+	got, err := MVPThreeOverPiSquaredPlusEApproxSnapshot(4, 6, 64)
+	if err != nil {
+		t.Fatalf("MVPThreeOverPiSquaredPlusEApproxSnapshot failed: %v", err)
+	}
+
+	want, err := MVPThreeOverPiSquaredPlusEApprox(4, 6)
+	if err != nil {
+		t.Fatalf("MVPThreeOverPiSquaredPlusEApprox failed: %v", err)
+	}
+
+	if got.Convergent.Cmp(want) != 0 {
+		t.Fatalf("got %v want %v", got.Convergent, want)
+	}
+}
+
+func TestMVPThreeOverPiSquaredPlusEApproxSnapshot_RejectsBadBridgeTerms(t *testing.T) {
+	_, err := MVPThreeOverPiSquaredPlusEApproxSnapshot(4, 6, 0)
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+}
+
+func TestMVPThreeOverPiSquaredPlusEApproxSnapshot_CurrentBridgeBudgetIsStable(t *testing.T) {
+	got, err := MVPThreeOverPiSquaredPlusEApproxSnapshot(4, 6, 64)
+	if err != nil {
+		t.Fatalf("MVPThreeOverPiSquaredPlusEApproxSnapshot(64) failed: %v", err)
+	}
+
+	want, err := MVPThreeOverPiSquaredPlusEApproxSnapshot(4, 6, 96)
+	if err != nil {
+		t.Fatalf("MVPThreeOverPiSquaredPlusEApproxSnapshot(96) failed: %v", err)
+	}
+
+	if got.Convergent.Cmp(want.Convergent) != 0 {
+		t.Fatalf("snapshot convergent not stable: got=%v want=%v", got.Convergent, want.Convergent)
+	}
+}
+
 // mvp_sources_test.go v9
