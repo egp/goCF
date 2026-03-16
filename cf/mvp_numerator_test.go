@@ -225,4 +225,48 @@ func TestMVPNumeratorApprox_CurrentBridgeBudgetIsStable(t *testing.T) {
 	}
 }
 
+func TestMVPNumeratorApprox_SharperRadicandBudgetsRemainPositive(t *testing.T) {
+	got, err := MVPNumeratorApproxDefault(8, 10)
+	if err != nil {
+		t.Fatalf("MVPNumeratorApproxDefault failed: %v", err)
+	}
+	if got.Cmp(intRat(0)) <= 0 {
+		t.Fatalf("got %v want positive", got)
+	}
+}
+
+func TestMVPNumeratorApprox_SharperRadicandBudgetsExceedOne(t *testing.T) {
+	got, err := MVPNumeratorApproxDefault(8, 10)
+	if err != nil {
+		t.Fatalf("MVPNumeratorApproxDefault failed: %v", err)
+	}
+	if got.Cmp(intRat(1)) <= 0 {
+		t.Fatalf("got %v want > 1", got)
+	}
+}
+
+func TestMVPNumeratorApprox_CurrentAndSharperBudgetsAreDistinctButClose(t *testing.T) {
+	current, err := MVPNumeratorApproxDefault(
+		MVPDefaultFourOverPiPrefixTerms,
+		MVPDefaultEPrefixTerms,
+	)
+	if err != nil {
+		t.Fatalf("MVPNumeratorApproxDefault current failed: %v", err)
+	}
+
+	sharper, err := MVPNumeratorApproxDefault(8, 10)
+	if err != nil {
+		t.Fatalf("MVPNumeratorApproxDefault sharper failed: %v", err)
+	}
+
+	if current.Cmp(sharper) == 0 {
+		t.Fatalf("expected sharper budgets to change the bounded numerator approximation")
+	}
+
+	// Both approximations should still describe the same coarse MVP shape.
+	if current.Cmp(intRat(1)) <= 0 || sharper.Cmp(intRat(1)) <= 0 {
+		t.Fatalf("current=%v sharper=%v want both > 1", current, sharper)
+	}
+}
+
 // mvp_numerator_test.go v4

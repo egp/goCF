@@ -139,6 +139,79 @@ func TestMVPTargetApproxDefault_CurrentlyReportsBoundedNonPoint(t *testing.T) {
 	}
 }
 
+func TestMVPTargetBounds_SharperNumeratorBudgetsRemainInsideAndPositive(t *testing.T) {
+	got, err := MVPTargetBounds(
+		8,
+		10,
+		DefaultSqrtPolicy2(),
+		Degrees(mustRat(69, 1)),
+	)
+	if err != nil {
+		t.Fatalf("MVPTargetBounds failed: %v", err)
+	}
+
+	if !got.IsInside() {
+		t.Fatalf("got %v want inside", got)
+	}
+	if got.Lo.Cmp(intRat(0)) <= 0 {
+		t.Fatalf("got %v want strictly positive lower bound", got)
+	}
+}
+
+func TestMVPTargetBounds_CurrentAndSharperBudgetsOverlap(t *testing.T) {
+	current, err := MVPTargetBoundsDefault()
+	if err != nil {
+		t.Fatalf("MVPTargetBoundsDefault failed: %v", err)
+	}
+
+	sharper, err := MVPTargetBounds(
+		8,
+		10,
+		DefaultSqrtPolicy2(),
+		Degrees(mustRat(69, 1)),
+	)
+	if err != nil {
+		t.Fatalf("MVPTargetBounds failed: %v", err)
+	}
+
+	if current.Hi.Cmp(sharper.Lo) < 0 || sharper.Hi.Cmp(current.Lo) < 0 {
+		t.Fatalf("ranges do not overlap: current=%v sharper=%v", current, sharper)
+	}
+}
+
+func TestMVPTargetBounds_SharperNumeratorBudgetsDoNotWidenRange(t *testing.T) {
+	current, err := MVPTargetBoundsDefault()
+	if err != nil {
+		t.Fatalf("MVPTargetBoundsDefault failed: %v", err)
+	}
+
+	sharper, err := MVPTargetBounds(
+		8,
+		10,
+		DefaultSqrtPolicy2(),
+		Degrees(mustRat(69, 1)),
+	)
+	if err != nil {
+		t.Fatalf("MVPTargetBounds failed: %v", err)
+	}
+
+	currentWidth, err := current.Hi.Sub(current.Lo)
+	if err != nil {
+		t.Fatalf("current width failed: %v", err)
+	}
+	sharperWidth, err := sharper.Hi.Sub(sharper.Lo)
+	if err != nil {
+		t.Fatalf("sharper width failed: %v", err)
+	}
+
+	if sharperWidth.Cmp(currentWidth) > 0 {
+		t.Fatalf(
+			"sharper numerator budgets widened target range: current=%v sharper=%v currentWidth=%v sharperWidth=%v",
+			current, sharper, currentWidth, sharperWidth,
+		)
+	}
+}
+
 // Full target formula intentionally lives in test code only for now:
 //
 //	sqrt(3/pi^2 + e) / (tanh(sqrt(5)) - sin(69°))
