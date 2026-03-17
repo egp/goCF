@@ -1,16 +1,9 @@
-// mvp_radicand_snapshot_legacy.go v2
+// mvp_radicand_snapshot_legacy.go v3
 package cf
 
 import "fmt"
 
-// MVPThreeOverPiSquaredPlusEApproxSnapshot is the legacy name for the current
-// radicand snapshot for:
-//
-//	3/pi^2 + e
-//
-// Deprecated MVP note:
-//   - prefer MVPRadicandAssembleSnapshotWithFourOverPiApprox
-//     or MVPRadicandSnapshot for new code
+// Legacy expression-specific wrapper retained temporarily while callers migrate.
 func MVPThreeOverPiSquaredPlusEApproxSnapshot(
 	fourOverPiPrefixTerms int,
 	ePrefixTerms int,
@@ -56,4 +49,4 @@ func MVPThreeOverPiSquaredPlusERadicandSnapshot(
 	)
 }
 
-// mvp_radicand_snapshot_legacy.go v2
+// mvp_radicand_snapshot_legacy.go v3

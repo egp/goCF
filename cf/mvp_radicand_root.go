@@ -1,4 +1,4 @@
-// mvp_radicand_root.go v1
+// mvp_radicand_root.go v2
 package cf
 
 import "fmt"
@@ -13,7 +13,10 @@ func MVPRadicandConvergent(
 	fourOverPiPrefixTerms int,
 	ePrefixTerms int,
 ) (Rational, error) {
-	return MVPRadicandAssembleConvergent(fourOverPiPrefixTerms, ePrefixTerms)
+	return MVPRadicandAssembleConvergent(
+		fourOverPiPrefixTerms,
+		ePrefixTerms,
+	)
 }
 
 func MVPRadicandSnapshot(
@@ -28,7 +31,7 @@ func MVPRadicandSnapshot(
 		)
 	}
 
-	return MVPThreeOverPiSquaredPlusERadicandSnapshot(
+	return MVPRadicandAssembleSnapshot(
 		fourOverPiPrefixTerms,
 		ePrefixTerms,
 		snapshotTerms,
@@ -152,4 +155,4 @@ func MVPRadicandRootTermsDefault(
 //
 //	    sqrt(3/pi^2 + e)
 //
-// mvp_radicand_root.go v1
+// mvp_radicand_root.go v2
