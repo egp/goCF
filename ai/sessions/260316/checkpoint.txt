@@ -1,0 +1,32 @@
+Project: goCF — mathematically correct continued-fraction arithmetic library for infinite GCF streams following Gosper, emitting primarily RCF.
+
+Current milestone:
+Retire MVP/target-formula-specific production scaffolding so the target formula is only a test client of the real operator architecture.
+
+Working components:
+- e ingested as GCF
+- sqrt(5) ingested as GCF
+- 69° represented as exact finite GCF input
+- full target formula assembled only in tests
+- denominator-specific assembly moved into test-local helpers
+- target-formula production files deleted
+- source-based finite bridge APIs removed from production
+- live numerator path uses direct radicand snapshot assembly
+- radicand assembly uses unified snapshot helpers
+- legacy radicand snapshot names remain as thin wrappers
+- tests are green
+
+Known failures:
+- none currently
+
+Next immediate task:
+- remove or rename remaining target-formula-specific production names, especially MVPNumerator* and lingering “Approx” names that are really snapshot/bounds concepts
+
+Constraints / invariants:
+- stay on the critical path
+- no float-based production work
+- finite GCFs are a subset of the same ingestion model
+- operators should consume stream-shaped inputs
+- production should avoid target-formula-specific APIs
+- prefer snapshot/range terminology over fake bridge/approx training wheels
+- work only from newly pasted files/test results; discard obsolete earlier versions
