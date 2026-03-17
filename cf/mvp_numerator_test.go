@@ -399,4 +399,20 @@ func TestMVPNumeratorRadicandApproxSnapshot_CurrentBridgeBudgetIsStable(t *testi
 	}
 }
 
+func TestMVPThreeOverPiSquaredPlusEApproxSnapshot_IsThinLegacyWrapper(t *testing.T) {
+	got, err := MVPThreeOverPiSquaredPlusEApproxSnapshot(4, 6, 64)
+	if err != nil {
+		t.Fatalf("MVPThreeOverPiSquaredPlusEApproxSnapshot failed: %v", err)
+	}
+
+	want, err := MVPThreeOverPiSquaredPlusERadicandSnapshot(4, 6, 64)
+	if err != nil {
+		t.Fatalf("MVPThreeOverPiSquaredPlusERadicandSnapshot failed: %v", err)
+	}
+
+	if got.Convergent.Cmp(want.Convergent) != 0 {
+		t.Fatalf("got %v want %v", got.Convergent, want.Convergent)
+	}
+}
+
 // mvp_numerator_test.go v4
