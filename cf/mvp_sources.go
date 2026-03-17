@@ -1,4 +1,4 @@
-// mvp_sources.go v11
+// mvp_sources.go v12
 package cf
 
 import "fmt"
@@ -155,63 +155,6 @@ func MVPDefaultEApproxSnapshot(prefixTerms int) (GCFApprox, error) {
 	)
 }
 
-func MVPThreeOverPiSquaredPlusEApproxWithFourOverPiApprox(
-	fourOverPiFn MVPFourOverPiApproxFunc,
-	fourOverPiPrefixTerms int,
-	ePrefixTerms int,
-) (Rational, error) {
-	fourOverPi, err := MVPApproxSnapshotFromApproxFunc(
-		fourOverPiFn,
-		fourOverPiPrefixTerms,
-	)
-	if err != nil {
-		return Rational{}, err
-	}
-
-	eApprox, err := MVPRadicandDefaultEApproxSnapshot(ePrefixTerms)
-	if err != nil {
-		return Rational{}, err
-	}
-
-	radicand, err := MVPRadicandAssembleFromSnapshots(fourOverPi, eApprox)
-	if err != nil {
-		return Rational{}, err
-	}
-
-	return radicand.Convergent, nil
-}
-
-// MVPFourOverPiApproxWithSource returns a bounded rational approximation of 4/pi
-// using the supplied GCF source factory and bounded prefix.
-//
-// Transitional note:
-//   - this hook fits source families that are natively 4/pi as GCFSource
-//   - Lambert parity uses MVPFourOverPiApproxLambert instead
-func MVPFourOverPiApproxWithSource(
-	srcFn func() GCFSource,
-	fourOverPiPrefixTerms int,
-) (Rational, error) {
-	a, err := MVPApproxSnapshotFromSourceFunc(srcFn, fourOverPiPrefixTerms)
-	if err != nil {
-		return Rational{}, err
-	}
-	return a.Convergent, nil
-}
-
-// MVPThreeOverPiSquaredPlusEApprox returns a bounded-prefix rational approximation
-// for:
-//
-//	3/pi^2 + e
-//
-// using the current canonical MVP source family.
-func MVPThreeOverPiSquaredPlusEApprox(fourOverPiPrefixTerms, ePrefixTerms int) (Rational, error) {
-	return MVPThreeOverPiSquaredPlusEApproxWithFourOverPiApprox(
-		MVPDefaultFourOverPiApproxFunc(),
-		fourOverPiPrefixTerms,
-		ePrefixTerms,
-	)
-}
-
 func MVPApproxSnapshotFromApproxFunc(
 	approxFn MVPFourOverPiApproxFunc,
 	prefixTerms int,
@@ -298,6 +241,105 @@ func MVPRadicandAssembleFromSnapshots(
 	}, nil
 }
 
+func MVPRadicandAssembleSnapshotWithFourOverPiApprox(
+	fourOverPiFn MVPFourOverPiApproxFunc,
+	fourOverPiPrefixTerms int,
+	ePrefixTerms int,
+) (GCFApprox, error) {
+	fourOverPi, err := MVPApproxSnapshotFromApproxFunc(
+		fourOverPiFn,
+		fourOverPiPrefixTerms,
+	)
+	if err != nil {
+		return GCFApprox{}, err
+	}
+
+	eApprox, err := MVPRadicandDefaultEApproxSnapshot(ePrefixTerms)
+	if err != nil {
+		return GCFApprox{}, err
+	}
+
+	return MVPRadicandAssembleFromSnapshots(fourOverPi, eApprox)
+}
+
+func MVPRadicandAssembleSnapshot(
+	fourOverPiPrefixTerms int,
+	ePrefixTerms int,
+) (GCFApprox, error) {
+	return MVPRadicandAssembleSnapshotWithFourOverPiApprox(
+		MVPDefaultFourOverPiApproxFunc(),
+		fourOverPiPrefixTerms,
+		ePrefixTerms,
+	)
+}
+
+func MVPRadicandAssembleConvergentWithFourOverPiApprox(
+	fourOverPiFn MVPFourOverPiApproxFunc,
+	fourOverPiPrefixTerms int,
+	ePrefixTerms int,
+) (Rational, error) {
+	radicand, err := MVPRadicandAssembleSnapshotWithFourOverPiApprox(
+		fourOverPiFn,
+		fourOverPiPrefixTerms,
+		ePrefixTerms,
+	)
+	if err != nil {
+		return Rational{}, err
+	}
+
+	return radicand.Convergent, nil
+}
+
+func MVPRadicandAssembleConvergent(
+	fourOverPiPrefixTerms int,
+	ePrefixTerms int,
+) (Rational, error) {
+	return MVPRadicandAssembleConvergentWithFourOverPiApprox(
+		MVPDefaultFourOverPiApproxFunc(),
+		fourOverPiPrefixTerms,
+		ePrefixTerms,
+	)
+}
+
+// Legacy expression-specific wrappers retained temporarily while tests migrate.
+
+func MVPThreeOverPiSquaredPlusEApproxWithFourOverPiApprox(
+	fourOverPiFn MVPFourOverPiApproxFunc,
+	fourOverPiPrefixTerms int,
+	ePrefixTerms int,
+) (Rational, error) {
+	return MVPRadicandAssembleConvergentWithFourOverPiApprox(
+		fourOverPiFn,
+		fourOverPiPrefixTerms,
+		ePrefixTerms,
+	)
+}
+
+// MVPFourOverPiApproxWithSource returns a bounded rational approximation of 4/pi
+// using the supplied GCF source factory and bounded prefix.
+//
+// Transitional note:
+//   - this hook fits source families that are natively 4/pi as GCFSource
+//   - Lambert parity uses MVPFourOverPiApproxLambert instead
+func MVPFourOverPiApproxWithSource(
+	srcFn func() GCFSource,
+	fourOverPiPrefixTerms int,
+) (Rational, error) {
+	a, err := MVPApproxSnapshotFromSourceFunc(srcFn, fourOverPiPrefixTerms)
+	if err != nil {
+		return Rational{}, err
+	}
+	return a.Convergent, nil
+}
+
+// Legacy expression-specific wrapper retained temporarily while tests migrate.
+func MVPThreeOverPiSquaredPlusEApprox(fourOverPiPrefixTerms, ePrefixTerms int) (Rational, error) {
+	return MVPRadicandAssembleConvergent(
+		fourOverPiPrefixTerms,
+		ePrefixTerms,
+	)
+}
+
 func MVPExactScalarGCFSource(n int64) (GCFSource, int, error) {
 	if n < 0 {
 		return nil, 0, fmt.Errorf("MVPExactScalarGCFSource: negative n %d", n)
@@ -340,4 +382,4 @@ func MVPRadicandScaleFactorSnapshot() (GCFApprox, error) {
 	}, nil
 }
 
-// mvp_sources.go v11
+// mvp_sources.go v12

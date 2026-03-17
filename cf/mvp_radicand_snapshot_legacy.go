@@ -25,25 +25,17 @@ func MVPThreeOverPiSquaredPlusEApproxSnapshot(
 
 // Production radicand snapshot path: build a direct point snapshot instead
 // of crossing the former finite bridge boundary.
+
 func MVPThreeOverPiSquaredPlusERadicandApproxSnapshotWithFourOverPiApprox(
 	fourOverPiFn MVPFourOverPiApproxFunc,
 	fourOverPiPrefixTerms int,
 	ePrefixTerms int,
 ) (GCFApprox, error) {
-	fourOverPi, err := MVPApproxSnapshotFromApproxFunc(
+	return MVPRadicandAssembleSnapshotWithFourOverPiApprox(
 		fourOverPiFn,
 		fourOverPiPrefixTerms,
+		ePrefixTerms,
 	)
-	if err != nil {
-		return GCFApprox{}, err
-	}
-
-	eApprox, err := MVPRadicandDefaultEApproxSnapshot(ePrefixTerms)
-	if err != nil {
-		return GCFApprox{}, err
-	}
-
-	return MVPRadicandAssembleFromSnapshots(fourOverPi, eApprox)
 }
 
 func MVPThreeOverPiSquaredPlusERadicandSnapshot(
@@ -58,8 +50,7 @@ func MVPThreeOverPiSquaredPlusERadicandSnapshot(
 		)
 	}
 
-	return MVPThreeOverPiSquaredPlusERadicandApproxSnapshotWithFourOverPiApprox(
-		MVPDefaultFourOverPiApproxFunc(),
+	return MVPRadicandAssembleSnapshot(
 		fourOverPiPrefixTerms,
 		ePrefixTerms,
 	)

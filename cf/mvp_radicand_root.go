@@ -13,7 +13,7 @@ func MVPRadicandConvergent(
 	fourOverPiPrefixTerms int,
 	ePrefixTerms int,
 ) (Rational, error) {
-	return MVPThreeOverPiSquaredPlusEApprox(fourOverPiPrefixTerms, ePrefixTerms)
+	return MVPRadicandAssembleConvergent(fourOverPiPrefixTerms, ePrefixTerms)
 }
 
 func MVPRadicandSnapshot(
