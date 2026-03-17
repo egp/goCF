@@ -1,0 +1,49 @@
+# requirements.md
+
+## Purpose
+
+Build a mathematically correct library for arithmetic on infinite generalized continued fraction streams (GCF), following Gosper and related work on arithmetic over generalized continued fractions, and emitting results primarily as regular continued fractions (RCF).
+
+The long-term goal is general arithmetic on infinite GCF streams. The current target formula involving pi, sqrt, and tanh is a milestone for validation, not the final purpose of the project.
+
+## Required capabilities
+
+The library shall provide:
+
+- GCF sources for well-known constants
+- unary operators including:
+  - reciprocal
+  - sqrt
+  - sin
+  - tanh
+- broader arithmetic on streamed values beyond the current target formula
+- primary output as RCF
+
+The library shall treat finite GCF inputs as a subset of the same ingestion model used for infinite GCF streams.
+
+The library shall be able to consume stream-shaped inputs at operator boundaries.
+
+## Design constraints
+
+The design shall prioritize, in order:
+
+1. mathematical correctness
+2. fidelity to Gosper-style GCF arithmetic
+3. sound emission of RCF output
+4. true infinite-stream support
+5. clean operator design
+6. testability
+
+The design may be changed as needed, since there are currently no external clients.
+
+Production code shall not retain:
+- temporary code
+- incomplete implementations
+- provisional implementations
+- special-case logic
+
+The canonical external output is RCF.
+
+Decimal digit emission may be added later as an extension, but it is not the primary interface.
+
+# EOF

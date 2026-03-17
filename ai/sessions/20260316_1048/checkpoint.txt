@@ -1,13 +1,29 @@
-Project: Go continued-fraction / generalized-continued-fraction library targeting MVP evaluation of sqrt(3/pi^2 + e) / (tanh(sqrt(5)) - sin(69°)) using mathematically justified CF/GCF-based reasoning.
-Current milestone: isolate all temporary MVP exceptions behind explicit names and narrow seams before replacing one exception with a more source-driven path.
-Working components: canonical 4/pi path is Brouncker; Lambert retained as parity/alternate approx path at 4/pi layer; numerator path works through explicit finite bridge helpers and GCFApprox snapshot into unary sqrt; denominator path works through explicit finite exact-tail 69° helpers and degree-aware sin/tanh(sqrt(5)) bounds; full target returns a positive inside range.
-Working components: legacy numerator bridge names are compatibility wrappers over explicit finite-bridge helpers.
-Working components: legacy 69° names are compatibility wrappers over explicit finite exact-tail helpers.
-Working components: target-level bridge stability tests are green; current and sharper target budgets overlap and sharper budgets do not widen the target range.
-Known failures: no current failing tests reported; full target is still a bounded non-point result, not a certified point.
-Known limitations: numerator radicand still collapses to a bounded rational before finite bridge adaptation; denominator still relies on an explicit 69° finite exact-tail exception.
-Next immediate task: choose and execute the next real architectural replacement step, likely replacing either the numerator finite bridge or the denominator exact-tail exception with a more source-driven construction.
-Constraints/invariants: Go only; mathematical correctness first; TDD preferred; keep steps small; do not assume file contents—request current files before edits.
-Constraints/invariants: Brouncker remains canonical unless explicitly changed.
-Constraints/invariants: keep context small and avoid broad redesign.
-Constraints/invariants: prefer explicit temporary-exception names; when proposing code changes, specify exact file targets and prefer whole-function replacements or clear append locations.
+Project: goCF — mathematically correct, testable continued-fraction / generalized-continued-fraction arithmetic with GCF-ingesting operator paths.
+
+Current milestone:
+Retire remaining MVP special seams and keep operator-facing paths uniformly GCF-shaped.
+
+Working components:
+- e is ingested as GCF via MVPEGCFSource / NewECFGSource
+- sqrt(5) is ingested as GCF via AdaptCFToGCF(Sqrt5CF())
+- 69° is represented as an exact finite GCF source, not tail-special handling
+- denominator no longer uses exact-tail trig entry
+- numerator live path no longer depends on fake finite bridge source
+- numerator radicand is assembled through explicit snapshot helpers
+- explicit exact scalar snapshots now exist for numerator scale-factor construction
+- target outputs currently support certified range, midpoint rational, and midpoint RCF terms
+
+Known failures:
+- none currently; tests are green
+
+Next immediate task:
+Decide whether to stop scalar cleanup at exact point snapshots for MVP, or add a tiny exact-finite-GCF scalar source helper and route scalar snapshots through that helper.
+
+Constraints / invariants:
+- stay on the critical path; no float work
+- prefer test-first: production stubs, failing tests, then implementation
+- finite GCFs are treated as a subset of GCF; ingesters should work by ingestion, not tail special cases
+- remove tail-era concepts and naming where practical
+- e should remain GCF-ingested
+- prefer full replacement files or contiguous complete replacement functions over partial block edits
+- do not speculate about APIs; work from pasted current source

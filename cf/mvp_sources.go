@@ -1,4 +1,4 @@
-// mvp_sources.go v10
+// mvp_sources.go v11
 package cf
 
 import "fmt"
@@ -155,60 +155,30 @@ func MVPDefaultEApproxSnapshot(prefixTerms int) (GCFApprox, error) {
 	)
 }
 
-// MVPThreeOverPiSquaredPlusEApproxWithFourOverPiApprox returns a bounded-prefix
-// rational approximation for:
-//
-//	3/pi^2 + e
-//
-// from a supplied bounded 4/pi approximation function:
-//
-//	(3/16) * (4/pi)^2 + e
 func MVPThreeOverPiSquaredPlusEApproxWithFourOverPiApprox(
 	fourOverPiFn MVPFourOverPiApproxFunc,
 	fourOverPiPrefixTerms int,
 	ePrefixTerms int,
 ) (Rational, error) {
-	if fourOverPiFn == nil {
-		return Rational{}, fmt.Errorf("MVPThreeOverPiSquaredPlusEApproxWithFourOverPiApprox: nil fourOverPiFn")
-	}
-	if fourOverPiPrefixTerms <= 0 {
-		return Rational{}, fmt.Errorf(
-			"MVPThreeOverPiSquaredPlusEApproxWithFourOverPiApprox: fourOverPiPrefixTerms must be > 0, got %d",
-			fourOverPiPrefixTerms,
-		)
-	}
-	if ePrefixTerms <= 0 {
-		return Rational{}, fmt.Errorf(
-			"MVPThreeOverPiSquaredPlusEApproxWithFourOverPiApprox: ePrefixTerms must be > 0, got %d",
-			ePrefixTerms,
-		)
-	}
-
-	fourOverPi, err := fourOverPiFn(fourOverPiPrefixTerms)
-	if err != nil {
-		return Rational{}, err
-	}
-	eApprox, err := GCFSourceConvergent(MVPEGCFSource(), ePrefixTerms)
+	fourOverPi, err := MVPApproxSnapshotFromApproxFunc(
+		fourOverPiFn,
+		fourOverPiPrefixTerms,
+	)
 	if err != nil {
 		return Rational{}, err
 	}
 
-	fourOverPiSq, err := fourOverPi.Mul(fourOverPi)
+	eApprox, err := MVPRadicandDefaultEApproxSnapshot(ePrefixTerms)
 	if err != nil {
 		return Rational{}, err
 	}
 
-	scale := mustRat(3, 16)
-	threeOverPiSq, err := scale.Mul(fourOverPiSq)
+	radicand, err := MVPRadicandAssembleFromSnapshots(fourOverPi, eApprox)
 	if err != nil {
 		return Rational{}, err
 	}
 
-	sum, err := threeOverPiSq.Add(eApprox)
-	if err != nil {
-		return Rational{}, err
-	}
-	return sum, nil
+	return radicand.Convergent, nil
 }
 
 // MVPFourOverPiApproxWithSource returns a bounded rational approximation of 4/pi
@@ -226,32 +196,6 @@ func MVPFourOverPiApproxWithSource(
 		return Rational{}, err
 	}
 	return a.Convergent, nil
-}
-
-// MVPThreeOverPiSquaredPlusEApproxWithFourOverPiSource returns a bounded-prefix
-// rational approximation for:
-//
-//	3/pi^2 + e
-//
-// using a supplied 4/pi GCF source:
-//
-//	(3/16) * (4/pi)^2 + e
-//
-// Transitional note:
-//   - this hook fits source families that are natively 4/pi as GCFSource
-//   - Lambert parity uses MVPThreeOverPiSquaredPlusEApproxWithFourOverPiApprox instead
-func MVPThreeOverPiSquaredPlusEApproxWithFourOverPiSource(
-	fourOverPiSrcFn func() GCFSource,
-	fourOverPiPrefixTerms int,
-	ePrefixTerms int,
-) (Rational, error) {
-	return MVPThreeOverPiSquaredPlusEApproxWithFourOverPiApprox(
-		func(prefixTerms int) (Rational, error) {
-			return MVPFourOverPiApproxWithSource(fourOverPiSrcFn, prefixTerms)
-		},
-		fourOverPiPrefixTerms,
-		ePrefixTerms,
-	)
 }
 
 // MVPThreeOverPiSquaredPlusEApprox returns a bounded-prefix rational approximation
@@ -298,6 +242,7 @@ func MVPApproxSnapshotFromApproxFunc(
 func MVPRadicandDefaultFourOverPiSnapshot(prefixTerms int) (GCFApprox, error) {
 	return MVPApproxSnapshotFromApproxFunc(MVPDefaultFourOverPiApproxFunc(), prefixTerms)
 }
+
 func MVPRadicandDefaultEApproxSnapshot(prefixTerms int) (GCFApprox, error) {
 	return MVPDefaultEApproxSnapshot(prefixTerms)
 }
@@ -352,21 +297,32 @@ func MVPRadicandAssembleFromSnapshots(
 		PrefixTerms: prefixTerms,
 	}, nil
 }
-func MVPExactScalarSnapshot(n int64) (GCFApprox, error) {
-	x := mustRat(n, 1)
-	r := NewRange(x, x, true, true)
-	return GCFApprox{
-		Convergent:  x,
-		Range:       &r,
-		PrefixTerms: 1,
-	}, nil
+
+func MVPExactScalarGCFSource(n int64) (GCFSource, int, error) {
+	if n < 0 {
+		return nil, 0, fmt.Errorf("MVPExactScalarGCFSource: negative n %d", n)
+	}
+	return NewSliceGCF([2]int64{n, 1}), 1, nil
 }
-func MVPRadicandScaleFactorSnapshot() (GCFApprox, error) {
-	three, err := MVPExactScalarSnapshot(3)
+
+func MVPExactScalarSnapshotFromSource(n int64) (GCFApprox, error) {
+	src, prefixTerms, err := MVPExactScalarGCFSource(n)
 	if err != nil {
 		return GCFApprox{}, err
 	}
-	sixteen, err := MVPExactScalarSnapshot(16)
+	return GCFApproxFromPrefix(src, prefixTerms)
+}
+
+func MVPExactScalarSnapshot(n int64) (GCFApprox, error) {
+	return MVPExactScalarSnapshotFromSource(n)
+}
+
+func MVPRadicandScaleFactorSnapshot() (GCFApprox, error) {
+	three, err := MVPExactScalarSnapshotFromSource(3)
+	if err != nil {
+		return GCFApprox{}, err
+	}
+	sixteen, err := MVPExactScalarSnapshotFromSource(16)
 	if err != nil {
 		return GCFApprox{}, err
 	}
@@ -384,4 +340,4 @@ func MVPRadicandScaleFactorSnapshot() (GCFApprox, error) {
 	}, nil
 }
 
-// mvp_sources.go v10
+// mvp_sources.go v11
