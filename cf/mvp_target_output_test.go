@@ -1,17 +1,48 @@
-// mvp_target_output_test.go v1
+// mvp_target_output_test.go v2
 package cf
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
-func TestMVPTargetMidpointApproxDefault_IsInsideTargetBounds(t *testing.T) {
-	got, err := MVPTargetMidpointApproxDefault()
+func mvpTestRangeMidpoint(r Range) (Rational, error) {
+	sum, err := r.Lo.Add(r.Hi)
 	if err != nil {
-		t.Fatalf("MVPTargetMidpointApproxDefault failed: %v", err)
+		return Rational{}, err
+	}
+	return sum.Div(mustRat(2, 1))
+}
+
+func mvpTestTargetMidpointApproxDefault() (Rational, error) {
+	r, err := mvpTestTargetBoundsDefault()
+	if err != nil {
+		return Rational{}, err
+	}
+	return mvpTestRangeMidpoint(r)
+}
+
+func mvpTestTargetMidpointApproxTermsDefault(digits int) ([]int64, error) {
+	if digits < 0 {
+		return nil, fmt.Errorf("mvpTestTargetMidpointApproxTermsDefault: negative digits %d", digits)
 	}
 
-	bounds, err := MVPTargetBoundsDefault()
+	approx, err := mvpTestTargetMidpointApproxDefault()
 	if err != nil {
-		t.Fatalf("MVPTargetBoundsDefault failed: %v", err)
+		return nil, err
+	}
+	return collectTerms(NewRationalCF(approx), digits), nil
+}
+
+func TestMVPTargetMidpointApproxDefault_IsInsideTargetBounds(t *testing.T) {
+	got, err := mvpTestTargetMidpointApproxDefault()
+	if err != nil {
+		t.Fatalf("mvpTestTargetMidpointApproxDefault failed: %v", err)
+	}
+
+	bounds, err := mvpTestTargetBoundsDefault()
+	if err != nil {
+		t.Fatalf("mvpTestTargetBoundsDefault failed: %v", err)
 	}
 
 	if !bounds.Contains(got) {
@@ -20,9 +51,9 @@ func TestMVPTargetMidpointApproxDefault_IsInsideTargetBounds(t *testing.T) {
 }
 
 func TestMVPTargetMidpointApproxDefault_IsPositive(t *testing.T) {
-	got, err := MVPTargetMidpointApproxDefault()
+	got, err := mvpTestTargetMidpointApproxDefault()
 	if err != nil {
-		t.Fatalf("MVPTargetMidpointApproxDefault failed: %v", err)
+		t.Fatalf("mvpTestTargetMidpointApproxDefault failed: %v", err)
 	}
 
 	if got.Cmp(intRat(0)) <= 0 {
@@ -31,9 +62,9 @@ func TestMVPTargetMidpointApproxDefault_IsPositive(t *testing.T) {
 }
 
 func TestMVPTargetMidpointApproxDefault_ExceedsOne(t *testing.T) {
-	got, err := MVPTargetMidpointApproxDefault()
+	got, err := mvpTestTargetMidpointApproxDefault()
 	if err != nil {
-		t.Fatalf("MVPTargetMidpointApproxDefault failed: %v", err)
+		t.Fatalf("mvpTestTargetMidpointApproxDefault failed: %v", err)
 	}
 
 	if got.Cmp(intRat(1)) <= 0 {
@@ -42,14 +73,14 @@ func TestMVPTargetMidpointApproxDefault_ExceedsOne(t *testing.T) {
 }
 
 func TestMVPTargetMidpointApprox_MatchesManualRangeMidpoint(t *testing.T) {
-	got, err := MVPTargetMidpointApproxDefault()
+	got, err := mvpTestTargetMidpointApproxDefault()
 	if err != nil {
-		t.Fatalf("MVPTargetMidpointApproxDefault failed: %v", err)
+		t.Fatalf("mvpTestTargetMidpointApproxDefault failed: %v", err)
 	}
 
-	r, err := MVPTargetBoundsDefault()
+	r, err := mvpTestTargetBoundsDefault()
 	if err != nil {
-		t.Fatalf("MVPTargetBoundsDefault failed: %v", err)
+		t.Fatalf("mvpTestTargetBoundsDefault failed: %v", err)
 	}
 
 	sum, err := r.Lo.Add(r.Hi)
@@ -67,14 +98,14 @@ func TestMVPTargetMidpointApprox_MatchesManualRangeMidpoint(t *testing.T) {
 }
 
 func TestMVPTargetMidpointApproxTermsDefault_MatchesMidpointRationalCF(t *testing.T) {
-	got, err := MVPTargetMidpointApproxTermsDefault(12)
+	got, err := mvpTestTargetMidpointApproxTermsDefault(12)
 	if err != nil {
-		t.Fatalf("MVPTargetMidpointApproxTermsDefault failed: %v", err)
+		t.Fatalf("mvpTestTargetMidpointApproxTermsDefault failed: %v", err)
 	}
 
-	approx, err := MVPTargetMidpointApproxDefault()
+	approx, err := mvpTestTargetMidpointApproxDefault()
 	if err != nil {
-		t.Fatalf("MVPTargetMidpointApproxDefault failed: %v", err)
+		t.Fatalf("mvpTestTargetMidpointApproxDefault failed: %v", err)
 	}
 
 	want := collectTerms(NewRationalCF(approx), 12)
@@ -89,4 +120,4 @@ func TestMVPTargetMidpointApproxTermsDefault_MatchesMidpointRationalCF(t *testin
 	}
 }
 
-// mvp_target_output_test.go v1
+// mvp_target_output_test.go v2

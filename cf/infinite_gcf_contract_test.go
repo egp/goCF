@@ -1,4 +1,4 @@
-// infinite_gcf_contract_test.go v4
+// infinite_gcf_contract_test.go v5
 package cf
 
 import (
@@ -75,9 +75,9 @@ func TestInfiniteGCFContract_CurrentNumeratorBridge_BudgetIsExplicit(t *testing.
 }
 
 func TestInfiniteGCFContract_CurrentMVPTargetStillWorksDespiteExceptions(t *testing.T) {
-	got, err := MVPTargetBoundsDefault()
+	got, err := mvpTestTargetBoundsDefault()
 	if err != nil {
-		t.Fatalf("MVPTargetBoundsDefault failed: %v", err)
+		t.Fatalf("mvpTestTargetBoundsDefault failed: %v", err)
 	}
 	if !got.IsInside() {
 		t.Fatalf("got %v want inside range", got)
@@ -96,4 +96,4 @@ func TestInfiniteGCFContract_CurrentMVPTargetStillWorksDespiteExceptions(t *test
 // 4. Post-MVP goal: retire those exceptions and move prod ingestion toward
 //    infinite-GCF-only operator plumbing.
 //
-// infinite_gcf_contract_test.go v4
+// infinite_gcf_contract_test.go v5

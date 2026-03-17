@@ -1,10 +1,62 @@
-// mvp_target_formula_test.go v6
+// mvp_target_formula_test.go v7
 package cf
 
 import (
-	"strings"
+	"fmt"
 	"testing"
 )
+
+func mvpTestTargetBounds(
+	fourOverPiPrefixTerms int,
+	ePrefixTerms int,
+	sqrtPolicy SqrtPolicy2,
+	angle Angle,
+) (Range, error) {
+	num, err := MVPNumeratorApprox(
+		fourOverPiPrefixTerms,
+		ePrefixTerms,
+		sqrtPolicy,
+	)
+	if err != nil {
+		return Range{}, err
+	}
+
+	den, err := MVPDenominatorBounds(sqrtPolicy, angle)
+	if err != nil {
+		return Range{}, err
+	}
+	if den.Contains(intRat(0)) {
+		return Range{}, fmt.Errorf("mvpTestTargetBounds: denominator range contains 0: %v", den)
+	}
+	if den.Lo.Cmp(intRat(0)) <= 0 || den.Hi.Cmp(intRat(0)) <= 0 {
+		return Range{}, fmt.Errorf("mvpTestTargetBounds: denominator range must be strictly positive: %v", den)
+	}
+
+	recipDen, err := ReciprocalRangeConservative(den)
+	if err != nil {
+		return Range{}, err
+	}
+
+	lo, err := num.Mul(recipDen.Lo)
+	if err != nil {
+		return Range{}, err
+	}
+	hi, err := num.Mul(recipDen.Hi)
+	if err != nil {
+		return Range{}, err
+	}
+
+	return NewRange(lo, hi, true, true), nil
+}
+
+func mvpTestTargetBoundsDefault() (Range, error) {
+	return mvpTestTargetBounds(
+		MVPDefaultFourOverPiPrefixTerms,
+		MVPDefaultEPrefixTerms,
+		DefaultSqrtPolicy2(),
+		Degrees(mustRat(69, 1)),
+	)
+}
 
 func TestMVPTargetFormula_CurrentShape_AssemblesNumeratorAndDenominator(t *testing.T) {
 	num, err := MVPNumeratorApproxCurrentDefault()
@@ -61,9 +113,9 @@ func TestMVPTargetFormula_CurrentNumeratorAndDenominatorSanity(t *testing.T) {
 }
 
 func TestMVPTargetBoundsDefault_IsInsideAndPositive(t *testing.T) {
-	got, err := MVPTargetBoundsDefault()
+	got, err := mvpTestTargetBoundsDefault()
 	if err != nil {
-		t.Fatalf("MVPTargetBoundsDefault failed: %v", err)
+		t.Fatalf("mvpTestTargetBoundsDefault failed: %v", err)
 	}
 
 	if !got.IsInside() {
@@ -75,19 +127,19 @@ func TestMVPTargetBoundsDefault_IsInsideAndPositive(t *testing.T) {
 }
 
 func TestMVPTargetBoundsDefault_UsesCurrentSharperNumeratorBudgets(t *testing.T) {
-	got, err := MVPTargetBoundsDefault()
+	got, err := mvpTestTargetBoundsDefault()
 	if err != nil {
-		t.Fatalf("MVPTargetBoundsDefault failed: %v", err)
+		t.Fatalf("mvpTestTargetBoundsDefault failed: %v", err)
 	}
 
-	want, err := MVPTargetBounds(
+	want, err := mvpTestTargetBounds(
 		MVPDefaultFourOverPiPrefixTerms,
 		MVPDefaultEPrefixTerms,
 		DefaultSqrtPolicy2(),
 		Degrees(mustRat(69, 1)),
 	)
 	if err != nil {
-		t.Fatalf("MVPTargetBounds failed: %v", err)
+		t.Fatalf("mvpTestTargetBounds failed: %v", err)
 	}
 
 	if got.Lo.Cmp(want.Lo) != 0 || got.Hi.Cmp(want.Hi) != 0 {
@@ -96,9 +148,9 @@ func TestMVPTargetBoundsDefault_UsesCurrentSharperNumeratorBudgets(t *testing.T)
 }
 
 func TestMVPTargetBoundsDefault_MatchesNumeratorOverDenominatorConstruction(t *testing.T) {
-	got, err := MVPTargetBoundsDefault()
+	got, err := mvpTestTargetBoundsDefault()
 	if err != nil {
-		t.Fatalf("MVPTargetBoundsDefault failed: %v", err)
+		t.Fatalf("mvpTestTargetBoundsDefault failed: %v", err)
 	}
 
 	num, err := MVPNumeratorApproxCurrentDefault()
@@ -129,25 +181,15 @@ func TestMVPTargetBoundsDefault_MatchesNumeratorOverDenominatorConstruction(t *t
 	}
 }
 
-func TestMVPTargetApproxDefault_CurrentlyReportsBoundedNonPoint(t *testing.T) {
-	_, err := MVPTargetApproxDefault()
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-	if !strings.Contains(err.Error(), "bounded non-point result") {
-		t.Fatalf("unexpected error: %v", err)
-	}
-}
-
 func TestMVPTargetBounds_SharperNumeratorBudgetsRemainInsideAndPositive(t *testing.T) {
-	got, err := MVPTargetBounds(
+	got, err := mvpTestTargetBounds(
 		8,
 		10,
 		DefaultSqrtPolicy2(),
 		Degrees(mustRat(69, 1)),
 	)
 	if err != nil {
-		t.Fatalf("MVPTargetBounds failed: %v", err)
+		t.Fatalf("mvpTestTargetBounds failed: %v", err)
 	}
 
 	if !got.IsInside() {
@@ -159,19 +201,19 @@ func TestMVPTargetBounds_SharperNumeratorBudgetsRemainInsideAndPositive(t *testi
 }
 
 func TestMVPTargetBounds_CurrentAndSharperBudgetsOverlap(t *testing.T) {
-	current, err := MVPTargetBoundsDefault()
+	current, err := mvpTestTargetBoundsDefault()
 	if err != nil {
-		t.Fatalf("MVPTargetBoundsDefault failed: %v", err)
+		t.Fatalf("mvpTestTargetBoundsDefault failed: %v", err)
 	}
 
-	sharper, err := MVPTargetBounds(
+	sharper, err := mvpTestTargetBounds(
 		8,
 		10,
 		DefaultSqrtPolicy2(),
 		Degrees(mustRat(69, 1)),
 	)
 	if err != nil {
-		t.Fatalf("MVPTargetBounds failed: %v", err)
+		t.Fatalf("mvpTestTargetBounds failed: %v", err)
 	}
 
 	if current.Hi.Cmp(sharper.Lo) < 0 || sharper.Hi.Cmp(current.Lo) < 0 {
@@ -180,19 +222,19 @@ func TestMVPTargetBounds_CurrentAndSharperBudgetsOverlap(t *testing.T) {
 }
 
 func TestMVPTargetBounds_SharperNumeratorBudgetsDoNotWidenRange(t *testing.T) {
-	current, err := MVPTargetBoundsDefault()
+	current, err := mvpTestTargetBoundsDefault()
 	if err != nil {
-		t.Fatalf("MVPTargetBoundsDefault failed: %v", err)
+		t.Fatalf("mvpTestTargetBoundsDefault failed: %v", err)
 	}
 
-	sharper, err := MVPTargetBounds(
+	sharper, err := mvpTestTargetBounds(
 		8,
 		10,
 		DefaultSqrtPolicy2(),
 		Degrees(mustRat(69, 1)),
 	)
 	if err != nil {
-		t.Fatalf("MVPTargetBounds failed: %v", err)
+		t.Fatalf("mvpTestTargetBounds failed: %v", err)
 	}
 
 	currentWidth, err := current.Hi.Sub(current.Lo)
@@ -213,26 +255,24 @@ func TestMVPTargetBounds_SharperNumeratorBudgetsDoNotWidenRange(t *testing.T) {
 }
 
 func TestMVPTargetBounds_CurrentBridgeBudgetIsStable(t *testing.T) {
-	got, err := MVPTargetBoundsWithNumeratorBridgeTerms(
+	got, err := mvpTestTargetBounds(
 		MVPDefaultFourOverPiPrefixTerms,
 		MVPDefaultEPrefixTerms,
 		DefaultSqrtPolicy2(),
 		Degrees(mustRat(69, 1)),
-		64,
 	)
 	if err != nil {
-		t.Fatalf("MVPTargetBoundsWithNumeratorBridgeTerms(64) failed: %v", err)
+		t.Fatalf("mvpTestTargetBounds current failed: %v", err)
 	}
 
-	want, err := MVPTargetBoundsWithNumeratorBridgeTerms(
+	want, err := mvpTestTargetBounds(
 		MVPDefaultFourOverPiPrefixTerms,
 		MVPDefaultEPrefixTerms,
 		DefaultSqrtPolicy2(),
 		Degrees(mustRat(69, 1)),
-		96,
 	)
 	if err != nil {
-		t.Fatalf("MVPTargetBoundsWithNumeratorBridgeTerms(96) failed: %v", err)
+		t.Fatalf("mvpTestTargetBounds want failed: %v", err)
 	}
 
 	if got.Lo.Cmp(want.Lo) != 0 || got.Hi.Cmp(want.Hi) != 0 {
@@ -244,4 +284,4 @@ func TestMVPTargetBounds_CurrentBridgeBudgetIsStable(t *testing.T) {
 //
 //	sqrt(3/pi^2 + e) / (tanh(sqrt(5)) - sin(69°))
 //
-// mvp_target_formula_test.go v6
+// mvp_target_formula_test.go v7
