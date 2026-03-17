@@ -1,4 +1,4 @@
-// mvp_numerator_test.go v5
+// mvp_numerator_test.go v6
 package cf
 
 import "testing"
@@ -140,21 +140,15 @@ func TestMVPRadicandRootValue_ExceedsOne(t *testing.T) {
 	}
 }
 
-// Full target formula intentionally stays in test code for now.
-// This test fixes only the rooted radicand shape:
-//
-//	sqrt(3/pi^2 + e)
-//
-
-func TestMVPRadicandConvergent_MatchesExistingSubexpression(t *testing.T) {
+func TestMVPRadicandConvergent_MatchesGenericAssemblyConvergent(t *testing.T) {
 	got, err := MVPRadicandConvergent(4, 6)
 	if err != nil {
 		t.Fatalf("MVPRadicandConvergent failed: %v", err)
 	}
 
-	want, err := MVPThreeOverPiSquaredPlusEApprox(4, 6)
+	want, err := MVPRadicandAssembleConvergent(4, 6)
 	if err != nil {
-		t.Fatalf("MVPThreeOverPiSquaredPlusEApprox failed: %v", err)
+		t.Fatalf("MVPRadicandAssembleConvergent failed: %v", err)
 	}
 
 	if got.Cmp(want) != 0 {
@@ -259,13 +253,13 @@ func TestMVPRadicandSnapshot_MatchesCanonicalRadicandAssembly(t *testing.T) {
 		t.Fatalf("MVPRadicandSnapshot failed: %v", err)
 	}
 
-	want, err := MVPThreeOverPiSquaredPlusERadicandApproxSnapshotWithFourOverPiApprox(
+	want, err := MVPRadicandAssembleSnapshotWithFourOverPiApprox(
 		MVPDefaultFourOverPiApproxFunc(),
 		4,
 		6,
 	)
 	if err != nil {
-		t.Fatalf("MVPThreeOverPiSquaredPlusERadicandApproxSnapshotWithFourOverPiApprox failed: %v", err)
+		t.Fatalf("MVPRadicandAssembleSnapshotWithFourOverPiApprox failed: %v", err)
 	}
 
 	if got.Convergent.Cmp(want.Convergent) != 0 {
@@ -341,20 +335,4 @@ func TestMVPRadicandSnapshot_CurrentSnapshotBudgetIsStable(t *testing.T) {
 	}
 }
 
-func TestMVPThreeOverPiSquaredPlusEApproxSnapshot_IsThinLegacyWrapper(t *testing.T) {
-	got, err := MVPThreeOverPiSquaredPlusEApproxSnapshot(4, 6, 64)
-	if err != nil {
-		t.Fatalf("MVPThreeOverPiSquaredPlusEApproxSnapshot failed: %v", err)
-	}
-
-	want, err := MVPThreeOverPiSquaredPlusERadicandSnapshot(4, 6, 64)
-	if err != nil {
-		t.Fatalf("MVPThreeOverPiSquaredPlusERadicandSnapshot failed: %v", err)
-	}
-
-	if got.Convergent.Cmp(want.Convergent) != 0 {
-		t.Fatalf("got %v want %v", got.Convergent, want.Convergent)
-	}
-}
-
-// mvp_numerator_test.go v5
+// mvp_numerator_test.go v6

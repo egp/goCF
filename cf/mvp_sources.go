@@ -335,33 +335,6 @@ func MVPFourOverPiApproxWithSource(
 	return a.Convergent, nil
 }
 
-// Legacy expression-specific wrappers retained temporarily while tests migrate.
-
-func MVPThreeOverPiSquaredPlusEApproxWithFourOverPiApprox(
-	fourOverPiFn MVPFourOverPiApproxFunc,
-	fourOverPiPrefixTerms int,
-	ePrefixTerms int,
-) (Rational, error) {
-	return MVPRadicandAssembleConvergentWithFourOverPiApprox(
-		fourOverPiFn,
-		fourOverPiPrefixTerms,
-		ePrefixTerms,
-	)
-}
-
-// MVPThreeOverPiSquaredPlusEApprox returns a bounded-prefix rational approximation
-// for:
-//
-//	3/pi^2 + e
-//
-// using the current canonical MVP source family.
-func MVPThreeOverPiSquaredPlusEApprox(fourOverPiPrefixTerms, ePrefixTerms int) (Rational, error) {
-	return MVPRadicandAssembleConvergent(
-		fourOverPiPrefixTerms,
-		ePrefixTerms,
-	)
-}
-
 func MVPExactScalarGCFSource(n int64) (GCFSource, int, error) {
 	if n < 0 {
 		return nil, 0, fmt.Errorf("MVPExactScalarGCFSource: negative n %d", n)
