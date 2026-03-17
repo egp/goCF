@@ -11,8 +11,8 @@ const (
 	MVPDefaultFourOverPiPrefixTerms = 6
 	MVPDefaultEPrefixTerms          = 8
 
-	// Temporary compatibility budget retained only for snapshot-based callers.
-	// The live numerator production path no longer uses a finite bridge source.
+	// Temporary compatibility budget retained for snapshot-based callers.
+	// The live numerator production path consumes a direct radicand snapshot.
 	MVPNumeratorBridgePrefixTerms = 64
 )
 
@@ -28,29 +28,13 @@ func MVPNumeratorRadicandApprox(
 	return MVPThreeOverPiSquaredPlusEApprox(fourOverPiPrefixTerms, ePrefixTerms)
 }
 
-// MVPNumeratorRadicandBridgeSource returns the temporary finite bridge source for
-// the numerator radicand subexpression.
-//
-// Temporary MVP exception:
-//   - this is the explicit bridge boundary
-//   - post-MVP goal is to replace this with a more source-driven path
-func MVPNumeratorRadicandBridgeSource(
-	fourOverPiPrefixTerms int,
-	ePrefixTerms int,
-) (GCFSource, error) {
-	return nil, fmt.Errorf(
-		"MVPNumeratorRadicandBridgeSource: removed from production path; use MVPNumeratorRadicandApproxSnapshot",
-	)
-}
-
 // MVPNumeratorApprox returns a bounded rational approximation for:
 //
 //	sqrt(3/pi^2 + e)
 //
 // Current MVP construction:
-//   - form bounded rational approximation to 3/pi^2 + e
-//   - cross the explicit temporary bridge boundary
-//   - route the final sqrt through a GCF-ingesting unary entry point
+//   - assemble a direct radicand snapshot for 3/pi^2 + e
+//   - route the final sqrt from that snapshot through the GCF-aware unary path
 func MVPNumeratorApprox(
 	fourOverPiPrefixTerms int,
 	ePrefixTerms int,
@@ -82,16 +66,6 @@ func MVPNumeratorApproxWithBridgeTerms(
 	return MVPNumeratorApproxFromRadicandApprox(a, sqrtPolicy)
 }
 
-func MVPNumeratorApproxFromRadicandSource(
-	src GCFSource,
-	sqrtPolicy SqrtPolicy2,
-	bridgeTerms int,
-) (Rational, error) {
-	return Rational{}, fmt.Errorf(
-		"MVPNumeratorApproxFromRadicandSource: removed from production path; use MVPNumeratorApproxFromRadicandApprox",
-	)
-}
-
 func MVPNumeratorRadicandApproxSnapshot(
 	fourOverPiPrefixTerms int,
 	ePrefixTerms int,
@@ -104,10 +78,10 @@ func MVPNumeratorRadicandApproxSnapshot(
 		)
 	}
 
-	return MVPThreeOverPiSquaredPlusERadicandApproxSnapshotWithFourOverPiApprox(
-		MVPDefaultFourOverPiApproxFunc(),
+	return MVPThreeOverPiSquaredPlusERadicandSnapshot(
 		fourOverPiPrefixTerms,
 		ePrefixTerms,
+		bridgeTerms,
 	)
 }
 
