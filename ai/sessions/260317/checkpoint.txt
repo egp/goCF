@@ -1,0 +1,31 @@
+Project: goCF — mathematically correct continued-fraction arithmetic library for infinite GCF streams following Gosper, emitting primarily RCF.
+
+Current milestone:
+Finish removing MVP target-formula-specific production scaffolding, then restart sqrt from scratch as a minimal Gosper-style unary operator.
+
+Working components:
+- full target formula lives only in tests
+- denominator-specific assembly moved to test-local helpers
+- production no longer exposes numerator/denominator APIs tied to the target formula
+- production now uses generic radicand assembly APIs:
+  MVPRadicandAssembleConvergent, MVPRadicandAssembleSnapshot,
+  MVPRadicandRootValue, MVPRadicandRootValueFromSnapshot
+- expression-specific radicand wrappers deleted
+- tests are green
+
+Known failures:
+- none currently
+
+Next immediate task:
+- start a fresh minimal sqrt implementation and tests
+- begin with a simple unary sqrt client interface and exact/known-RCF test cases
+- then evolve toward Gosper-style Newton/feedback design
+
+Constraints / invariants:
+- stay on the critical path
+- no float-based production work
+- finite GCFs are a subset of the same ingestion model
+- production should avoid target-formula-specific APIs
+- prefer generic stream/snapshot/bounds terminology
+- work only from newly pasted files/test results; discard obsolete earlier versions
+- legacy sqrt code may be ignored initially and deleted later after the new path is green
