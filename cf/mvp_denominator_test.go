@@ -1,15 +1,82 @@
-// mvp_denominator_test.go v7
+// mvp_denominator_test.go v8
 package cf
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
 
-func TestMVPDenominatorBoundsDefault_UsesDegreesByDefault(t *testing.T) {
-	got, err := MVPDenominatorBoundsDefault()
+func mvpTestDenominatorBounds(
+	sqrt5Policy SqrtPolicy2,
+	angle Angle,
+) (Range, error) {
+	_ = sqrt5Policy // reserved for later tighter tanh(sqrt(5)) work
+
+	if err := angle.Validate(); err != nil {
+		return Range{}, err
+	}
+	if !angle.IsDegrees() {
+		return Range{}, fmt.Errorf("mvpTestDenominatorBounds: angle must be expressed in degrees")
+	}
+
+	tanhR, err := TanhBoundsSpecialFromGCF2(AdaptCFToGCF(Sqrt5CF()))
 	if err != nil {
-		t.Fatalf("MVPDenominatorBoundsDefault failed: %v", err)
+		return Range{}, err
+	}
+
+	sinR, err := SinBoundsDegreesFromGCFPrefix2(
+		MVP69DegreeGCFSource(),
+		2,
+	)
+	if err != nil {
+		return Range{}, err
+	}
+
+	lo, err := tanhR.Lo.Sub(sinR.Hi)
+	if err != nil {
+		return Range{}, err
+	}
+	hi, err := tanhR.Hi.Sub(sinR.Lo)
+	if err != nil {
+		return Range{}, err
+	}
+
+	return NewRange(lo, hi, true, true), nil
+}
+
+func mvpTestDenominatorBoundsDefault() (Range, error) {
+	return mvpTestDenominatorBounds(
+		DefaultSqrtPolicy2(),
+		Degrees(mustRat(69, 1)),
+	)
+}
+
+func mvpTestDenominatorApprox(
+	sqrt5Policy SqrtPolicy2,
+	angle Angle,
+) (Rational, error) {
+	r, err := mvpTestDenominatorBounds(sqrt5Policy, angle)
+	if err != nil {
+		return Rational{}, err
+	}
+	if r.Lo.Cmp(r.Hi) != 0 {
+		return Rational{}, fmt.Errorf("mvpTestDenominatorApprox: bounded non-point result for %v", angle)
+	}
+	return r.Lo, nil
+}
+
+func mvpTestDenominatorApproxDefault() (Rational, error) {
+	return mvpTestDenominatorApprox(
+		DefaultSqrtPolicy2(),
+		Degrees(mustRat(69, 1)),
+	)
+}
+
+func TestMVPDenominatorBoundsDefault_UsesDegreesByDefault(t *testing.T) {
+	got, err := mvpTestDenominatorBoundsDefault()
+	if err != nil {
+		t.Fatalf("mvpTestDenominatorBoundsDefault failed: %v", err)
 	}
 
 	want := NewRange(mustRat(11, 280), mustRat(7, 150), true, true)
@@ -22,7 +89,7 @@ func TestMVPDenominatorBoundsDefault_UsesDegreesByDefault(t *testing.T) {
 }
 
 func TestMVPDenominatorBounds_RejectsRadiansForMVP(t *testing.T) {
-	_, err := MVPDenominatorBounds(
+	_, err := mvpTestDenominatorBounds(
 		DefaultSqrtPolicy2(),
 		Radians(mustRat(69, 1)),
 	)
@@ -35,12 +102,12 @@ func TestMVPDenominatorBounds_RejectsRadiansForMVP(t *testing.T) {
 }
 
 func TestMVPDenominatorBounds_Accepts69DegreeBoundAndExcludesZero(t *testing.T) {
-	got, err := MVPDenominatorBounds(
+	got, err := mvpTestDenominatorBounds(
 		DefaultSqrtPolicy2(),
 		Degrees(mustRat(69, 1)),
 	)
 	if err != nil {
-		t.Fatalf("MVPDenominatorBounds failed: %v", err)
+		t.Fatalf("mvpTestDenominatorBounds failed: %v", err)
 	}
 
 	want := NewRange(mustRat(11, 280), mustRat(7, 150), true, true)
@@ -53,7 +120,7 @@ func TestMVPDenominatorBounds_Accepts69DegreeBoundAndExcludesZero(t *testing.T) 
 }
 
 func TestMVPDenominatorApprox_CurrentlyReportsBoundedNonPoint(t *testing.T) {
-	_, err := MVPDenominatorApproxDefault()
+	_, err := mvpTestDenominatorApproxDefault()
 	if err == nil {
 		t.Fatalf("expected error")
 	}
@@ -88,9 +155,9 @@ func TestMVPDenominatorBounds_UsesExactFiniteGCFPrefixFor69Degrees(t *testing.T)
 }
 
 func TestMVPDenominatorBounds_NoLongerNeedsExactTailTrigEntryPointFor69Degrees(t *testing.T) {
-	got, err := MVPDenominatorBoundsDefault()
+	got, err := mvpTestDenominatorBoundsDefault()
 	if err != nil {
-		t.Fatalf("MVPDenominatorBoundsDefault failed: %v", err)
+		t.Fatalf("mvpTestDenominatorBoundsDefault failed: %v", err)
 	}
 
 	want := NewRange(mustRat(11, 280), mustRat(7, 150), true, true)
@@ -127,4 +194,4 @@ func TestSinBoundsDegreesFromGCFPrefix2_MVP69DegreeGCFSource_IsExactAtPrefix2(t 
 	}
 }
 
-// mvp_denominator_test.go v7
+// mvp_denominator_test.go v8

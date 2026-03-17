@@ -1,4 +1,4 @@
-// mvp_target_formula_test.go v7
+// mvp_target_formula_test.go v8
 package cf
 
 import (
@@ -21,7 +21,7 @@ func mvpTestTargetBounds(
 		return Range{}, err
 	}
 
-	den, err := MVPDenominatorBounds(sqrtPolicy, angle)
+	den, err := mvpTestDenominatorBounds(sqrtPolicy, angle)
 	if err != nil {
 		return Range{}, err
 	}
@@ -64,9 +64,9 @@ func TestMVPTargetFormula_CurrentShape_AssemblesNumeratorAndDenominator(t *testi
 		t.Fatalf("MVPNumeratorApproxCurrentDefault failed: %v", err)
 	}
 
-	den, err := MVPDenominatorBoundsDefault()
+	den, err := mvpTestDenominatorBoundsDefault()
 	if err != nil {
-		t.Fatalf("MVPDenominatorBoundsDefault failed: %v", err)
+		t.Fatalf("mvpTestDenominatorBoundsDefault failed: %v", err)
 	}
 
 	if num.Cmp(intRat(0)) <= 0 {
@@ -81,9 +81,9 @@ func TestMVPTargetFormula_CurrentShape_AssemblesNumeratorAndDenominator(t *testi
 }
 
 func TestMVPTargetFormula_DenominatorNowExcludesZero(t *testing.T) {
-	den, err := MVPDenominatorBoundsDefault()
+	den, err := mvpTestDenominatorBoundsDefault()
 	if err != nil {
-		t.Fatalf("MVPDenominatorBoundsDefault failed: %v", err)
+		t.Fatalf("mvpTestDenominatorBoundsDefault failed: %v", err)
 	}
 
 	if den.Contains(intRat(0)) {
@@ -97,9 +97,9 @@ func TestMVPTargetFormula_CurrentNumeratorAndDenominatorSanity(t *testing.T) {
 		t.Fatalf("MVPNumeratorApproxCurrentDefault failed: %v", err)
 	}
 
-	den, err := MVPDenominatorBoundsDefault()
+	den, err := mvpTestDenominatorBoundsDefault()
 	if err != nil {
-		t.Fatalf("MVPDenominatorBoundsDefault failed: %v", err)
+		t.Fatalf("mvpTestDenominatorBoundsDefault failed: %v", err)
 	}
 
 	if num.Cmp(intRat(1)) <= 0 {
@@ -157,9 +157,9 @@ func TestMVPTargetBoundsDefault_MatchesNumeratorOverDenominatorConstruction(t *t
 	if err != nil {
 		t.Fatalf("MVPNumeratorApproxCurrentDefault failed: %v", err)
 	}
-	den, err := MVPDenominatorBoundsDefault()
+	den, err := mvpTestDenominatorBoundsDefault()
 	if err != nil {
-		t.Fatalf("MVPDenominatorBoundsDefault failed: %v", err)
+		t.Fatalf("mvpTestDenominatorBoundsDefault failed: %v", err)
 	}
 
 	recipDen, err := ReciprocalRangeConservative(den)
@@ -284,4 +284,4 @@ func TestMVPTargetBounds_CurrentBridgeBudgetIsStable(t *testing.T) {
 //
 //	sqrt(3/pi^2 + e) / (tanh(sqrt(5)) - sin(69°))
 //
-// mvp_target_formula_test.go v7
+// mvp_target_formula_test.go v8
