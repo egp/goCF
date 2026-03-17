@@ -1,4 +1,4 @@
-// infinite_gcf_contract_test.go v6
+// infinite_gcf_contract_test.go v7
 package cf
 
 import (
@@ -52,23 +52,23 @@ func TestInfiniteGCFContract_CurrentAngleConstant_IsExactFiniteGCFPrefix(t *test
 	}
 }
 
-func TestInfiniteGCFContract_CurrentNumeratorSnapshotPath_IsAvailable(t *testing.T) {
-	got, err := MVPNumeratorRadicandApproxSnapshot(
-		MVPDefaultFourOverPiPrefixTerms,
-		MVPDefaultEPrefixTerms,
-		MVPNumeratorBridgePrefixTerms,
+func TestInfiniteGCFContract_CurrentRadicandSnapshotPath_IsAvailable(t *testing.T) {
+	got, err := MVPRadicandSnapshot(
+		MVPRadicandDefaultFourOverPiPrefixTerms,
+		MVPRadicandDefaultEPrefixTerms,
+		MVPRadicandSnapshotTerms,
 	)
 	if err != nil {
-		t.Fatalf("MVPNumeratorRadicandApproxSnapshot failed: %v", err)
+		t.Fatalf("MVPRadicandSnapshot failed: %v", err)
 	}
 	if got.Convergent.Cmp(intRat(0)) <= 0 {
 		t.Fatalf("got %v want positive convergent", got.Convergent)
 	}
 }
 
-func TestInfiniteGCFContract_CurrentNumeratorBridge_BudgetIsExplicit(t *testing.T) {
-	if MVPNumeratorBridgePrefixTerms <= 0 {
-		t.Fatalf("got MVPNumeratorBridgePrefixTerms=%d want > 0", MVPNumeratorBridgePrefixTerms)
+func TestInfiniteGCFContract_CurrentRadicandSnapshotBudget_IsExplicit(t *testing.T) {
+	if MVPRadicandSnapshotTerms <= 0 {
+		t.Fatalf("got MVPRadicandSnapshotTerms=%d want > 0", MVPRadicandSnapshotTerms)
 	}
 }
 
@@ -89,7 +89,7 @@ func TestInfiniteGCFContract_CurrentMVPTargetStillWorksDespiteExceptions(t *test
 //
 // 1. Canonical mathematical sources are infinite/algorithmic.
 // 2. Some MVP helpers still rely on explicit finite/exact-tail exceptions.
-// 3. The numerator live path now uses snapshot assembly rather than a finite bridge source.
-// 4. Post-MVP goal: retire the remaining compatibility wrappers and bridge-budget naming.
+// 3. The rooted-radicand live path uses snapshot assembly.
+// 4. Post-MVP goal: retire remaining legacy names and tighten snapshot/bounds terminology.
 //
-// infinite_gcf_contract_test.go v6
+// infinite_gcf_contract_test.go v7

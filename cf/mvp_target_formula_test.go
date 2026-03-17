@@ -1,4 +1,4 @@
-// mvp_target_formula_test.go v8
+// mvp_target_formula_test.go v9
 package cf
 
 import (
@@ -12,7 +12,7 @@ func mvpTestTargetBounds(
 	sqrtPolicy SqrtPolicy2,
 	angle Angle,
 ) (Range, error) {
-	num, err := MVPNumeratorApprox(
+	num, err := MVPRadicandRootValue(
 		fourOverPiPrefixTerms,
 		ePrefixTerms,
 		sqrtPolicy,
@@ -51,17 +51,17 @@ func mvpTestTargetBounds(
 
 func mvpTestTargetBoundsDefault() (Range, error) {
 	return mvpTestTargetBounds(
-		MVPDefaultFourOverPiPrefixTerms,
-		MVPDefaultEPrefixTerms,
+		MVPRadicandDefaultFourOverPiPrefixTerms,
+		MVPRadicandDefaultEPrefixTerms,
 		DefaultSqrtPolicy2(),
 		Degrees(mustRat(69, 1)),
 	)
 }
 
 func TestMVPTargetFormula_CurrentShape_AssemblesNumeratorAndDenominator(t *testing.T) {
-	num, err := MVPNumeratorApproxCurrentDefault()
+	num, err := MVPRadicandRootValueCurrentDefault()
 	if err != nil {
-		t.Fatalf("MVPNumeratorApproxCurrentDefault failed: %v", err)
+		t.Fatalf("MVPRadicandRootValueCurrentDefault failed: %v", err)
 	}
 
 	den, err := mvpTestDenominatorBoundsDefault()
@@ -92,9 +92,9 @@ func TestMVPTargetFormula_DenominatorNowExcludesZero(t *testing.T) {
 }
 
 func TestMVPTargetFormula_CurrentNumeratorAndDenominatorSanity(t *testing.T) {
-	num, err := MVPNumeratorApproxCurrentDefault()
+	num, err := MVPRadicandRootValueCurrentDefault()
 	if err != nil {
-		t.Fatalf("MVPNumeratorApproxCurrentDefault failed: %v", err)
+		t.Fatalf("MVPRadicandRootValueCurrentDefault failed: %v", err)
 	}
 
 	den, err := mvpTestDenominatorBoundsDefault()
@@ -133,8 +133,8 @@ func TestMVPTargetBoundsDefault_UsesCurrentSharperNumeratorBudgets(t *testing.T)
 	}
 
 	want, err := mvpTestTargetBounds(
-		MVPDefaultFourOverPiPrefixTerms,
-		MVPDefaultEPrefixTerms,
+		MVPRadicandDefaultFourOverPiPrefixTerms,
+		MVPRadicandDefaultEPrefixTerms,
 		DefaultSqrtPolicy2(),
 		Degrees(mustRat(69, 1)),
 	)
@@ -153,9 +153,9 @@ func TestMVPTargetBoundsDefault_MatchesNumeratorOverDenominatorConstruction(t *t
 		t.Fatalf("mvpTestTargetBoundsDefault failed: %v", err)
 	}
 
-	num, err := MVPNumeratorApproxCurrentDefault()
+	num, err := MVPRadicandRootValueCurrentDefault()
 	if err != nil {
-		t.Fatalf("MVPNumeratorApproxCurrentDefault failed: %v", err)
+		t.Fatalf("MVPRadicandRootValueCurrentDefault failed: %v", err)
 	}
 	den, err := mvpTestDenominatorBoundsDefault()
 	if err != nil {
@@ -256,8 +256,8 @@ func TestMVPTargetBounds_SharperNumeratorBudgetsDoNotWidenRange(t *testing.T) {
 
 func TestMVPTargetBounds_CurrentBridgeBudgetIsStable(t *testing.T) {
 	got, err := mvpTestTargetBounds(
-		MVPDefaultFourOverPiPrefixTerms,
-		MVPDefaultEPrefixTerms,
+		MVPRadicandDefaultFourOverPiPrefixTerms,
+		MVPRadicandDefaultEPrefixTerms,
 		DefaultSqrtPolicy2(),
 		Degrees(mustRat(69, 1)),
 	)
@@ -266,8 +266,8 @@ func TestMVPTargetBounds_CurrentBridgeBudgetIsStable(t *testing.T) {
 	}
 
 	want, err := mvpTestTargetBounds(
-		MVPDefaultFourOverPiPrefixTerms,
-		MVPDefaultEPrefixTerms,
+		MVPRadicandDefaultFourOverPiPrefixTerms,
+		MVPRadicandDefaultEPrefixTerms,
 		DefaultSqrtPolicy2(),
 		Degrees(mustRat(69, 1)),
 	)
@@ -284,4 +284,4 @@ func TestMVPTargetBounds_CurrentBridgeBudgetIsStable(t *testing.T) {
 //
 //	sqrt(3/pi^2 + e) / (tanh(sqrt(5)) - sin(69°))
 //
-// mvp_target_formula_test.go v8
+// mvp_target_formula_test.go v9

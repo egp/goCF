@@ -202,7 +202,7 @@ func TestMVPThreeOverPiSquaredPlusERadicandApproxSnapshotWithFourOverPiApprox_La
 	}
 }
 
-func TestMVPNumeratorApproxFromRadicandApprox_LambertSnapshotPathIsUsableBySqrt(t *testing.T) {
+func TestMVPRadicandRootValueFromSnapshot_LambertSnapshotPathIsUsableBySqrt(t *testing.T) {
 	a, err := MVPThreeOverPiSquaredPlusERadicandApproxSnapshotWithFourOverPiApprox(
 		MVPFourOverPiApproxLambert,
 		8,
@@ -212,9 +212,9 @@ func TestMVPNumeratorApproxFromRadicandApprox_LambertSnapshotPathIsUsableBySqrt(
 		t.Fatalf("MVPThreeOverPiSquaredPlusERadicandApproxSnapshotWithFourOverPiApprox failed: %v", err)
 	}
 
-	got, err := MVPNumeratorApproxFromRadicandApprox(a, DefaultSqrtPolicy2())
+	got, err := MVPRadicandRootValueFromSnapshot(a, DefaultSqrtPolicy2())
 	if err != nil {
-		t.Fatalf("MVPNumeratorApproxFromRadicandApprox failed: %v", err)
+		t.Fatalf("MVPRadicandRootValueFromSnapshot failed: %v", err)
 	}
 
 	if got.Cmp(intRat(1)) <= 0 {
@@ -274,19 +274,19 @@ func TestMVPThreeOverPiSquaredPlusERadicandApproxSnapshotWithFourOverPiApprox_La
 	}
 }
 
-func TestMVPNumeratorApproxWithBridgeTerms_IgnoresBridgeBudgetOnDirectSnapshotPath(t *testing.T) {
-	got, err := MVPNumeratorApproxWithBridgeTerms(4, 6, DefaultSqrtPolicy2(), 64)
+func TestMVPRadicandRootValueWithSnapshotTerms_IgnoresSnapshotBudgetOnDirectSnapshotPath(t *testing.T) {
+	got, err := MVPRadicandRootValueWithSnapshotTerms(4, 6, DefaultSqrtPolicy2(), 64)
 	if err != nil {
-		t.Fatalf("MVPNumeratorApproxWithBridgeTerms(64) failed: %v", err)
+		t.Fatalf("MVPRadicandRootValueWithSnapshotTerms(64) failed: %v", err)
 	}
 
-	want, err := MVPNumeratorApproxWithBridgeTerms(4, 6, DefaultSqrtPolicy2(), 96)
+	want, err := MVPRadicandRootValueWithSnapshotTerms(4, 6, DefaultSqrtPolicy2(), 96)
 	if err != nil {
-		t.Fatalf("MVPNumeratorApproxWithBridgeTerms(96) failed: %v", err)
+		t.Fatalf("MVPRadicandRootValueWithSnapshotTerms(96) failed: %v", err)
 	}
 
 	if got.Cmp(want) != 0 {
-		t.Fatalf("direct snapshot path should ignore bridge budget: got=%v want=%v", got, want)
+		t.Fatalf("direct snapshot path should ignore snapshot budget: got=%v want=%v", got, want)
 	}
 }
 
