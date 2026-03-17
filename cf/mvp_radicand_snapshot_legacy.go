@@ -1,4 +1,4 @@
-// mvp_radicand_snapshot_legacy.go v1
+// mvp_radicand_snapshot_legacy.go v2
 package cf
 
 import "fmt"
@@ -9,7 +9,7 @@ import "fmt"
 //	3/pi^2 + e
 //
 // Deprecated MVP note:
-//   - prefer MVPThreeOverPiSquaredPlusERadicandApproxSnapshotWithFourOverPiApprox
+//   - prefer MVPRadicandAssembleSnapshotWithFourOverPiApprox
 //     or MVPRadicandSnapshot for new code
 func MVPThreeOverPiSquaredPlusEApproxSnapshot(
 	fourOverPiPrefixTerms int,
@@ -23,9 +23,7 @@ func MVPThreeOverPiSquaredPlusEApproxSnapshot(
 	)
 }
 
-// Production radicand snapshot path: build a direct point snapshot instead
-// of crossing the former finite bridge boundary.
-
+// Legacy expression-specific wrapper retained temporarily while callers migrate.
 func MVPThreeOverPiSquaredPlusERadicandApproxSnapshotWithFourOverPiApprox(
 	fourOverPiFn MVPFourOverPiApproxFunc,
 	fourOverPiPrefixTerms int,
@@ -38,6 +36,7 @@ func MVPThreeOverPiSquaredPlusERadicandApproxSnapshotWithFourOverPiApprox(
 	)
 }
 
+// Legacy expression-specific wrapper retained temporarily while callers migrate.
 func MVPThreeOverPiSquaredPlusERadicandSnapshot(
 	fourOverPiPrefixTerms int,
 	ePrefixTerms int,
@@ -53,7 +52,8 @@ func MVPThreeOverPiSquaredPlusERadicandSnapshot(
 	return MVPRadicandAssembleSnapshot(
 		fourOverPiPrefixTerms,
 		ePrefixTerms,
+		bridgeTerms,
 	)
 }
 
-// mvp_radicand_snapshot_legacy.go v1
+// mvp_radicand_snapshot_legacy.go v2

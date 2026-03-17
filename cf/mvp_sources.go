@@ -20,7 +20,7 @@ const MVPDefaultFourOverPiFamily = MVPFourOverPiFamilyBrouncker
 //   - Brouncker 4/pi
 //
 // Rationale:
-//   - the target expression needs 3/pi^2
+//   - the current radicand needs 3/pi^2
 //   - 3/pi^2 = (3/16) * (4/pi)^2
 //   - this avoids introducing a separate reciprocal-of-pi step for MVP
 func MVPReciprocalPiGCFSource() GCFSource {
@@ -241,6 +241,43 @@ func MVPRadicandAssembleFromSnapshots(
 	}, nil
 }
 
+func MVPRadicandAssembleConvergentWithFourOverPiApprox(
+	fourOverPiFn MVPFourOverPiApproxFunc,
+	fourOverPiPrefixTerms int,
+	ePrefixTerms int,
+) (Rational, error) {
+	fourOverPi, err := MVPApproxSnapshotFromApproxFunc(
+		fourOverPiFn,
+		fourOverPiPrefixTerms,
+	)
+	if err != nil {
+		return Rational{}, err
+	}
+
+	eApprox, err := MVPRadicandDefaultEApproxSnapshot(ePrefixTerms)
+	if err != nil {
+		return Rational{}, err
+	}
+
+	radicand, err := MVPRadicandAssembleFromSnapshots(fourOverPi, eApprox)
+	if err != nil {
+		return Rational{}, err
+	}
+
+	return radicand.Convergent, nil
+}
+
+func MVPRadicandAssembleConvergent(
+	fourOverPiPrefixTerms int,
+	ePrefixTerms int,
+) (Rational, error) {
+	return MVPRadicandAssembleConvergentWithFourOverPiApprox(
+		MVPDefaultFourOverPiApproxFunc(),
+		fourOverPiPrefixTerms,
+		ePrefixTerms,
+	)
+}
+
 func MVPRadicandAssembleSnapshotWithFourOverPiApprox(
 	fourOverPiFn MVPFourOverPiApproxFunc,
 	fourOverPiPrefixTerms int,
@@ -265,51 +302,17 @@ func MVPRadicandAssembleSnapshotWithFourOverPiApprox(
 func MVPRadicandAssembleSnapshot(
 	fourOverPiPrefixTerms int,
 	ePrefixTerms int,
+	snapshotTerms int,
 ) (GCFApprox, error) {
-	return MVPRadicandAssembleSnapshotWithFourOverPiApprox(
-		MVPDefaultFourOverPiApproxFunc(),
-		fourOverPiPrefixTerms,
-		ePrefixTerms,
-	)
-}
-
-func MVPRadicandAssembleConvergentWithFourOverPiApprox(
-	fourOverPiFn MVPFourOverPiApproxFunc,
-	fourOverPiPrefixTerms int,
-	ePrefixTerms int,
-) (Rational, error) {
-	radicand, err := MVPRadicandAssembleSnapshotWithFourOverPiApprox(
-		fourOverPiFn,
-		fourOverPiPrefixTerms,
-		ePrefixTerms,
-	)
-	if err != nil {
-		return Rational{}, err
+	if snapshotTerms <= 0 {
+		return GCFApprox{}, fmt.Errorf(
+			"MVPRadicandAssembleSnapshot: snapshotTerms must be > 0, got %d",
+			snapshotTerms,
+		)
 	}
 
-	return radicand.Convergent, nil
-}
-
-func MVPRadicandAssembleConvergent(
-	fourOverPiPrefixTerms int,
-	ePrefixTerms int,
-) (Rational, error) {
-	return MVPRadicandAssembleConvergentWithFourOverPiApprox(
+	return MVPRadicandAssembleSnapshotWithFourOverPiApprox(
 		MVPDefaultFourOverPiApproxFunc(),
-		fourOverPiPrefixTerms,
-		ePrefixTerms,
-	)
-}
-
-// Legacy expression-specific wrappers retained temporarily while tests migrate.
-
-func MVPThreeOverPiSquaredPlusEApproxWithFourOverPiApprox(
-	fourOverPiFn MVPFourOverPiApproxFunc,
-	fourOverPiPrefixTerms int,
-	ePrefixTerms int,
-) (Rational, error) {
-	return MVPRadicandAssembleConvergentWithFourOverPiApprox(
-		fourOverPiFn,
 		fourOverPiPrefixTerms,
 		ePrefixTerms,
 	)
@@ -332,7 +335,26 @@ func MVPFourOverPiApproxWithSource(
 	return a.Convergent, nil
 }
 
-// Legacy expression-specific wrapper retained temporarily while tests migrate.
+// Legacy expression-specific wrappers retained temporarily while tests migrate.
+
+func MVPThreeOverPiSquaredPlusEApproxWithFourOverPiApprox(
+	fourOverPiFn MVPFourOverPiApproxFunc,
+	fourOverPiPrefixTerms int,
+	ePrefixTerms int,
+) (Rational, error) {
+	return MVPRadicandAssembleConvergentWithFourOverPiApprox(
+		fourOverPiFn,
+		fourOverPiPrefixTerms,
+		ePrefixTerms,
+	)
+}
+
+// MVPThreeOverPiSquaredPlusEApprox returns a bounded-prefix rational approximation
+// for:
+//
+//	3/pi^2 + e
+//
+// using the current canonical MVP source family.
 func MVPThreeOverPiSquaredPlusEApprox(fourOverPiPrefixTerms, ePrefixTerms int) (Rational, error) {
 	return MVPRadicandAssembleConvergent(
 		fourOverPiPrefixTerms,
