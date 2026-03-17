@@ -12,13 +12,13 @@ import "fmt"
 //   - this helper adapts a bounded rational approximation into a regular CF and
 //     then into a GCF source
 //   - prefer MVPThreeOverPiSquaredPlusEFiniteBridgeSource for new code
+
 func MVPThreeOverPiSquaredPlusEAsGCFSource(
 	fourOverPiPrefixTerms int,
 	ePrefixTerms int,
 ) (GCFSource, error) {
-	return MVPThreeOverPiSquaredPlusEFiniteBridgeSource(
-		fourOverPiPrefixTerms,
-		ePrefixTerms,
+	return nil, fmt.Errorf(
+		"MVPThreeOverPiSquaredPlusEAsGCFSource: removed from production path; use MVPThreeOverPiSquaredPlusERadicandSnapshot",
 	)
 }
 
@@ -47,10 +47,8 @@ func MVPThreeOverPiSquaredPlusEFiniteBridgeSource(
 	fourOverPiPrefixTerms int,
 	ePrefixTerms int,
 ) (GCFSource, error) {
-	return MVPThreeOverPiSquaredPlusEFiniteBridgeSourceWithFourOverPiApprox(
-		MVPDefaultFourOverPiApproxFunc(),
-		fourOverPiPrefixTerms,
-		ePrefixTerms,
+	return nil, fmt.Errorf(
+		"MVPThreeOverPiSquaredPlusEFiniteBridgeSource: removed from production path; use MVPThreeOverPiSquaredPlusERadicandSnapshot",
 	)
 }
 
@@ -79,20 +77,15 @@ func MVPThreeOverPiSquaredPlusEFiniteBridgeSnapshot(
 }
 
 // Legacy family-parameterized finite bridge retained for compatibility/tests.
+
 func MVPThreeOverPiSquaredPlusEFiniteBridgeSourceWithFourOverPiApprox(
 	fourOverPiFn MVPFourOverPiApproxFunc,
 	fourOverPiPrefixTerms int,
 	ePrefixTerms int,
 ) (GCFSource, error) {
-	x, err := MVPThreeOverPiSquaredPlusEApproxWithFourOverPiApprox(
-		fourOverPiFn,
-		fourOverPiPrefixTerms,
-		ePrefixTerms,
+	return nil, fmt.Errorf(
+		"MVPThreeOverPiSquaredPlusEFiniteBridgeSourceWithFourOverPiApprox: removed from production path; use MVPThreeOverPiSquaredPlusERadicandApproxSnapshotWithFourOverPiApprox",
 	)
-	if err != nil {
-		return nil, err
-	}
-	return AdaptCFToGCF(NewRationalCF(x)), nil
 }
 
 // Legacy family-parameterized finite bridge snapshot retained for compatibility/tests.
@@ -148,9 +141,8 @@ func MVPThreeOverPiSquaredPlusERadicandSource(
 	fourOverPiPrefixTerms int,
 	ePrefixTerms int,
 ) (GCFSource, error) {
-	return MVPThreeOverPiSquaredPlusEFiniteBridgeSource(
-		fourOverPiPrefixTerms,
-		ePrefixTerms,
+	return nil, fmt.Errorf(
+		"MVPThreeOverPiSquaredPlusERadicandSource: removed from production path; use MVPThreeOverPiSquaredPlusERadicandSnapshot",
 	)
 }
 

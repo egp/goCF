@@ -11,8 +11,8 @@ const (
 	MVPDefaultFourOverPiPrefixTerms = 6
 	MVPDefaultEPrefixTerms          = 8
 
-	// Temporary bridge budget for the finite adapted source produced by
-	// MVPNumeratorRadicandBridgeSource.
+	// Temporary compatibility budget retained only for snapshot-based callers.
+	// The live numerator production path no longer uses a finite bridge source.
 	MVPNumeratorBridgePrefixTerms = 64
 )
 
@@ -38,9 +38,8 @@ func MVPNumeratorRadicandBridgeSource(
 	fourOverPiPrefixTerms int,
 	ePrefixTerms int,
 ) (GCFSource, error) {
-	return MVPThreeOverPiSquaredPlusERadicandSource(
-		fourOverPiPrefixTerms,
-		ePrefixTerms,
+	return nil, fmt.Errorf(
+		"MVPNumeratorRadicandBridgeSource: removed from production path; use MVPNumeratorRadicandApproxSnapshot",
 	)
 }
 
@@ -88,21 +87,9 @@ func MVPNumeratorApproxFromRadicandSource(
 	sqrtPolicy SqrtPolicy2,
 	bridgeTerms int,
 ) (Rational, error) {
-	if src == nil {
-		return Rational{}, fmt.Errorf("MVPNumeratorApproxFromRadicandSource: nil src")
-	}
-	if bridgeTerms <= 0 {
-		return Rational{}, fmt.Errorf(
-			"MVPNumeratorApproxFromRadicandSource: bridgeTerms must be > 0, got %d",
-			bridgeTerms,
-		)
-	}
-
-	a, err := GCFApproxFromPrefix(src, bridgeTerms)
-	if err != nil {
-		return Rational{}, err
-	}
-	return MVPNumeratorApproxFromRadicandApprox(a, sqrtPolicy)
+	return Rational{}, fmt.Errorf(
+		"MVPNumeratorApproxFromRadicandSource: removed from production path; use MVPNumeratorApproxFromRadicandApprox",
+	)
 }
 
 func MVPNumeratorRadicandApproxSnapshot(
@@ -117,10 +104,10 @@ func MVPNumeratorRadicandApproxSnapshot(
 		)
 	}
 
-	return MVPThreeOverPiSquaredPlusERadicandSnapshot(
+	return MVPThreeOverPiSquaredPlusERadicandApproxSnapshotWithFourOverPiApprox(
+		MVPDefaultFourOverPiApproxFunc(),
 		fourOverPiPrefixTerms,
 		ePrefixTerms,
-		bridgeTerms,
 	)
 }
 

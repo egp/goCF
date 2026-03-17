@@ -1,4 +1,4 @@
-// infinite_gcf_contract_test.go v5
+// infinite_gcf_contract_test.go v6
 package cf
 
 import (
@@ -26,7 +26,6 @@ func TestInfiniteGCFContract_CanonicalAlgorithmicSourcesDoNotExhaustEarly(t *tes
 }
 
 func TestInfiniteGCFContract_SinPrefixEntryRejectsNonExactInfiniteAngle(t *testing.T) {
-	// Prefix 68 + 1/x with an infinite tail is not an exact finite angle.
 	src := NewPeriodicGCF(
 		[][2]int64{{68, 1}},
 		[][2]int64{{1, 1}},
@@ -53,18 +52,17 @@ func TestInfiniteGCFContract_CurrentAngleConstant_IsExactFiniteGCFPrefix(t *test
 	}
 }
 
-func TestInfiniteGCFContract_CurrentNumeratorBridge_IsFiniteByDesign(t *testing.T) {
-	src, err := MVPThreeOverPiSquaredPlusEAsGCFSource(
+func TestInfiniteGCFContract_CurrentNumeratorSnapshotPath_IsAvailable(t *testing.T) {
+	got, err := MVPNumeratorRadicandApproxSnapshot(
 		MVPDefaultFourOverPiPrefixTerms,
 		MVPDefaultEPrefixTerms,
+		MVPNumeratorBridgePrefixTerms,
 	)
 	if err != nil {
-		t.Fatalf("MVPThreeOverPiSquaredPlusEAsGCFSource failed: %v", err)
+		t.Fatalf("MVPNumeratorRadicandApproxSnapshot failed: %v", err)
 	}
-
-	_, exhausted := readUntilExhaustionPQ(src, 128)
-	if !exhausted {
-		t.Fatalf("expected current numerator bridge to be finite within 128 terms")
+	if got.Convergent.Cmp(intRat(0)) <= 0 {
+		t.Fatalf("got %v want positive convergent", got.Convergent)
 	}
 }
 
@@ -91,9 +89,7 @@ func TestInfiniteGCFContract_CurrentMVPTargetStillWorksDespiteExceptions(t *test
 //
 // 1. Canonical mathematical sources are infinite/algorithmic.
 // 2. Some MVP helpers still rely on explicit finite/exact-tail exceptions.
-// 3. The numerator path currently uses an explicit temporary finite bridge and
-//    an explicit bridge-prefix budget.
-// 4. Post-MVP goal: retire those exceptions and move prod ingestion toward
-//    infinite-GCF-only operator plumbing.
+// 3. The numerator live path now uses snapshot assembly rather than a finite bridge source.
+// 4. Post-MVP goal: retire the remaining compatibility wrappers and bridge-budget naming.
 //
-// infinite_gcf_contract_test.go v5
+// infinite_gcf_contract_test.go v6

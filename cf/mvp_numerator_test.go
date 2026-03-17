@@ -12,15 +12,15 @@ func TestMVPNumeratorApprox_RejectsBadBounds(t *testing.T) {
 	}
 }
 
-func TestMVPThreeOverPiSquaredPlusEAsGCFSource_IsUsableByGCFUnaryPath(t *testing.T) {
-	src, err := MVPThreeOverPiSquaredPlusEAsGCFSource(4, 6)
+func TestMVPNumeratorApproxFromRadicandApprox_UsesSnapshotUnaryPath(t *testing.T) {
+	a, err := MVPNumeratorRadicandApproxSnapshot(4, 6, MVPNumeratorBridgePrefixTerms)
 	if err != nil {
-		t.Fatalf("MVPThreeOverPiSquaredPlusEAsGCFSource failed: %v", err)
+		t.Fatalf("MVPNumeratorRadicandApproxSnapshot failed: %v", err)
 	}
 
-	got, err := SqrtApproxFromGCFSourceRangeSeed2(src, MVPNumeratorBridgePrefixTerms, DefaultSqrtPolicy2())
+	got, err := MVPNumeratorApproxFromRadicandApprox(a, DefaultSqrtPolicy2())
 	if err != nil {
-		t.Fatalf("SqrtApproxFromGCFSourceRangeSeed2 failed: %v", err)
+		t.Fatalf("MVPNumeratorApproxFromRadicandApprox failed: %v", err)
 	}
 
 	want, err := MVPNumeratorApproxDefault(4, 6)
@@ -33,21 +33,20 @@ func TestMVPThreeOverPiSquaredPlusEAsGCFSource_IsUsableByGCFUnaryPath(t *testing
 	}
 }
 
-func TestMVPNumeratorApprox_UsesGCFIngestingUnarySqrtPath(t *testing.T) {
+func TestMVPNumeratorApprox_UsesSnapshotAssembledRadicandPath(t *testing.T) {
 	got, err := MVPNumeratorApproxDefault(4, 6)
 	if err != nil {
 		t.Fatalf("MVPNumeratorApproxDefault failed: %v", err)
 	}
 
-	x, err := MVPThreeOverPiSquaredPlusEApprox(4, 6)
+	a, err := MVPNumeratorRadicandApproxSnapshot(4, 6, MVPNumeratorBridgePrefixTerms)
 	if err != nil {
-		t.Fatalf("MVPThreeOverPiSquaredPlusEApprox failed: %v", err)
+		t.Fatalf("MVPNumeratorRadicandApproxSnapshot failed: %v", err)
 	}
 
-	src := AdaptCFToGCF(NewRationalCF(x))
-	want, err := SqrtApproxFromGCFSourceRangeSeed2(src, MVPNumeratorBridgePrefixTerms, DefaultSqrtPolicy2())
+	want, err := MVPNumeratorApproxFromRadicandApprox(a, DefaultSqrtPolicy2())
 	if err != nil {
-		t.Fatalf("SqrtApproxFromGCFSourceRangeSeed2 failed: %v", err)
+		t.Fatalf("MVPNumeratorApproxFromRadicandApprox failed: %v", err)
 	}
 
 	if got.Cmp(want) != 0 {
@@ -74,23 +73,24 @@ func TestMVPNumeratorApprox_CurrentDefaultUsesSharperBudgets(t *testing.T) {
 	}
 }
 
-func TestMVPNumeratorApprox_UsesExplicitTemporaryBridgeBudget(t *testing.T) {
+func TestMVPNumeratorApprox_UsesExplicitSnapshotBudget(t *testing.T) {
 	got, err := MVPNumeratorApproxCurrentDefault()
 	if err != nil {
 		t.Fatalf("MVPNumeratorApproxCurrentDefault failed: %v", err)
 	}
 
-	src, err := MVPThreeOverPiSquaredPlusEAsGCFSource(
+	a, err := MVPNumeratorRadicandApproxSnapshot(
 		MVPDefaultFourOverPiPrefixTerms,
 		MVPDefaultEPrefixTerms,
+		MVPNumeratorBridgePrefixTerms,
 	)
 	if err != nil {
-		t.Fatalf("MVPThreeOverPiSquaredPlusEAsGCFSource failed: %v", err)
+		t.Fatalf("MVPNumeratorRadicandApproxSnapshot failed: %v", err)
 	}
 
-	want, err := SqrtApproxFromGCFSourceRangeSeed2(src, MVPNumeratorBridgePrefixTerms, DefaultSqrtPolicy2())
+	want, err := MVPNumeratorApproxFromRadicandApprox(a, DefaultSqrtPolicy2())
 	if err != nil {
-		t.Fatalf("SqrtApproxFromGCFSourceRangeSeed2 failed: %v", err)
+		t.Fatalf("MVPNumeratorApproxFromRadicandApprox failed: %v", err)
 	}
 
 	if got.Cmp(want) != 0 {
@@ -162,15 +162,10 @@ func TestMVPNumeratorRadicandApprox_MatchesExistingSubexpression(t *testing.T) {
 	}
 }
 
-func TestMVPNumeratorRadicandBridgeSource_RoundTripsRadicandApprox(t *testing.T) {
-	src, err := MVPNumeratorRadicandBridgeSource(4, 6)
+func TestMVPNumeratorRadicandApproxSnapshot_RoundTripsRadicandApprox(t *testing.T) {
+	got, err := MVPNumeratorRadicandApproxSnapshot(4, 6, MVPNumeratorBridgePrefixTerms)
 	if err != nil {
-		t.Fatalf("MVPNumeratorRadicandBridgeSource failed: %v", err)
-	}
-
-	got, err := GCFSourceConvergent(src, MVPNumeratorBridgePrefixTerms)
-	if err != nil {
-		t.Fatalf("GCFSourceConvergent failed: %v", err)
+		t.Fatalf("MVPNumeratorRadicandApproxSnapshot failed: %v", err)
 	}
 
 	want, err := MVPNumeratorRadicandApprox(4, 6)
@@ -178,34 +173,24 @@ func TestMVPNumeratorRadicandBridgeSource_RoundTripsRadicandApprox(t *testing.T)
 		t.Fatalf("MVPNumeratorRadicandApprox failed: %v", err)
 	}
 
-	if got.Cmp(want) != 0 {
-		t.Fatalf("got %v want %v", got, want)
+	if got.Convergent.Cmp(want) != 0 {
+		t.Fatalf("got %v want %v", got.Convergent, want)
 	}
 }
 
-func TestMVPNumeratorRadicandBridgeSource_ConvergentStabilizesAfterExhaustion(t *testing.T) {
-	src1, err := MVPNumeratorRadicandBridgeSource(4, 6)
+func TestMVPNumeratorRadicandApproxSnapshot_ConvergentIsStableAcrossSnapshotBudgets(t *testing.T) {
+	got64, err := MVPNumeratorRadicandApproxSnapshot(4, 6, 64)
 	if err != nil {
-		t.Fatalf("MVPNumeratorRadicandBridgeSource failed: %v", err)
+		t.Fatalf("MVPNumeratorRadicandApproxSnapshot(64) failed: %v", err)
 	}
 
-	got64, err := GCFSourceConvergent(src1, 64)
+	got96, err := MVPNumeratorRadicandApproxSnapshot(4, 6, 96)
 	if err != nil {
-		t.Fatalf("GCFSourceConvergent(64) failed: %v", err)
+		t.Fatalf("MVPNumeratorRadicandApproxSnapshot(96) failed: %v", err)
 	}
 
-	src2, err := MVPNumeratorRadicandBridgeSource(4, 6)
-	if err != nil {
-		t.Fatalf("MVPNumeratorRadicandBridgeSource failed: %v", err)
-	}
-
-	got96, err := GCFSourceConvergent(src2, 96)
-	if err != nil {
-		t.Fatalf("GCFSourceConvergent(96) failed: %v", err)
-	}
-
-	if got64.Cmp(got96) != 0 {
-		t.Fatalf("bridge convergent not stable: got64=%v got96=%v", got64, got96)
+	if got64.Convergent.Cmp(got96.Convergent) != 0 {
+		t.Fatalf("snapshot convergent not stable: got64=%v got96=%v", got64.Convergent, got96.Convergent)
 	}
 }
 
@@ -269,73 +254,31 @@ func TestMVPNumeratorApprox_CurrentAndSharperBudgetsAreDistinctButClose(t *testi
 	}
 }
 
-func TestMVPNumeratorRadicandBridgeSource_MatchesCanonicalRadicandSource(t *testing.T) {
-	got, err := MVPNumeratorRadicandBridgeSource(4, 6)
+func TestMVPNumeratorRadicandApproxSnapshot_MatchesCanonicalRadicandAssembly(t *testing.T) {
+	got, err := MVPNumeratorRadicandApproxSnapshot(4, 6, 64)
 	if err != nil {
-		t.Fatalf("MVPNumeratorRadicandBridgeSource failed: %v", err)
+		t.Fatalf("MVPNumeratorRadicandApproxSnapshot failed: %v", err)
 	}
 
-	want, err := MVPThreeOverPiSquaredPlusEAsGCFSource(4, 6)
-	if err != nil {
-		t.Fatalf("MVPThreeOverPiSquaredPlusEAsGCFSource failed: %v", err)
-	}
-
-	gotConv, err := GCFSourceConvergent(got, MVPNumeratorBridgePrefixTerms)
-	if err != nil {
-		t.Fatalf("GCFSourceConvergent got failed: %v", err)
-	}
-
-	wantConv, err := GCFSourceConvergent(want, MVPNumeratorBridgePrefixTerms)
-	if err != nil {
-		t.Fatalf("GCFSourceConvergent want failed: %v", err)
-	}
-
-	if gotConv.Cmp(wantConv) != 0 {
-		t.Fatalf("got %v want %v", gotConv, wantConv)
-	}
-}
-
-func TestMVPNumeratorApproxFromRadicandSource_MatchesCurrentPath(t *testing.T) {
-	src, err := MVPThreeOverPiSquaredPlusEAsGCFSource(4, 6)
-	if err != nil {
-		t.Fatalf("MVPThreeOverPiSquaredPlusEAsGCFSource failed: %v", err)
-	}
-
-	got, err := MVPNumeratorApproxFromRadicandSource(
-		src,
-		DefaultSqrtPolicy2(),
-		MVPNumeratorBridgePrefixTerms,
+	want, err := MVPThreeOverPiSquaredPlusERadicandApproxSnapshotWithFourOverPiApprox(
+		MVPDefaultFourOverPiApproxFunc(),
+		4,
+		6,
 	)
 	if err != nil {
-		t.Fatalf("MVPNumeratorApproxFromRadicandSource failed: %v", err)
+		t.Fatalf("MVPThreeOverPiSquaredPlusERadicandApproxSnapshotWithFourOverPiApprox failed: %v", err)
 	}
 
-	want, err := MVPNumeratorApproxDefault(4, 6)
-	if err != nil {
-		t.Fatalf("MVPNumeratorApproxDefault failed: %v", err)
+	if got.Convergent.Cmp(want.Convergent) != 0 {
+		t.Fatalf("got %v want %v", got.Convergent, want.Convergent)
 	}
-
-	if got.Cmp(want) != 0 {
-		t.Fatalf("got %v want %v", got, want)
+	if got.HasRange() != want.HasRange() {
+		t.Fatalf("range presence mismatch: got=%v want=%v", got.HasRange(), want.HasRange())
 	}
-}
-
-func TestMVPNumeratorApproxFromRadicandSource_RejectsNilSource(t *testing.T) {
-	_, err := MVPNumeratorApproxFromRadicandSource(nil, DefaultSqrtPolicy2(), 64)
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-}
-
-func TestMVPNumeratorApproxFromRadicandSource_RejectsBadBridgeTerms(t *testing.T) {
-	src, err := MVPThreeOverPiSquaredPlusEAsGCFSource(4, 6)
-	if err != nil {
-		t.Fatalf("MVPThreeOverPiSquaredPlusEAsGCFSource failed: %v", err)
-	}
-
-	_, err = MVPNumeratorApproxFromRadicandSource(src, DefaultSqrtPolicy2(), 0)
-	if err == nil {
-		t.Fatalf("expected error")
+	if got.HasRange() {
+		if got.Range.Lo.Cmp(want.Range.Lo) != 0 || got.Range.Hi.Cmp(want.Range.Hi) != 0 {
+			t.Fatalf("got range %v want %v", *got.Range, *want.Range)
+		}
 	}
 }
 

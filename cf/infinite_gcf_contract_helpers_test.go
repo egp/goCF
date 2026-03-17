@@ -17,16 +17,4 @@ func mustReadNPQWithoutExhaustion(t *testing.T, src GCFSource, n int) [][2]int64
 	return out
 }
 
-func readUntilExhaustionPQ(src GCFSource, limit int) ([][2]int64, bool) {
-	out := make([][2]int64, 0, limit)
-	for i := 0; i < limit; i++ {
-		p, q, ok := src.NextPQ()
-		if !ok {
-			return out, true
-		}
-		out = append(out, [2]int64{p, q})
-	}
-	return out, false
-}
-
 // infinite_gcf_contract_helpers_test.go v1
