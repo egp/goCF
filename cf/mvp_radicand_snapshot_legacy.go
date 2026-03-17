@@ -1,4 +1,4 @@
-// mvp_numerator_gcf_bridge.go v4
+// mvp_radicand_snapshot_legacy.go v1
 package cf
 
 import "fmt"
@@ -10,7 +10,7 @@ import "fmt"
 //
 // Deprecated MVP note:
 //   - prefer MVPThreeOverPiSquaredPlusERadicandApproxSnapshotWithFourOverPiApprox
-//     or MVPNumeratorRadicandApproxSnapshot for new code
+//     or MVPRadicandSnapshot for new code
 func MVPThreeOverPiSquaredPlusEApproxSnapshot(
 	fourOverPiPrefixTerms int,
 	ePrefixTerms int,
@@ -23,8 +23,8 @@ func MVPThreeOverPiSquaredPlusEApproxSnapshot(
 	)
 }
 
-// New production radicand snapshot path: build a direct point snapshot instead
-// of crossing the temporary finite bridge boundary.
+// Production radicand snapshot path: build a direct point snapshot instead
+// of crossing the former finite bridge boundary.
 func MVPThreeOverPiSquaredPlusERadicandApproxSnapshotWithFourOverPiApprox(
 	fourOverPiFn MVPFourOverPiApproxFunc,
 	fourOverPiPrefixTerms int,
@@ -65,4 +65,4 @@ func MVPThreeOverPiSquaredPlusERadicandSnapshot(
 	)
 }
 
-// mvp_numerator_gcf_bridge.go v4
+// mvp_radicand_snapshot_legacy.go v1

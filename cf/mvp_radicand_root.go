@@ -1,4 +1,4 @@
-// mvp_numerator.go v6
+// mvp_radicand_root.go v1
 package cf
 
 import "fmt"
@@ -145,11 +145,11 @@ func MVPRadicandRootTermsDefault(
 	)
 }
 
-// MVP radicand-root shape note:
+// MVP rooted-radicand shape note:
 //
 //	The full target formula should remain assembled in tests for now.
-//	This production helper intentionally stops at the rooted radicand:
+//	This production helper intentionally stops at:
 //
 //	    sqrt(3/pi^2 + e)
 //
-// mvp_numerator.go v6
+// mvp_radicand_root.go v1
