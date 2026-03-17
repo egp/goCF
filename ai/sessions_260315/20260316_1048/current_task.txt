@@ -1,0 +1,17 @@
+# current_task.txt
+
+First task: retire the remaining finite-bridge / legacy compatibility helpers in the radicand / numerator production path.
+
+Goal:
+- keep the live production path on the unified snapshot assembly pipeline
+- reduce duplicated helper layers
+- preserve green tests
+
+Acceptance criteria:
+- all tests remain green
+- no live radicand / numerator production path depends on the fake finite bridge
+- legacy bridge helpers are either removed or reduced to thin compatibility wrappers
+- no new special-case production logic is introduced
+
+Highest-priority design question:
+How much of the remaining bridge API can be removed now versus kept temporarily as thin wrappers without obscuring the real architecture?

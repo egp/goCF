@@ -1,0 +1,5 @@
+# open_questions.txt
+
+- Which remaining finite-bridge helpers are still needed as temporary compatibility wrappers, and which can be removed now?
+- What is the cleanest final boundary between durable production operator APIs and milestone-specific target-formula helpers?
+- Should exact scalar finite-GCF helpers remain explicit utilities, or be absorbed into a more general exact-constant source abstraction later?

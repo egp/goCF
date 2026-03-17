@@ -1,0 +1,31 @@
+# checkpoint.txt
+Project: goCF — mathematically correct library for arithmetic on infinite GCF streams, following Gosper, emitting primarily RCF.
+
+Current milestone:
+Retire remaining MVP-specific scaffolding so the target formula is only a validation client of the real operator architecture.
+
+Working:
+- e ingested as GCF
+- sqrt(5) ingested as GCF
+- 69° represented as exact finite GCF input
+- denominator no longer uses exact-tail trig entry
+- numerator live path no longer depends on fake finite bridge
+- radicand built through explicit snapshot assembly
+- exact scalar constants now routed through finite GCF ingestion
+- radicand approximation helpers route through unified snapshot assembly path
+- tests are green
+
+Broken:
+- nothing currently failing
+
+Immediate next step:
+Retire remaining finite-bridge / legacy compatibility helpers in production while preserving the unified live radicand/numerator path and green tests.
+
+Constraints:
+- stay on the critical path
+- no float work
+- finite GCFs are a subset of the same ingestion model
+- operators should consume stream-shaped inputs
+- remove temporary / provisional / special-case production code
+- prefer test-first and complete replacements
+- work only from files/errors pasted next

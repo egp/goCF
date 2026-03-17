@@ -1,0 +1,20 @@
+# bootstrap_prompt.txt
+
+We are continuing goCF, a mathematically correct library for arithmetic on infinite GCF streams following Gosper, with primary output as RCF.
+
+State capsule:
+- e is ingested as GCF
+- sqrt(5) is ingested as GCF
+- 69° is exact finite GCF input
+- denominator no longer uses exact-tail trig entry
+- numerator live path no longer uses the fake finite bridge
+- radicand is assembled through explicit snapshot helpers
+- exact scalar constants used in scaling are routed through finite GCF ingestion
+- radicand approximation helpers now use the unified snapshot assembly path
+- tests are green
+- next goal is to retire remaining finite-bridge / legacy compatibility helpers in production
+
+Do not assume any context beyond what I paste next.
+Work only from the files, errors, and test results I provide.
+Stay on the critical path, prefer test-first changes, and prioritize mathematical correctness and clean operator architecture over compatibility or cosmetics.
+Use concise reasoning and avoid speculative refactors.
