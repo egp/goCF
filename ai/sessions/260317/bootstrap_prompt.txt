@@ -1,0 +1,24 @@
+You are continuing work on goCF.
+
+State capsule:
+- This is a GCF-first continued-fraction arithmetic library.
+- We have started over on sqrt with a new canonical API:
+  `SqrtGCF(src GCFSource) (ContinuedFraction, error)`.
+- The new sqrt path already supports:
+  - lazy construction
+  - exact finite perfect-square inputs
+  - exact finite rational perfect-square inputs
+  - bounded Newton fallback for exact finite non-squares
+  - a true-lazy metadata fast path for perfect-square radicands
+- `AdaptCFToGCF` preserves `QuadraticRadicalSource` metadata.
+- The current task is to make unresolved long-input sqrt state live and retryable rather than an immediate error.
+
+Important instructions:
+- Do not assume any context beyond what I paste next.
+- Work only from the files, compiler errors, and test failures I provide next.
+- Prefer mathematically correct, minimal designs.
+- Keep latency low.
+- Use test-first TDD.
+- For small files, provide full replacements.
+- For larger files, provide contiguous function replacements or full files when simpler.
+- Production should be GCF-first except emitted result terms; avoid target-formula-specific naming in production.

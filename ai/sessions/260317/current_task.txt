@@ -1,0 +1,17 @@
+First task for the new chat:
+Fix the new sqrt stream so unresolved state is live, not a terminal error.
+
+Target file:
+- sqrt_gcf.go
+
+Highest-priority issue:
+Current prod still sets `Err()` when the stream merely needs more input after one bounded ingestion pass.
+
+Acceptance criteria:
+- On a long unresolved source, first `Next()` does bounded work, emits nothing, and leaves `Err()==nil`.
+- Second `Next()` consumes more input than the first and still leaves `Err()==nil` while unresolved.
+- Only after the buffered prefix reaches the bootstrap term budget should `Err()` become non-nil.
+- Existing exact finite and metadata-fast-path sqrt tests remain green.
+
+Single highest-priority design question:
+How to represent “live unresolved” distinctly from terminal error while preserving bounded work per `Next()`.

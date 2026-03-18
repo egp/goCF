@@ -1,0 +1,5 @@
+- Should the new sqrt stream model “unresolved, need more input” as an explicit internal state separate from both prepared and terminal error?
+- How much of the existing range/interval machinery should be reused for certified sqrt emission versus introducing a cleaner unary-specific layer?
+- What is the minimal mathematically sound path from the current bootstrap stream to first certified nontrivial emission for `sqrt(2)`?
+- When the new sqrt path is stable, which legacy sqrt APIs/files can be removed immediately versus kept temporarily behind compatibility wrappers?
+- Later, should any public tuning/budget API exist for sqrt, or should all such controls remain internal?

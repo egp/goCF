@@ -1,17 +1,16 @@
-# MasterPlan.md
-
 # goCF Master Plan
 
 ## Mission
 Build a mathematically correct, testable continued-fraction arithmetic library with strong GCF support, robust unary/operator plumbing, and eventually real streaming operators that emit certified digits rather than only collapsing bounded approximations to rationals.
 
 ## Current status
-The project has moved from broad sqrt refactor work into MVP target construction and cleanup for a concrete expression:
+The project has moved past broad sqrt refactor work and past most MVP target-path cleanup into rebuilding sqrt on a simpler foundation.
+
+The concrete validation expression remains:
 
 $$
 \frac{\sqrt{\frac{3}{\pi^2} + e}}{\tanh(\sqrt{5}) - \sin(69^\circ)}
 $$
-
 
     sqrt(3/pi^2 + e) / (tanh(sqrt(5)) - sin(69°))
 
@@ -23,8 +22,7 @@ Current mathematical float estimates for that target are:
 
 What is working:
 - exact-tail transform streams for ULFT / DiagBLFT / BLFT
-- canonical/internal bounded sqrt substrate
-- public bounded sqrt streams for CF prefix, GCF prefix, and GCF exact-tail input
+- canonical/internal bounded sqrt substrate from earlier work still exists in legacy code
 - stream introspection and status semantics
 - proof-safe conservative sqrt enclosure engine
 - unary reciprocal operator for GCF exact-tail and bounded GCF-prefix input
@@ -42,6 +40,15 @@ What is working:
 - radicand approximation helpers route through a unified snapshot assembly path
 - full MVP target currently returns a positive inside range
 - tests are currently green
+- new sqrt work is underway around a single canonical public entry point:
+  `SqrtGCF(src GCFSource) (ContinuedFraction, error)`
+- `SqrtGCF` is lazy at construction time
+- exact finite perfect-square inputs round-trip correctly through the new `SqrtGCF`
+- exact finite rational perfect-square inputs such as `1/4` and `9/16` round-trip correctly through the new `SqrtGCF`
+- exact finite non-square inputs currently return a bounded Newton rational approximation as a regular CF
+- `QuadraticRadicalSource` metadata is preserved through `AdaptCFToGCF`
+- the new sqrt path has a first true-lazy metadata fast path for perfect-square radicands like `sqrt(4)`
+- the new sqrt stream keeps buffered input progress across calls and uses bounded per-call ingestion
 
 What is not complete:
 - production still retains legacy finite-bridge compatibility helpers in the radicand / numerator area
@@ -50,6 +57,9 @@ What is not complete:
 - GCF-side certified-progressive sqrt is still not the main production engine for the MVP target path
 - final public naming / wrapper retirement / docs are deferred
 - the target formula is still represented with MVP-specific scaffolding rather than as a thin validation client of the real operator architecture
+- legacy sqrt code still exists in parallel with the new `SqrtGCF` path
+- the new sqrt stream still needs one key semantic fix: unresolved long-input state must remain live and retryable rather than being treated as a terminal error
+- certified nontrivial lazy sqrt emission for inputs like `sqrt(2)` is not implemented yet
 
 ## Completed work
 
@@ -89,7 +99,7 @@ Substantial retirement of duplicate or obsolete sqrt code/tests:
 - remaining legacy tests trimmed toward public-surface regression coverage
 
 ### Public bounded sqrt surfaces
-Public/user-facing bounded sqrt constructors now exist:
+Public/user-facing bounded sqrt constructors now exist in legacy code:
 - `SqrtStream(...)`
 - `SqrtGCFStream(...)`
 - `SqrtGCFExactTailStream(...)`
@@ -150,31 +160,59 @@ The current MVP target path has been narrowed and clarified:
 - target-level bridge stability tests are green
 - current and sharper target budgets overlap
 - sharper numerator budgets do not widen the target range
+- production naming in this area has been pushed toward radicand / radicand-root terminology, with the full target formula kept in tests rather than production
+
+### New sqrt reboot
+Started over on sqrt with a new minimal path rather than extending the legacy sqrt jungle:
+- introduced a single new public entry point:
+  `SqrtGCF(src GCFSource) (ContinuedFraction, error)`
+- added a small Newton bootstrap core:
+  - `sqrtNewtonStep`
+  - `sqrtNewtonApprox`
+  - bootstrap state wrapper
+- added tests for:
+  - exact finite squares
+  - exact finite rational squares
+  - negative input rejection
+  - non-square bootstrap approximation
+  - lazy construction
+  - lazy metadata shortcut for perfect-square radicands
+  - bounded per-call ingestion
+  - recorded terminal error behavior
+- added first true-lazy shortcut:
+  - if the source advertises square-radicand metadata and the radicand is a perfect square, `SqrtGCF` returns the exact root CF without reading source terms
 
 ## Current milestone
-Retire remaining MVP-specific scaffolding in the numerator/radicand area so the target formula becomes a thin validation client of the real operator architecture.
+Make the new `SqrtGCF` path a mathematically coherent live lazy unary operator, then retire legacy sqrt and remaining MVP-specific scaffolding.
 
 ## Critical path to completion
 
-1. Retire remaining finite-bridge and legacy compatibility helpers from production in the radicand / numerator path
-2. Collapse duplicated radicand / numerator helper layers onto one explicit snapshot-assembly path
-3. Reduce MVP-specific scaffolding until the target formula is only a validation client of the real operator architecture
-4. Advance from bounded non-point target range toward a tighter/certified point result where mathematically justified
-5. Resume broader operator completion and eventual streaming/certified-progressive operator unification
-6. Continue toward general arithmetic on infinite GCF streams with operators consuming stream-shaped inputs and emitting RCF
+1. Finish the new sqrt stream semantics so unresolved long-input state remains live and retryable rather than becoming an immediate terminal error
+2. Replace bootstrap-style whole-value thinking with a real unary operator state for the new `SqrtGCF` path
+3. Certify the first nontrivial lazy sqrt output for a case such as `sqrt(2)`
+4. Make the new sqrt path primary and delete or isolate legacy sqrt APIs/files/tests
+5. Retire remaining finite-bridge and legacy compatibility helpers from production in the radicand / numerator path
+6. Collapse duplicated radicand / numerator helper layers onto one explicit snapshot-assembly path
+7. Reduce MVP-specific scaffolding until the target formula is only a validation client of the real operator architecture
+8. Advance from bounded non-point target range toward a tighter/certified point result where mathematically justified
+9. Resume broader operator completion and eventual streaming/certified-progressive operator unification
+10. Continue toward general arithmetic on infinite GCF streams with operators consuming stream-shaped inputs and emitting RCF
 
 ## Immediate next technical focus
-Take the next big bite on the critical path:
-- retire the remaining finite-bridge compatibility helpers in production
-- preserve green tests
-- keep the live numerator/radicand path on the unified snapshot assembly pipeline
-- convert old bridge helpers to thin wrappers or remove them if no longer needed
+Take the next big bite on the critical path in the new `SqrtGCF` path:
+- distinguish live unresolved state from terminal error
+- preserve bounded per-call ingestion
+- preserve progress across repeated `Next()` calls
+- make bootstrap-budget exhaustion the first terminal error for long unresolved inputs
+- keep exact finite and metadata-fast-path tests green
 
 ## Known risks / unresolved design questions
 - How aggressively should legacy finite-bridge helpers be removed versus kept temporarily as thin wrappers during the cleanup phase?
 - What is the cleanest final boundary between durable production operator APIs and milestone-specific target-formula helpers?
 - How far should MVP go toward a point result versus accepting a mathematically justified bounded range?
 - When operator stabilizes, should public names keep compatibility wrappers or collapse onto canonical names?
+- How much of the existing range machinery should be reused directly for certified lazy sqrt emission versus introducing a cleaner unary-specific layer?
+- Should any public budget/tuning API exist for sqrt, or should all such controls remain internal?
 
 ## Deferred work / future ideas
 - final naming/API cleanup after exception replacement
@@ -183,6 +221,8 @@ Take the next big bite on the critical path:
 - decimal digit emission beyond MVP reporting
 - broader unary-operator family beyond reciprocal/sqrt
 - eventually real streaming sqrt/operator machinery as the main engine rather than bounded-collapse staging
+- cleanup to remove remaining production references where legacy “CF” meant regular CF instead of GCF; production should be GCF-first except for emitted result terms
+- later cleanup to remove remaining MVP scaffolding once replacement paths are stable
 
 ## Practical guidance
 - Do not restart broad refactoring

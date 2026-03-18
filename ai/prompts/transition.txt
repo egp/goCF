@@ -13,6 +13,7 @@ Produce these artifacts:
    - critical path to completion
    - deferred work / future ideas
    - known risks or unresolved design questions
+   - ask for current copy, change incorrect info, add important missing info, but don't change anything else.
 
 2. checkpoint.txt
    Requirements:
