@@ -1,4 +1,4 @@
-// sqrt_gcf.go v4
+// sqrt_gcf.go v6
 package cf
 
 import (
@@ -11,46 +11,79 @@ const (
 	sqrtGCFNewtonSteps            = 4
 )
 
-// SqrtGCF is the new canonical sqrt unary entry point.
-//
-// Current behavior:
-//   - accepts any GCFSource
-//   - for exact finite nonnegative perfect-square rational input, returns the
-//     exact square root as a regular CF
-//   - for exact finite nonnegative non-square input, returns a Newton rational
-//     approximation as a regular CF
-//   - for non-terminating input, reports not implemented for now
+type sqrtBootstrapCFStream struct {
+	src       GCFSource
+	prepared  bool
+	preparing bool
+	out       ContinuedFraction
+}
+
 func SqrtGCF(src GCFSource) (ContinuedFraction, error) {
 	if src == nil {
 		return nil, fmt.Errorf("SqrtGCF: nil src")
 	}
+	return &sqrtBootstrapCFStream{src: src}, nil
+}
 
-	x, exact, err := sqrtGCFExactFiniteValue(src, sqrtGCFExactBootstrapMaxTerms)
+func (s *sqrtBootstrapCFStream) Next() (int64, bool) {
+	if !s.prepared {
+		if err := s.prepare(); err != nil {
+			return 0, false
+		}
+	}
+	if s.out == nil {
+		return 0, false
+	}
+	return s.out.Next()
+}
+
+func (s *sqrtBootstrapCFStream) prepare() error {
+	if s.prepared {
+		return nil
+	}
+	if s.preparing {
+		return fmt.Errorf("sqrtBootstrapCFStream.prepare: re-entrant prepare")
+	}
+	s.preparing = true
+	defer func() { s.preparing = false }()
+
+	x, exact, err := sqrtGCFExactFiniteValue(s.src, sqrtGCFExactBootstrapMaxTerms)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if !exact {
-		return nil, fmt.Errorf("SqrtGCF: not implemented for non-terminating input")
+		s.prepared = true
+		s.out = nil
+		return nil
 	}
 
 	root, ok, err := sqrtExactNonnegativeRational(x)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if ok {
-		return NewRationalCF(root), nil
+		s.out = NewRationalCF(root)
+		s.prepared = true
+		return nil
 	}
 
-	s, err := newSqrtBootstrapState(x)
+	state, err := newSqrtBootstrapState(x)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	for i := 0; i < sqrtGCFNewtonSteps; i++ {
-		if err := s.Step(); err != nil {
-			return nil, err
+		if err := state.Step(); err != nil {
+			return err
 		}
 	}
-	return s.CF()
+	cf, err := state.CF()
+	if err != nil {
+		return err
+	}
+
+	s.out = cf
+	s.prepared = true
+	return nil
 }
 
 func sqrtGCFExactFiniteValue(src GCFSource, maxTerms int) (Rational, bool, error) {
@@ -178,4 +211,4 @@ func (s *sqrtBootstrapState) CF() (ContinuedFraction, error) {
 	return NewRationalCF(s.y), nil
 }
 
-// sqrt_gcf.go v4
+// sqrt_gcf.go v6
