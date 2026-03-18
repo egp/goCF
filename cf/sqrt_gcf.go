@@ -1,4 +1,4 @@
-// sqrt_gcf.go v3
+// sqrt_gcf.go v4
 package cf
 
 import (
@@ -41,11 +41,16 @@ func SqrtGCF(src GCFSource) (ContinuedFraction, error) {
 		return NewRationalCF(root), nil
 	}
 
-	approx, err := sqrtNewtonApprox(x, sqrtGCFNewtonSteps)
+	s, err := newSqrtBootstrapState(x)
 	if err != nil {
 		return nil, err
 	}
-	return NewRationalCF(approx), nil
+	for i := 0; i < sqrtGCFNewtonSteps; i++ {
+		if err := s.Step(); err != nil {
+			return nil, err
+		}
+	}
+	return s.CF()
 }
 
 func sqrtGCFExactFiniteValue(src GCFSource, maxTerms int) (Rational, bool, error) {
@@ -145,4 +150,32 @@ func sqrtNewtonApprox(x Rational, steps int) (Rational, error) {
 	return y, nil
 }
 
-// sqrt_gcf.go v3
+type sqrtBootstrapState struct {
+	x Rational
+	y Rational
+}
+
+func newSqrtBootstrapState(x Rational) (*sqrtBootstrapState, error) {
+	if x.Cmp(intRat(0)) < 0 {
+		return nil, fmt.Errorf("newSqrtBootstrapState: negative input %v", x)
+	}
+	return &sqrtBootstrapState{
+		x: x,
+		y: intRat(1),
+	}, nil
+}
+
+func (s *sqrtBootstrapState) Step() error {
+	next, err := sqrtNewtonStep(s.x, s.y)
+	if err != nil {
+		return err
+	}
+	s.y = next
+	return nil
+}
+
+func (s *sqrtBootstrapState) CF() (ContinuedFraction, error) {
+	return NewRationalCF(s.y), nil
+}
+
+// sqrt_gcf.go v4
