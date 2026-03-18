@@ -1,4 +1,4 @@
-// mvp_radicand_root.go v2
+// cf/mvp_radicand_root.go v3
 package cf
 
 import "fmt"
@@ -6,7 +6,6 @@ import "fmt"
 const (
 	MVPRadicandDefaultFourOverPiPrefixTerms = 6
 	MVPRadicandDefaultEPrefixTerms          = 8
-	MVPRadicandSnapshotTerms                = 64
 )
 
 func MVPRadicandConvergent(
@@ -22,19 +21,10 @@ func MVPRadicandConvergent(
 func MVPRadicandSnapshot(
 	fourOverPiPrefixTerms int,
 	ePrefixTerms int,
-	snapshotTerms int,
 ) (GCFApprox, error) {
-	if snapshotTerms <= 0 {
-		return GCFApprox{}, fmt.Errorf(
-			"MVPRadicandSnapshot: snapshotTerms must be > 0, got %d",
-			snapshotTerms,
-		)
-	}
-
 	return MVPRadicandAssembleSnapshot(
 		fourOverPiPrefixTerms,
 		ePrefixTerms,
-		snapshotTerms,
 	)
 }
 
@@ -50,24 +40,9 @@ func MVPRadicandRootValue(
 	ePrefixTerms int,
 	sqrtPolicy SqrtPolicy2,
 ) (Rational, error) {
-	return MVPRadicandRootValueWithSnapshotTerms(
-		fourOverPiPrefixTerms,
-		ePrefixTerms,
-		sqrtPolicy,
-		MVPRadicandSnapshotTerms,
-	)
-}
-
-func MVPRadicandRootValueWithSnapshotTerms(
-	fourOverPiPrefixTerms int,
-	ePrefixTerms int,
-	sqrtPolicy SqrtPolicy2,
-	snapshotTerms int,
-) (Rational, error) {
 	a, err := MVPRadicandSnapshot(
 		fourOverPiPrefixTerms,
 		ePrefixTerms,
-		snapshotTerms,
 	)
 	if err != nil {
 		return Rational{}, err
@@ -155,4 +130,4 @@ func MVPRadicandRootTermsDefault(
 //
 //	    sqrt(3/pi^2 + e)
 //
-// mvp_radicand_root.go v2
+// cf/mvp_radicand_root.go v3

@@ -1,4 +1,4 @@
-// mvp_sources.go v12
+// cf/mvp_sources.go v13
 package cf
 
 import "fmt"
@@ -302,15 +302,7 @@ func MVPRadicandAssembleSnapshotWithFourOverPiApprox(
 func MVPRadicandAssembleSnapshot(
 	fourOverPiPrefixTerms int,
 	ePrefixTerms int,
-	snapshotTerms int,
 ) (GCFApprox, error) {
-	if snapshotTerms <= 0 {
-		return GCFApprox{}, fmt.Errorf(
-			"MVPRadicandAssembleSnapshot: snapshotTerms must be > 0, got %d",
-			snapshotTerms,
-		)
-	}
-
 	return MVPRadicandAssembleSnapshotWithFourOverPiApprox(
 		MVPDefaultFourOverPiApproxFunc(),
 		fourOverPiPrefixTerms,
@@ -377,4 +369,4 @@ func MVPRadicandScaleFactorSnapshot() (GCFApprox, error) {
 	}, nil
 }
 
-// mvp_sources.go v12
+// cf/mvp_sources.go v13

@@ -1,4 +1,4 @@
-// mvp_numerator_test.go v6
+// cf/mvp_numerator_test.go v7
 package cf
 
 import "testing"
@@ -13,7 +13,7 @@ func TestMVPRadicandRootValue_RejectsBadBounds(t *testing.T) {
 }
 
 func TestMVPRadicandRootValueFromSnapshot_UsesSnapshotUnaryPath(t *testing.T) {
-	a, err := MVPRadicandSnapshot(4, 6, MVPRadicandSnapshotTerms)
+	a, err := MVPRadicandSnapshot(4, 6)
 	if err != nil {
 		t.Fatalf("MVPRadicandSnapshot failed: %v", err)
 	}
@@ -39,7 +39,7 @@ func TestMVPRadicandRootValue_UsesSnapshotAssembledRadicandPath(t *testing.T) {
 		t.Fatalf("MVPRadicandRootValueDefault failed: %v", err)
 	}
 
-	a, err := MVPRadicandSnapshot(4, 6, MVPRadicandSnapshotTerms)
+	a, err := MVPRadicandSnapshot(4, 6)
 	if err != nil {
 		t.Fatalf("MVPRadicandSnapshot failed: %v", err)
 	}
@@ -73,7 +73,7 @@ func TestMVPRadicandRootValue_CurrentDefaultUsesSharperBudgets(t *testing.T) {
 	}
 }
 
-func TestMVPRadicandRootValue_UsesExplicitSnapshotBudget(t *testing.T) {
+func TestMVPRadicandRootValue_UsesSnapshotPath(t *testing.T) {
 	got, err := MVPRadicandRootValueCurrentDefault()
 	if err != nil {
 		t.Fatalf("MVPRadicandRootValueCurrentDefault failed: %v", err)
@@ -82,7 +82,6 @@ func TestMVPRadicandRootValue_UsesExplicitSnapshotBudget(t *testing.T) {
 	a, err := MVPRadicandSnapshot(
 		MVPRadicandDefaultFourOverPiPrefixTerms,
 		MVPRadicandDefaultEPrefixTerms,
-		MVPRadicandSnapshotTerms,
 	)
 	if err != nil {
 		t.Fatalf("MVPRadicandSnapshot failed: %v", err)
@@ -157,7 +156,7 @@ func TestMVPRadicandConvergent_MatchesGenericAssemblyConvergent(t *testing.T) {
 }
 
 func TestMVPRadicandSnapshot_RoundTripsRadicandConvergent(t *testing.T) {
-	got, err := MVPRadicandSnapshot(4, 6, MVPRadicandSnapshotTerms)
+	got, err := MVPRadicandSnapshot(4, 6)
 	if err != nil {
 		t.Fatalf("MVPRadicandSnapshot failed: %v", err)
 	}
@@ -169,38 +168,6 @@ func TestMVPRadicandSnapshot_RoundTripsRadicandConvergent(t *testing.T) {
 
 	if got.Convergent.Cmp(want) != 0 {
 		t.Fatalf("got %v want %v", got.Convergent, want)
-	}
-}
-
-func TestMVPRadicandSnapshot_ConvergentIsStableAcrossSnapshotBudgets(t *testing.T) {
-	got64, err := MVPRadicandSnapshot(4, 6, 64)
-	if err != nil {
-		t.Fatalf("MVPRadicandSnapshot(64) failed: %v", err)
-	}
-
-	got96, err := MVPRadicandSnapshot(4, 6, 96)
-	if err != nil {
-		t.Fatalf("MVPRadicandSnapshot(96) failed: %v", err)
-	}
-
-	if got64.Convergent.Cmp(got96.Convergent) != 0 {
-		t.Fatalf("snapshot convergent not stable: got64=%v got96=%v", got64.Convergent, got96.Convergent)
-	}
-}
-
-func TestMVPRadicandRootValue_CurrentSnapshotBudgetIsStable(t *testing.T) {
-	got, err := MVPRadicandRootValueWithSnapshotTerms(4, 6, DefaultSqrtPolicy2(), 64)
-	if err != nil {
-		t.Fatalf("MVPRadicandRootValueWithSnapshotTerms(64) failed: %v", err)
-	}
-
-	want, err := MVPRadicandRootValueWithSnapshotTerms(4, 6, DefaultSqrtPolicy2(), 96)
-	if err != nil {
-		t.Fatalf("MVPRadicandRootValueWithSnapshotTerms(96) failed: %v", err)
-	}
-
-	if got.Cmp(want) != 0 {
-		t.Fatalf("root value not stable across snapshot budgets: got=%v want=%v", got, want)
 	}
 }
 
@@ -248,7 +215,7 @@ func TestMVPRadicandRootValue_CurrentAndSharperBudgetsAreDistinctButClose(t *tes
 }
 
 func TestMVPRadicandSnapshot_MatchesCanonicalRadicandAssembly(t *testing.T) {
-	got, err := MVPRadicandSnapshot(4, 6, 64)
+	got, err := MVPRadicandSnapshot(4, 6)
 	if err != nil {
 		t.Fatalf("MVPRadicandSnapshot failed: %v", err)
 	}
@@ -276,7 +243,7 @@ func TestMVPRadicandSnapshot_MatchesCanonicalRadicandAssembly(t *testing.T) {
 }
 
 func TestMVPRadicandSnapshot_RoundTripsCurrentRadicand(t *testing.T) {
-	got, err := MVPRadicandSnapshot(4, 6, MVPRadicandSnapshotTerms)
+	got, err := MVPRadicandSnapshot(4, 6)
 	if err != nil {
 		t.Fatalf("MVPRadicandSnapshot failed: %v", err)
 	}
@@ -291,15 +258,8 @@ func TestMVPRadicandSnapshot_RoundTripsCurrentRadicand(t *testing.T) {
 	}
 }
 
-func TestMVPRadicandSnapshot_RejectsBadSnapshotTerms(t *testing.T) {
-	_, err := MVPRadicandSnapshot(4, 6, 0)
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-}
-
 func TestMVPRadicandRootValueFromSnapshot_MatchesCurrentPath(t *testing.T) {
-	a, err := MVPRadicandSnapshot(4, 6, MVPRadicandSnapshotTerms)
+	a, err := MVPRadicandSnapshot(4, 6)
 	if err != nil {
 		t.Fatalf("MVPRadicandSnapshot failed: %v", err)
 	}
@@ -319,20 +279,4 @@ func TestMVPRadicandRootValueFromSnapshot_MatchesCurrentPath(t *testing.T) {
 	}
 }
 
-func TestMVPRadicandSnapshot_CurrentSnapshotBudgetIsStable(t *testing.T) {
-	got, err := MVPRadicandSnapshot(4, 6, 64)
-	if err != nil {
-		t.Fatalf("MVPRadicandSnapshot(64) failed: %v", err)
-	}
-
-	want, err := MVPRadicandSnapshot(4, 6, 96)
-	if err != nil {
-		t.Fatalf("MVPRadicandSnapshot(96) failed: %v", err)
-	}
-
-	if got.Convergent.Cmp(want.Convergent) != 0 {
-		t.Fatalf("snapshot convergent not stable: got=%v want=%v", got.Convergent, want.Convergent)
-	}
-}
-
-// mvp_numerator_test.go v6
+// cf/mvp_numerator_test.go v7

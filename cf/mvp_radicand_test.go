@@ -1,10 +1,10 @@
-// mvp_radicand_test.go v4
+// cf/mvp_radicand_test.go v5
 package cf
 
 import "testing"
 
 func TestMVPRadicandAssembleSnapshot_RoundTripsApproxValue(t *testing.T) {
-	got, err := MVPRadicandAssembleSnapshot(4, 6, 64)
+	got, err := MVPRadicandAssembleSnapshot(4, 6)
 	if err != nil {
 		t.Fatalf("MVPRadicandAssembleSnapshot failed: %v", err)
 	}
@@ -123,29 +123,6 @@ func TestMVPRadicandAssembleConvergent_IsPositiveAndExceedsEApprox(t *testing.T)
 	}
 }
 
-func TestMVPRadicandAssembleSnapshot_RejectsBadSnapshotTerms(t *testing.T) {
-	_, err := MVPRadicandAssembleSnapshot(4, 6, 0)
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-}
-
-func TestMVPRadicandAssembleSnapshot_CurrentSnapshotBudgetIsStable(t *testing.T) {
-	got, err := MVPRadicandAssembleSnapshot(4, 6, 64)
-	if err != nil {
-		t.Fatalf("MVPRadicandAssembleSnapshot(64) failed: %v", err)
-	}
-
-	want, err := MVPRadicandAssembleSnapshot(4, 6, 96)
-	if err != nil {
-		t.Fatalf("MVPRadicandAssembleSnapshot(96) failed: %v", err)
-	}
-
-	if got.Convergent.Cmp(want.Convergent) != 0 {
-		t.Fatalf("snapshot convergent not stable: got=%v want=%v", got.Convergent, want.Convergent)
-	}
-}
-
 func TestMVPRadicandAssembleSnapshotWithFourOverPiApprox_LambertRoundTripsAlternateApprox(t *testing.T) {
 	got, err := MVPRadicandAssembleSnapshotWithFourOverPiApprox(
 		MVPFourOverPiApproxLambert,
@@ -191,7 +168,7 @@ func TestMVPRadicandRootValueFromSnapshot_LambertSnapshotPathIsUsableBySqrt(t *t
 }
 
 func TestMVPRadicandAssembleSnapshot_MatchesDirectApproxAsPointSnapshot(t *testing.T) {
-	got, err := MVPRadicandAssembleSnapshot(4, 6, 64)
+	got, err := MVPRadicandAssembleSnapshot(4, 6)
 	if err != nil {
 		t.Fatalf("MVPRadicandAssembleSnapshot failed: %v", err)
 	}
@@ -239,22 +216,6 @@ func TestMVPRadicandAssembleSnapshotWithFourOverPiApprox_LambertMatchesAlternate
 	}
 	if got.Range.Lo.Cmp(want) != 0 || got.Range.Hi.Cmp(want) != 0 {
 		t.Fatalf("got range %v want point %v", *got.Range, want)
-	}
-}
-
-func TestMVPRadicandRootValueWithSnapshotTerms_IgnoresSnapshotBudgetOnDirectSnapshotPath(t *testing.T) {
-	got, err := MVPRadicandRootValueWithSnapshotTerms(4, 6, DefaultSqrtPolicy2(), 64)
-	if err != nil {
-		t.Fatalf("MVPRadicandRootValueWithSnapshotTerms(64) failed: %v", err)
-	}
-
-	want, err := MVPRadicandRootValueWithSnapshotTerms(4, 6, DefaultSqrtPolicy2(), 96)
-	if err != nil {
-		t.Fatalf("MVPRadicandRootValueWithSnapshotTerms(96) failed: %v", err)
-	}
-
-	if got.Cmp(want) != 0 {
-		t.Fatalf("direct snapshot path should ignore snapshot budget: got=%v want=%v", got, want)
 	}
 }
 
@@ -664,4 +625,4 @@ func TestMVPRadicandAssembleSnapshotWithFourOverPiApprox_UsesAssembleFromSnapsho
 	}
 }
 
-// mvp_radicand_test.go v4
+// cf/mvp_radicand_test.go v5

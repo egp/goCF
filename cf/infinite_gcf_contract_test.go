@@ -1,4 +1,4 @@
-// infinite_gcf_contract_test.go v7
+// cf/infinite_gcf_contract_test.go v8
 package cf
 
 import (
@@ -56,19 +56,12 @@ func TestInfiniteGCFContract_CurrentRadicandSnapshotPath_IsAvailable(t *testing.
 	got, err := MVPRadicandSnapshot(
 		MVPRadicandDefaultFourOverPiPrefixTerms,
 		MVPRadicandDefaultEPrefixTerms,
-		MVPRadicandSnapshotTerms,
 	)
 	if err != nil {
 		t.Fatalf("MVPRadicandSnapshot failed: %v", err)
 	}
 	if got.Convergent.Cmp(intRat(0)) <= 0 {
 		t.Fatalf("got %v want positive convergent", got.Convergent)
-	}
-}
-
-func TestInfiniteGCFContract_CurrentRadicandSnapshotBudget_IsExplicit(t *testing.T) {
-	if MVPRadicandSnapshotTerms <= 0 {
-		t.Fatalf("got MVPRadicandSnapshotTerms=%d want > 0", MVPRadicandSnapshotTerms)
 	}
 }
 
@@ -92,4 +85,4 @@ func TestInfiniteGCFContract_CurrentMVPTargetStillWorksDespiteExceptions(t *test
 // 3. The rooted-radicand live path uses snapshot assembly.
 // 4. Post-MVP goal: retire remaining legacy names and tighten snapshot/bounds terminology.
 //
-// infinite_gcf_contract_test.go v7
+// cf/infinite_gcf_contract_test.go v8
