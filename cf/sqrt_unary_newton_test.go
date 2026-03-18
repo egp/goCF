@@ -1,4 +1,4 @@
-// cf/sqrt_unary_newton_test.go v2
+// cf/sqrt_unary_newton_test.go v3
 package cf
 
 import (
@@ -7,9 +7,9 @@ import (
 )
 
 func TestSqrtUnaryNewtonStep_FourFromOne_GivesFiveHalves(t *testing.T) {
-	got, err := SqrtUnaryNewtonStepExact(mustRat(4, 1), mustRat(1, 1))
+	got, err := sqrtUnaryNewtonStepExact(mustRat(4, 1), mustRat(1, 1))
 	if err != nil {
-		t.Fatalf("SqrtUnaryNewtonStepExact failed: %v", err)
+		t.Fatalf("sqrtUnaryNewtonStepExact failed: %v", err)
 	}
 
 	want := mustRat(5, 2)
@@ -19,9 +19,9 @@ func TestSqrtUnaryNewtonStep_FourFromOne_GivesFiveHalves(t *testing.T) {
 }
 
 func TestSqrtUnaryNewtonStep_FourSecondStep_GivesFortyOneTwentieths(t *testing.T) {
-	got, err := SqrtUnaryNewtonStepExact(mustRat(4, 1), mustRat(5, 2))
+	got, err := sqrtUnaryNewtonStepExact(mustRat(4, 1), mustRat(5, 2))
 	if err != nil {
-		t.Fatalf("SqrtUnaryNewtonStepExact failed: %v", err)
+		t.Fatalf("sqrtUnaryNewtonStepExact failed: %v", err)
 	}
 
 	want := mustRat(41, 20)
@@ -31,9 +31,9 @@ func TestSqrtUnaryNewtonStep_FourSecondStep_GivesFortyOneTwentieths(t *testing.T
 }
 
 func TestSqrtUnaryNewtonStep_FourAtFixedPoint_StaysTwo(t *testing.T) {
-	got, err := SqrtUnaryNewtonStepExact(mustRat(4, 1), mustRat(2, 1))
+	got, err := sqrtUnaryNewtonStepExact(mustRat(4, 1), mustRat(2, 1))
 	if err != nil {
-		t.Fatalf("SqrtUnaryNewtonStepExact failed: %v", err)
+		t.Fatalf("sqrtUnaryNewtonStepExact failed: %v", err)
 	}
 
 	want := mustRat(2, 1)
@@ -43,7 +43,7 @@ func TestSqrtUnaryNewtonStep_FourAtFixedPoint_StaysTwo(t *testing.T) {
 }
 
 func TestSqrtUnaryNewtonStep_RejectsZeroInput(t *testing.T) {
-	_, err := SqrtUnaryNewtonStepExact(mustRat(0, 1), mustRat(1, 1))
+	_, err := sqrtUnaryNewtonStepExact(mustRat(0, 1), mustRat(1, 1))
 	if err == nil {
 		t.Fatalf("expected error")
 	}
@@ -53,7 +53,7 @@ func TestSqrtUnaryNewtonStep_RejectsZeroInput(t *testing.T) {
 }
 
 func TestSqrtUnaryNewtonStep_RejectsNegativeInput(t *testing.T) {
-	_, err := SqrtUnaryNewtonStepExact(mustRat(-1, 1), mustRat(1, 1))
+	_, err := sqrtUnaryNewtonStepExact(mustRat(-1, 1), mustRat(1, 1))
 	if err == nil {
 		t.Fatalf("expected error")
 	}
@@ -63,7 +63,7 @@ func TestSqrtUnaryNewtonStep_RejectsNegativeInput(t *testing.T) {
 }
 
 func TestSqrtUnaryNewtonStep_RejectsZeroIterate(t *testing.T) {
-	_, err := SqrtUnaryNewtonStepExact(mustRat(4, 1), mustRat(0, 1))
+	_, err := sqrtUnaryNewtonStepExact(mustRat(4, 1), mustRat(0, 1))
 	if err == nil {
 		t.Fatalf("expected error")
 	}
@@ -73,7 +73,7 @@ func TestSqrtUnaryNewtonStep_RejectsZeroIterate(t *testing.T) {
 }
 
 func TestSqrtUnaryNewtonStep_RejectsNegativeIterate(t *testing.T) {
-	_, err := SqrtUnaryNewtonStepExact(mustRat(4, 1), mustRat(-1, 1))
+	_, err := sqrtUnaryNewtonStepExact(mustRat(4, 1), mustRat(-1, 1))
 	if err == nil {
 		t.Fatalf("expected error")
 	}
@@ -82,4 +82,4 @@ func TestSqrtUnaryNewtonStep_RejectsNegativeIterate(t *testing.T) {
 	}
 }
 
-// cf/sqrt_unary_newton_test.go v2
+// cf/sqrt_unary_newton_test.go v3

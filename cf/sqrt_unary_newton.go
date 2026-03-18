@@ -1,21 +1,21 @@
-// cf/sqrt_unary_newton.go v4
+// cf/sqrt_unary_newton.go v5
 package cf
 
 import "fmt"
 
-// SqrtUnaryNewtonStepExact applies exactly one Newton update for solving y^2 = x:
+// sqrtUnaryNewtonStepExact applies exactly one Newton update for solving y^2 = x:
 //
 //	y' = (y + x/y) / 2
 //
 // Domain for the current real positive sqrt operator kernel:
 //   - x > 0
 //   - y > 0
-func SqrtUnaryNewtonStepExact(x Rational, y Rational) (Rational, error) {
+func sqrtUnaryNewtonStepExact(x Rational, y Rational) (Rational, error) {
 	if x.Cmp(intRat(0)) <= 0 {
-		return Rational{}, fmt.Errorf("SqrtUnaryNewtonStepExact: nonpositive input %v", x)
+		return Rational{}, fmt.Errorf("sqrtUnaryNewtonStepExact: nonpositive input %v", x)
 	}
 	if y.Cmp(intRat(0)) <= 0 {
-		return Rational{}, fmt.Errorf("SqrtUnaryNewtonStepExact: nonpositive iterate %v", y)
+		return Rational{}, fmt.Errorf("sqrtUnaryNewtonStepExact: nonpositive iterate %v", y)
 	}
 
 	xy, err := x.Div(y)
@@ -31,4 +31,4 @@ func SqrtUnaryNewtonStepExact(x Rational, y Rational) (Rational, error) {
 	return sum.Div(mustRat(2, 1))
 }
 
-// cf/sqrt_unary_newton.go v4
+// cf/sqrt_unary_newton.go v5
