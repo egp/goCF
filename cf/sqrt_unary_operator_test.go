@@ -2,6 +2,7 @@
 package cf
 
 import (
+	"math/big"
 	"strings"
 	"testing"
 )
@@ -305,6 +306,65 @@ func TestSqrtUnaryOperator_SnapshotCarriesSqrtEnclosureAfterTwoIngests(t *testin
 	}
 	if !snap.SqrtEnclosure.Contains(mustRat(12, 7)) {
 		t.Fatalf("expected enclosure %v to contain reciprocal companion 12/7", *snap.SqrtEnclosure)
+	}
+}
+
+func TestSqrtUnaryOperator_InitialSnapshotHasNoForcedDigit(t *testing.T) {
+	op, err := newSqrtUnaryOperator(NewECFGSource(), mustRat(1, 1), defaultSqrtUnaryRefinementPolicy())
+	if err != nil {
+		t.Fatalf("newSqrtUnaryOperator failed: %v", err)
+	}
+
+	snap := op.snapshot()
+	if snap.ForcedDigit != nil {
+		t.Fatalf("ForcedDigit: got non-nil want nil")
+	}
+}
+
+func TestSqrtUnaryOperator_SnapshotCarriesForcedDigitAfterOneIngest(t *testing.T) {
+	op, err := newSqrtUnaryOperator(NewECFGSource(), mustRat(1, 1), defaultSqrtUnaryRefinementPolicy())
+	if err != nil {
+		t.Fatalf("newSqrtUnaryOperator failed: %v", err)
+	}
+
+	if err := op.ingestOneAndRefine(); err != nil {
+		t.Fatalf("ingestOneAndRefine failed: %v", err)
+	}
+
+	snap := op.snapshot()
+	if snap.SqrtEnclosure == nil {
+		t.Fatalf("SqrtEnclosure: got nil want non-nil")
+	}
+	if snap.ForcedDigit == nil {
+		t.Fatalf("ForcedDigit: got nil want non-nil")
+	}
+	if snap.ForcedDigit.Cmp(big.NewInt(1)) != 0 {
+		t.Fatalf("ForcedDigit: got %v want 1", snap.ForcedDigit)
+	}
+}
+
+func TestSqrtUnaryOperator_SnapshotCarriesForcedDigitAfterTwoIngests(t *testing.T) {
+	op, err := newSqrtUnaryOperator(NewECFGSource(), mustRat(1, 1), defaultSqrtUnaryRefinementPolicy())
+	if err != nil {
+		t.Fatalf("newSqrtUnaryOperator failed: %v", err)
+	}
+
+	if err := op.ingestOneAndRefine(); err != nil {
+		t.Fatalf("first ingestOneAndRefine failed: %v", err)
+	}
+	if err := op.ingestOneAndRefine(); err != nil {
+		t.Fatalf("second ingestOneAndRefine failed: %v", err)
+	}
+
+	snap := op.snapshot()
+	if snap.SqrtEnclosure == nil {
+		t.Fatalf("SqrtEnclosure: got nil want non-nil")
+	}
+	if snap.ForcedDigit == nil {
+		t.Fatalf("ForcedDigit: got nil want non-nil")
+	}
+	if snap.ForcedDigit.Cmp(big.NewInt(1)) != 0 {
+		t.Fatalf("ForcedDigit: got %v want 1", snap.ForcedDigit)
 	}
 }
 

@@ -1,7 +1,10 @@
-// cf/sqrt_unary_digit_test.go v2
+// cf/sqrt_unary_digit_test.go v3
 package cf
 
-import "testing"
+import (
+	"math/big"
+	"testing"
+)
 
 func TestSqrtUnaryNextDigitForced_PointTwoToTwo_ForcesDigitTwo(t *testing.T) {
 	r := NewRange(mustRat(2, 1), mustRat(2, 1), true, true)
@@ -13,8 +16,8 @@ func TestSqrtUnaryNextDigitForced_PointTwoToTwo_ForcesDigitTwo(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected forced digit")
 	}
-	if d != 2 {
-		t.Fatalf("got %d want 2", d)
+	if d.Cmp(big.NewInt(2)) != 0 {
+		t.Fatalf("got %v want 2", d)
 	}
 }
 
@@ -28,8 +31,8 @@ func TestSqrtUnaryNextDigitForced_RangeFourThirdsToThreeHalves_ForcesDigitOne(t 
 	if !ok {
 		t.Fatalf("expected forced digit")
 	}
-	if d != 1 {
-		t.Fatalf("got %d want 1", d)
+	if d.Cmp(big.NewInt(1)) != 0 {
+		t.Fatalf("got %v want 1", d)
 	}
 }
 
@@ -41,7 +44,7 @@ func TestSqrtUnaryNextDigitForced_RangeNineTenthsToElevenTenths_DoesNotForceDigi
 		t.Fatalf("sqrtUnaryNextDigitIfForced failed: %v", err)
 	}
 	if ok {
-		t.Fatalf("unexpected forced digit %d", d)
+		t.Fatalf("unexpected forced digit %v", d)
 	}
 }
 
@@ -56,7 +59,7 @@ func TestSqrtUnaryOperator_NextDigitIfForced_InitialStateNotForced(t *testing.T)
 		t.Fatalf("nextDigitIfForced failed: %v", err)
 	}
 	if ok {
-		t.Fatalf("unexpected forced digit %d", d)
+		t.Fatalf("unexpected forced digit %v", d)
 	}
 }
 
@@ -77,9 +80,9 @@ func TestSqrtUnaryOperator_NextDigitIfForced_AfterOneIngest_ForcesDigitOne(t *te
 	if !ok {
 		t.Fatalf("expected forced digit")
 	}
-	if d != 1 {
-		t.Fatalf("got %d want 1", d)
+	if d.Cmp(big.NewInt(1)) != 0 {
+		t.Fatalf("got %v want 1", d)
 	}
 }
 
-// cf/sqrt_unary_digit_test.go v2
+// cf/sqrt_unary_digit_test.go v3
