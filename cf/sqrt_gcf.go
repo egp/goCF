@@ -1,4 +1,4 @@
-// sqrt_gcf.go v2
+// sqrt_gcf.go v3
 package cf
 
 import (
@@ -15,7 +15,7 @@ const (
 //
 // Current behavior:
 //   - accepts any GCFSource
-//   - for exact finite nonnegative perfect-square integer input, returns the
+//   - for exact finite nonnegative perfect-square rational input, returns the
 //     exact square root as a regular CF
 //   - for exact finite nonnegative non-square input, returns a Newton rational
 //     approximation as a regular CF
@@ -33,7 +33,7 @@ func SqrtGCF(src GCFSource) (ContinuedFraction, error) {
 		return nil, fmt.Errorf("SqrtGCF: not implemented for non-terminating input")
 	}
 
-	root, ok, err := sqrtExactNonnegativeIntegerRational(x)
+	root, ok, err := sqrtExactNonnegativeRational(x)
 	if err != nil {
 		return nil, err
 	}
@@ -69,22 +69,22 @@ func sqrtGCFExactFiniteValue(src GCFSource, maxTerms int) (Rational, bool, error
 	return Rational{}, false, nil
 }
 
-func sqrtExactNonnegativeIntegerRational(x Rational) (Rational, bool, error) {
-	num, den := x.ratNumDen()
-
+func sqrtExactNonnegativeRational(x Rational) (Rational, bool, error) {
 	if x.Cmp(intRat(0)) < 0 {
 		return Rational{}, false, fmt.Errorf("SqrtGCF: negative input %v", x)
 	}
-	if den.Cmp(big.NewInt(1)) != 0 {
+
+	num, den := x.ratNumDen()
+	numRoot, ok := sqrtExactBigInt(num)
+	if !ok {
 		return Rational{}, false, nil
 	}
-
-	root, ok := sqrtExactBigInt(num)
+	denRoot, ok := sqrtExactBigInt(den)
 	if !ok {
 		return Rational{}, false, nil
 	}
 
-	r, err := newRationalBig(root, big.NewInt(1))
+	r, err := newRationalBig(numRoot, denRoot)
 	if err != nil {
 		return Rational{}, false, err
 	}
@@ -145,4 +145,4 @@ func sqrtNewtonApprox(x Rational, steps int) (Rational, error) {
 	return y, nil
 }
 
-// sqrt_gcf.go v2
+// sqrt_gcf.go v3

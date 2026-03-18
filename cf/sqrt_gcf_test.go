@@ -1,4 +1,4 @@
-// sqrt_gcf_test.go v1
+// sqrt_gcf_test.go v2
 package cf
 
 import (
@@ -82,6 +82,48 @@ func TestSqrtGCF_ExactFiniteNine(t *testing.T) {
 	}
 }
 
+func TestSqrtGCF_ExactFiniteOneQuarter(t *testing.T) {
+	src := AdaptCFToGCF(NewRationalCF(mustRat(1, 4)))
+
+	cf, err := SqrtGCF(src)
+	if err != nil {
+		t.Fatalf("SqrtGCF failed: %v", err)
+	}
+
+	got := collectTerms(cf, 8)
+	want := collectTerms(NewRationalCF(mustRat(1, 2)), 8)
+
+	if len(got) != len(want) {
+		t.Fatalf("len mismatch: got=%v want=%v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("digit %d: got=%v want=%v", i, got, want)
+		}
+	}
+}
+
+func TestSqrtGCF_ExactFiniteNineSixteenths(t *testing.T) {
+	src := AdaptCFToGCF(NewRationalCF(mustRat(9, 16)))
+
+	cf, err := SqrtGCF(src)
+	if err != nil {
+		t.Fatalf("SqrtGCF failed: %v", err)
+	}
+
+	got := collectTerms(cf, 8)
+	want := collectTerms(NewRationalCF(mustRat(3, 4)), 8)
+
+	if len(got) != len(want) {
+		t.Fatalf("len mismatch: got=%v want=%v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("digit %d: got=%v want=%v", i, got, want)
+		}
+	}
+}
+
 func TestSqrtGCF_RejectsNegativeExactFiniteInput(t *testing.T) {
 	_, err := SqrtGCF(NewSliceGCF([2]int64{-1, 1}))
 	if err == nil {
@@ -91,6 +133,7 @@ func TestSqrtGCF_RejectsNegativeExactFiniteInput(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
 func TestSqrtGCF_ExactFiniteNonSquare_ReturnsNewtonApproxCF(t *testing.T) {
 	cf, err := SqrtGCF(NewSliceGCF([2]int64{2, 1}))
 	if err != nil {
@@ -110,4 +153,14 @@ func TestSqrtGCF_ExactFiniteNonSquare_ReturnsNewtonApproxCF(t *testing.T) {
 	}
 }
 
-// sqrt_gcf_test.go v1
+func TestSqrtGCF_NonTerminatingInput_NotImplemented(t *testing.T) {
+	_, err := SqrtGCF(AdaptCFToGCF(Sqrt2CF()))
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	if !strings.Contains(err.Error(), "not implemented") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// sqrt_gcf_test.go v2
