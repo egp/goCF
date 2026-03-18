@@ -1,4 +1,4 @@
-// cf/sqrt_unary_operator_test.go v1
+// cf/sqrt_unary_operator_test.go v2
 package cf
 
 import (
@@ -48,8 +48,6 @@ func TestNewSqrtUnaryOperator_InitialSnapshotIsEmpty(t *testing.T) {
 }
 
 func TestSqrtUnaryOperator_IngestOneAndRefine_UsesOneTermConvergent(t *testing.T) {
-	// e source first term is 2, so with initial y=1:
-	// y' = (1 + 2/1)/2 = 3/2
 	op, err := newSqrtUnaryOperator(NewECFGSource(), mustRat(1, 1))
 	if err != nil {
 		t.Fatalf("newSqrtUnaryOperator failed: %v", err)
@@ -78,10 +76,6 @@ func TestSqrtUnaryOperator_IngestOneAndRefine_UsesOneTermConvergent(t *testing.T
 }
 
 func TestSqrtUnaryOperator_TwoIngestsTrackChangingInputApproximation(t *testing.T) {
-	// e source first two terms are (2,1), (1,1), giving convergent 3.
-	// Start y=1:
-	// after first ingest, y = (1 + 2)/2 = 3/2
-	// after second ingest with x=3, y = (3/2 + 3/(3/2))/2 = (3/2 + 2)/2 = 7/4
 	op, err := newSqrtUnaryOperator(NewECFGSource(), mustRat(1, 1))
 	if err != nil {
 		t.Fatalf("newSqrtUnaryOperator failed: %v", err)
@@ -106,5 +100,33 @@ func TestSqrtUnaryOperator_TwoIngestsTrackChangingInputApproximation(t *testing.
 	}
 	if snap.CurrentY.Cmp(mustRat(7, 4)) != 0 {
 		t.Fatalf("CurrentY: got %v want %v", *snap.CurrentY, mustRat(7, 4))
+	}
+}
+
+func TestSqrtUnaryOperator_UsesPrefixStateForInputApproximation(t *testing.T) {
+	op, err := newSqrtUnaryOperator(NewECFGSource(), mustRat(1, 1))
+	if err != nil {
+		t.Fatalf("newSqrtUnaryOperator failed: %v", err)
+	}
+
+	if err := op.ingestOneAndRefine(); err != nil {
+		t.Fatalf("first ingestOneAndRefine failed: %v", err)
+	}
+
+	if op.prefixState == nil {
+		t.Fatalf("prefixState: got nil want non-nil")
+	}
+	if !op.prefixState.hasApprox() {
+		t.Fatalf("prefixState.hasApprox: got false want true")
+	}
+
+	got := op.snapshot()
+	want := op.prefixState.approx()
+
+	if got.InputApprox == nil {
+		t.Fatalf("snapshot InputApprox: got nil want non-nil")
+	}
+	if got.InputApprox.Convergent.Cmp(want.Convergent) != 0 {
+		t.Fatalf("snapshot convergent: got %v want %v", got.InputApprox.Convergent, want.Convergent)
 	}
 }

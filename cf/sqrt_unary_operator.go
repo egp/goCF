@@ -1,4 +1,4 @@
-// cf/sqrt_unary_operator.go v2
+// cf/sqrt_unary_operator.go v4
 package cf
 
 import "fmt"
@@ -10,11 +10,11 @@ type sqrtUnaryOperatorSnapshot struct {
 }
 
 type sqrtUnaryOperator struct {
-	src           GCFSource
-	initialY      Rational
-	currentY      Rational
-	bufferedTerms [][2]int64
-	inputApprox   *GCFApprox
+	src         GCFSource
+	initialY    Rational
+	currentY    Rational
+	prefixState *gcfPrefixState
+	inputApprox *GCFApprox
 }
 
 func newSqrtUnaryOperator(src GCFSource, initialY Rational) (*sqrtUnaryOperator, error) {
@@ -26,9 +26,10 @@ func newSqrtUnaryOperator(src GCFSource, initialY Rational) (*sqrtUnaryOperator,
 	}
 
 	return &sqrtUnaryOperator{
-		src:      src,
-		initialY: initialY,
-		currentY: initialY,
+		src:         src,
+		initialY:    initialY,
+		currentY:    initialY,
+		prefixState: newGcfPrefixState(),
 	}, nil
 }
 
@@ -54,12 +55,11 @@ func (s *sqrtUnaryOperator) ingestOneAndRefine() error {
 		return fmt.Errorf("sqrtUnaryOperator.ingestOneAndRefine: source exhausted")
 	}
 
-	s.bufferedTerms = append(s.bufferedTerms, [2]int64{p, q})
-
-	a, err := GCFApproxFromPrefix(NewSliceGCF(s.bufferedTerms...), len(s.bufferedTerms))
-	if err != nil {
+	if err := s.prefixState.ingestOne(p, q); err != nil {
 		return err
 	}
+
+	a := s.prefixState.approx()
 	s.inputApprox = &a
 
 	state, err := newSqrtUnaryState(a.Convergent, s.currentY)
@@ -74,4 +74,4 @@ func (s *sqrtUnaryOperator) ingestOneAndRefine() error {
 	return nil
 }
 
-// cf/sqrt_unary_operator.go v2
+// cf/sqrt_unary_operator.go v4
