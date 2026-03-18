@@ -1,4 +1,4 @@
-// sqrt_gcf.go v8
+// sqrt_gcf.go v10
 package cf
 
 import (
@@ -53,6 +53,15 @@ func (s *sqrtBootstrapCFStream) prepare() error {
 	s.preparing = true
 	defer func() { s.preparing = false }()
 
+	if cf, ok, err := sqrtExactRootCFViaSourceMetadata(s.src); err != nil {
+		s.prepared = true
+		return err
+	} else if ok {
+		s.out = cf
+		s.prepared = true
+		return nil
+	}
+
 	x, exact, err := sqrtGCFExactFiniteValue(s.src, sqrtGCFExactBootstrapTermBudget)
 	if err != nil {
 		s.prepared = true
@@ -98,6 +107,32 @@ func (s *sqrtBootstrapCFStream) prepare() error {
 	s.out = cf
 	s.prepared = true
 	return nil
+}
+
+func sqrtExactRootCFViaSourceMetadata(src GCFSource) (ContinuedFraction, bool, error) {
+	qr, ok := src.(QuadraticRadicalSource)
+	if !ok {
+		return nil, false, nil
+	}
+
+	n, ok := qr.Radicand()
+	if !ok {
+		return nil, false, nil
+	}
+	if n < 0 {
+		return nil, false, fmt.Errorf("SqrtGCF: negative radicand metadata %d", n)
+	}
+
+	root, ok := sqrtExactBigInt(big.NewInt(n))
+	if !ok {
+		return nil, false, nil
+	}
+
+	r, err := newRationalBig(root, big.NewInt(1))
+	if err != nil {
+		return nil, false, err
+	}
+	return NewRationalCF(r), true, nil
 }
 
 func sqrtGCFExactFiniteValue(src GCFSource, termBudget int) (Rational, bool, error) {
@@ -225,4 +260,4 @@ func (s *sqrtBootstrapState) CF() (ContinuedFraction, error) {
 	return NewRationalCF(s.y), nil
 }
 
-// sqrt_gcf.go v8
+// sqrt_gcf.go v10

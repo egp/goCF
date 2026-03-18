@@ -135,6 +135,7 @@ func Sqrt7CF() ContinuedFraction {
 // CFGCFAdapter adapts an ordinary continued fraction source into a generalized
 // continued-fraction source by mapping each regular term a to generalized term
 // (p,q) = (a,1).
+
 type CFGCFAdapter struct {
 	src ContinuedFraction
 }
@@ -142,6 +143,10 @@ type CFGCFAdapter struct {
 // AdaptCFToGCF wraps a ContinuedFraction as a GCFSource using (a,1) terms.
 func AdaptCFToGCF(src ContinuedFraction) GCFSource {
 	return &CFGCFAdapter{src: src}
+}
+
+func (a *CFGCFAdapter) Next() (int64, bool) {
+	return a.src.Next()
 }
 
 func (a *CFGCFAdapter) NextPQ() (int64, int64, bool) {
