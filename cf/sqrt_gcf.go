@@ -1,4 +1,4 @@
-// sqrt_gcf.go v6
+// sqrt_gcf.go v8
 package cf
 
 import (
@@ -7,8 +7,8 @@ import (
 )
 
 const (
-	sqrtGCFExactBootstrapMaxTerms = 256
-	sqrtGCFNewtonSteps            = 4
+	sqrtGCFExactBootstrapTermBudget = 256
+	sqrtGCFNewtonSteps              = 4
 )
 
 type sqrtBootstrapCFStream struct {
@@ -16,6 +16,7 @@ type sqrtBootstrapCFStream struct {
 	prepared  bool
 	preparing bool
 	out       ContinuedFraction
+	err       error
 }
 
 func SqrtGCF(src GCFSource) (ContinuedFraction, error) {
@@ -28,6 +29,7 @@ func SqrtGCF(src GCFSource) (ContinuedFraction, error) {
 func (s *sqrtBootstrapCFStream) Next() (int64, bool) {
 	if !s.prepared {
 		if err := s.prepare(); err != nil {
+			s.err = err
 			return 0, false
 		}
 	}
@@ -35,6 +37,10 @@ func (s *sqrtBootstrapCFStream) Next() (int64, bool) {
 		return 0, false
 	}
 	return s.out.Next()
+}
+
+func (s *sqrtBootstrapCFStream) Err() error {
+	return s.err
 }
 
 func (s *sqrtBootstrapCFStream) prepare() error {
@@ -47,18 +53,23 @@ func (s *sqrtBootstrapCFStream) prepare() error {
 	s.preparing = true
 	defer func() { s.preparing = false }()
 
-	x, exact, err := sqrtGCFExactFiniteValue(s.src, sqrtGCFExactBootstrapMaxTerms)
+	x, exact, err := sqrtGCFExactFiniteValue(s.src, sqrtGCFExactBootstrapTermBudget)
 	if err != nil {
+		s.prepared = true
 		return err
 	}
 	if !exact {
 		s.prepared = true
 		s.out = nil
-		return nil
+		return fmt.Errorf(
+			"SqrtGCF: exact finite value not available within bootstrap term budget %d",
+			sqrtGCFExactBootstrapTermBudget,
+		)
 	}
 
 	root, ok, err := sqrtExactNonnegativeRational(x)
 	if err != nil {
+		s.prepared = true
 		return err
 	}
 	if ok {
@@ -69,15 +80,18 @@ func (s *sqrtBootstrapCFStream) prepare() error {
 
 	state, err := newSqrtBootstrapState(x)
 	if err != nil {
+		s.prepared = true
 		return err
 	}
 	for i := 0; i < sqrtGCFNewtonSteps; i++ {
 		if err := state.Step(); err != nil {
+			s.prepared = true
 			return err
 		}
 	}
 	cf, err := state.CF()
 	if err != nil {
+		s.prepared = true
 		return err
 	}
 
@@ -86,10 +100,10 @@ func (s *sqrtBootstrapCFStream) prepare() error {
 	return nil
 }
 
-func sqrtGCFExactFiniteValue(src GCFSource, maxTerms int) (Rational, bool, error) {
+func sqrtGCFExactFiniteValue(src GCFSource, termBudget int) (Rational, bool, error) {
 	terms := make([][2]int64, 0, 8)
 
-	for i := 0; i < maxTerms; i++ {
+	for i := 0; i < termBudget; i++ {
 		p, q, ok := src.NextPQ()
 		if !ok {
 			if len(terms) == 0 {
@@ -211,4 +225,4 @@ func (s *sqrtBootstrapState) CF() (ContinuedFraction, error) {
 	return NewRationalCF(s.y), nil
 }
 
-// sqrt_gcf.go v6
+// sqrt_gcf.go v8

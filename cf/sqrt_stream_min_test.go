@@ -1,7 +1,10 @@
-// sqrt_stream_min_test.go v1
+// sqrt_stream_min_test.go v2
 package cf
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 type countingSliceGCF struct {
 	terms [][2]int64
@@ -22,6 +25,14 @@ func (s *countingSliceGCF) NextPQ() (int64, int64, bool) {
 	t := s.terms[s.i]
 	s.i++
 	return t[0], t[1], true
+}
+
+func repeatedUnitTerms(n int) [][2]int64 {
+	out := make([][2]int64, n)
+	for i := range out {
+		out[i] = [2]int64{1, 1}
+	}
+	return out
 }
 
 func TestSqrtGCF_IsLazyBeforeFirstNext(t *testing.T) {
@@ -78,4 +89,103 @@ func TestSqrtGCF_ExactFiniteTwoStillReturnsBootstrapApproximation(t *testing.T) 
 	}
 }
 
-// sqrt_stream_min_test.go v1
+func TestSqrtGCF_EmptySourceRecordsErrorOnFirstNext(t *testing.T) {
+	cf, err := SqrtGCF(NewSliceGCF())
+	if err != nil {
+		t.Fatalf("SqrtGCF failed: %v", err)
+	}
+
+	_, ok := cf.Next()
+	if ok {
+		t.Fatalf("expected no emitted term")
+	}
+
+	s, ok := cf.(*sqrtBootstrapCFStream)
+	if !ok {
+		t.Fatalf("expected *sqrtBootstrapCFStream")
+	}
+	if s.Err() == nil {
+		t.Fatalf("expected recorded error")
+	}
+	if !strings.Contains(s.Err().Error(), "empty source") {
+		t.Fatalf("unexpected error: %v", s.Err())
+	}
+}
+
+func TestSqrtGCF_NegativeFiniteInputRecordsErrorOnFirstNext(t *testing.T) {
+	cf, err := SqrtGCF(NewSliceGCF([2]int64{-1, 1}))
+	if err != nil {
+		t.Fatalf("SqrtGCF failed: %v", err)
+	}
+
+	_, ok := cf.Next()
+	if ok {
+		t.Fatalf("expected no emitted term")
+	}
+
+	s, ok := cf.(*sqrtBootstrapCFStream)
+	if !ok {
+		t.Fatalf("expected *sqrtBootstrapCFStream")
+	}
+	if s.Err() == nil {
+		t.Fatalf("expected recorded error")
+	}
+	if !strings.Contains(s.Err().Error(), "negative input") {
+		t.Fatalf("unexpected error: %v", s.Err())
+	}
+}
+
+func TestSqrtGCF_InputUnresolvedWithinBootstrapBudget_RecordsBudgetError(t *testing.T) {
+	src := newCountingSliceGCF(repeatedUnitTerms(sqrtGCFExactBootstrapTermBudget + 20)...)
+
+	cf, err := SqrtGCF(src)
+	if err != nil {
+		t.Fatalf("SqrtGCF failed: %v", err)
+	}
+
+	_, ok := cf.Next()
+	if ok {
+		t.Fatalf("expected no emitted term")
+	}
+
+	s, ok := cf.(*sqrtBootstrapCFStream)
+	if !ok {
+		t.Fatalf("expected *sqrtBootstrapCFStream")
+	}
+	if s.Err() == nil {
+		t.Fatalf("expected recorded error")
+	}
+	if !strings.Contains(s.Err().Error(), "bootstrap term budget") {
+		t.Fatalf("unexpected error: %v", s.Err())
+	}
+	if src.reads != sqrtGCFExactBootstrapTermBudget {
+		t.Fatalf("reads got %d want %d", src.reads, sqrtGCFExactBootstrapTermBudget)
+	}
+}
+
+func TestSqrtGCF_CurrentBootstrapCannotDistinguishLongFiniteFromInfinite(t *testing.T) {
+	finiteLong := newCountingSliceGCF(repeatedUnitTerms(sqrtGCFExactBootstrapTermBudget + 20)...)
+
+	cf, err := SqrtGCF(finiteLong)
+	if err != nil {
+		t.Fatalf("SqrtGCF failed: %v", err)
+	}
+
+	_, ok := cf.Next()
+	if ok {
+		t.Fatalf("expected no emitted term")
+	}
+
+	s, ok := cf.(*sqrtBootstrapCFStream)
+	if !ok {
+		t.Fatalf("expected *sqrtBootstrapCFStream")
+	}
+	if s.Err() == nil {
+		t.Fatalf("expected recorded error")
+	}
+	if strings.Contains(s.Err().Error(), "non-terminating") {
+		t.Fatalf("bootstrap should not claim non-terminating input: %v", s.Err())
+	}
+}
+
+// sqrt_stream_min_test.go v2
