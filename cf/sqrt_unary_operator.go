@@ -1,4 +1,4 @@
-// cf/sqrt_unary_operator.go v10
+// cf/sqrt_unary_operator.go v12
 package cf
 
 import "fmt"
@@ -8,16 +8,18 @@ type sqrtUnaryOperatorSnapshot struct {
 	InputApprox    *GCFApprox
 	CurrentY       *Rational
 	Residual       *sqrtUnaryResidualSnapshot
+	SqrtEnclosure  *Range
 }
 
 type sqrtUnaryOperator struct {
-	src             GCFSource
-	initialY        Rational
-	currentY        Rational
-	policy          sqrtUnaryRefinementPolicy
-	prefixState     *gcfPrefixState
-	inputApprox     *GCFApprox
-	currentResidual *sqrtUnaryResidualSnapshot
+	src              GCFSource
+	initialY         Rational
+	currentY         Rational
+	policy           sqrtUnaryRefinementPolicy
+	prefixState      *gcfPrefixState
+	inputApprox      *GCFApprox
+	currentResidual  *sqrtUnaryResidualSnapshot
+	currentEnclosure *Range
 }
 
 func newSqrtUnaryOperator(src GCFSource, initialY Rational, policy sqrtUnaryRefinementPolicy) (*sqrtUnaryOperator, error) {
@@ -55,11 +57,18 @@ func (s *sqrtUnaryOperator) snapshot() sqrtUnaryOperatorSnapshot {
 		r = &cp
 	}
 
+	var e *Range
+	if s.currentEnclosure != nil {
+		cp := *s.currentEnclosure
+		e = &cp
+	}
+
 	return sqrtUnaryOperatorSnapshot{
 		HasInputApprox: s.inputApprox != nil,
 		InputApprox:    a,
 		CurrentY:       &y,
 		Residual:       r,
+		SqrtEnclosure:  e,
 	}
 }
 
@@ -94,7 +103,17 @@ func (s *sqrtUnaryOperator) ingestOneAndRefine() error {
 	}
 	s.currentResidual = &resid
 
+	if a.Range != nil {
+		enclosure, err := sqrtUnaryRangeEnclosureFromInputRange(*a.Range, s.currentY)
+		if err != nil {
+			return err
+		}
+		s.currentEnclosure = &enclosure
+	} else {
+		s.currentEnclosure = nil
+	}
+
 	return nil
 }
 
-// cf/sqrt_unary_operator.go v10
+// cf/sqrt_unary_operator.go v12

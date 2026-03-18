@@ -1,4 +1,4 @@
-// cf/sqrt_unary_operator_test.go v5
+// cf/sqrt_unary_operator_test.go v6
 package cf
 
 import (
@@ -61,6 +61,9 @@ func TestNewSqrtUnaryOperator_InitialSnapshotIsEmpty(t *testing.T) {
 	}
 	if snap.Residual != nil {
 		t.Fatalf("Residual: got non-nil want nil")
+	}
+	if snap.SqrtEnclosure != nil {
+		t.Fatalf("SqrtEnclosure: got non-nil want nil")
 	}
 }
 
@@ -258,4 +261,51 @@ func TestSqrtUnaryOperator_SnapshotCarriesResidualAfterTwoIngests(t *testing.T) 
 	}
 }
 
-// cf/sqrt_unary_operator_test.go v5
+func TestSqrtUnaryOperator_SnapshotCarriesSqrtEnclosureAfterOneIngest(t *testing.T) {
+	op, err := newSqrtUnaryOperator(NewECFGSource(), mustRat(1, 1), defaultSqrtUnaryRefinementPolicy())
+	if err != nil {
+		t.Fatalf("newSqrtUnaryOperator failed: %v", err)
+	}
+
+	if err := op.ingestOneAndRefine(); err != nil {
+		t.Fatalf("ingestOneAndRefine failed: %v", err)
+	}
+
+	snap := op.snapshot()
+	if snap.SqrtEnclosure == nil {
+		t.Fatalf("SqrtEnclosure: got nil want non-nil")
+	}
+	if snap.SqrtEnclosure.Lo.Cmp(mustRat(4, 3)) != 0 {
+		t.Fatalf("SqrtEnclosure.Lo: got %v want %v", snap.SqrtEnclosure.Lo, mustRat(4, 3))
+	}
+	if snap.SqrtEnclosure.Hi.Cmp(mustRat(3, 2)) != 0 {
+		t.Fatalf("SqrtEnclosure.Hi: got %v want %v", snap.SqrtEnclosure.Hi, mustRat(3, 2))
+	}
+}
+
+func TestSqrtUnaryOperator_SnapshotCarriesSqrtEnclosureAfterTwoIngests(t *testing.T) {
+	op, err := newSqrtUnaryOperator(NewECFGSource(), mustRat(1, 1), defaultSqrtUnaryRefinementPolicy())
+	if err != nil {
+		t.Fatalf("newSqrtUnaryOperator failed: %v", err)
+	}
+
+	if err := op.ingestOneAndRefine(); err != nil {
+		t.Fatalf("first ingestOneAndRefine failed: %v", err)
+	}
+	if err := op.ingestOneAndRefine(); err != nil {
+		t.Fatalf("second ingestOneAndRefine failed: %v", err)
+	}
+
+	snap := op.snapshot()
+	if snap.SqrtEnclosure == nil {
+		t.Fatalf("SqrtEnclosure: got nil want non-nil")
+	}
+	if !snap.SqrtEnclosure.Contains(mustRat(7, 4)) {
+		t.Fatalf("expected enclosure %v to contain current iterate 7/4", *snap.SqrtEnclosure)
+	}
+	if !snap.SqrtEnclosure.Contains(mustRat(12, 7)) {
+		t.Fatalf("expected enclosure %v to contain reciprocal companion 12/7", *snap.SqrtEnclosure)
+	}
+}
+
+// cf/sqrt_unary_operator_test.go v6
