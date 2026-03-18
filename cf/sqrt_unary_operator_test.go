@@ -1,4 +1,4 @@
-// cf/sqrt_unary_operator_test.go v4
+// cf/sqrt_unary_operator_test.go v5
 package cf
 
 import (
@@ -58,6 +58,9 @@ func TestNewSqrtUnaryOperator_InitialSnapshotIsEmpty(t *testing.T) {
 	}
 	if snap.CurrentY.Cmp(mustRat(1, 1)) != 0 {
 		t.Fatalf("CurrentY: got %v want %v", *snap.CurrentY, mustRat(1, 1))
+	}
+	if snap.Residual != nil {
+		t.Fatalf("Residual: got non-nil want nil")
 	}
 }
 
@@ -196,4 +199,63 @@ func TestSqrtUnaryOperator_SnapshotCarriesInputRangeWhenAvailable(t *testing.T) 
 	}
 }
 
-// cf/sqrt_unary_operator_test.go v4
+func TestSqrtUnaryOperator_SnapshotCarriesResidualAfterOneIngest(t *testing.T) {
+	op, err := newSqrtUnaryOperator(NewECFGSource(), mustRat(1, 1), defaultSqrtUnaryRefinementPolicy())
+	if err != nil {
+		t.Fatalf("newSqrtUnaryOperator failed: %v", err)
+	}
+
+	if err := op.ingestOneAndRefine(); err != nil {
+		t.Fatalf("ingestOneAndRefine failed: %v", err)
+	}
+
+	snap := op.snapshot()
+	if snap.Residual == nil {
+		t.Fatalf("Residual: got nil want non-nil")
+	}
+	if snap.Residual.X.Cmp(mustRat(2, 1)) != 0 {
+		t.Fatalf("Residual.X: got %v want %v", snap.Residual.X, mustRat(2, 1))
+	}
+	if snap.Residual.Y.Cmp(mustRat(3, 2)) != 0 {
+		t.Fatalf("Residual.Y: got %v want %v", snap.Residual.Y, mustRat(3, 2))
+	}
+	if snap.Residual.YSquared.Cmp(mustRat(9, 4)) != 0 {
+		t.Fatalf("Residual.YSquared: got %v want %v", snap.Residual.YSquared, mustRat(9, 4))
+	}
+	if snap.Residual.Residual.Cmp(mustRat(1, 4)) != 0 {
+		t.Fatalf("Residual.Residual: got %v want %v", snap.Residual.Residual, mustRat(1, 4))
+	}
+}
+
+func TestSqrtUnaryOperator_SnapshotCarriesResidualAfterTwoIngests(t *testing.T) {
+	op, err := newSqrtUnaryOperator(NewECFGSource(), mustRat(1, 1), defaultSqrtUnaryRefinementPolicy())
+	if err != nil {
+		t.Fatalf("newSqrtUnaryOperator failed: %v", err)
+	}
+
+	if err := op.ingestOneAndRefine(); err != nil {
+		t.Fatalf("first ingestOneAndRefine failed: %v", err)
+	}
+	if err := op.ingestOneAndRefine(); err != nil {
+		t.Fatalf("second ingestOneAndRefine failed: %v", err)
+	}
+
+	snap := op.snapshot()
+	if snap.Residual == nil {
+		t.Fatalf("Residual: got nil want non-nil")
+	}
+	if snap.Residual.X.Cmp(mustRat(3, 1)) != 0 {
+		t.Fatalf("Residual.X: got %v want %v", snap.Residual.X, mustRat(3, 1))
+	}
+	if snap.Residual.Y.Cmp(mustRat(7, 4)) != 0 {
+		t.Fatalf("Residual.Y: got %v want %v", snap.Residual.Y, mustRat(7, 4))
+	}
+	if snap.Residual.YSquared.Cmp(mustRat(49, 16)) != 0 {
+		t.Fatalf("Residual.YSquared: got %v want %v", snap.Residual.YSquared, mustRat(49, 16))
+	}
+	if snap.Residual.Residual.Cmp(mustRat(1, 16)) != 0 {
+		t.Fatalf("Residual.Residual: got %v want %v", snap.Residual.Residual, mustRat(1, 16))
+	}
+}
+
+// cf/sqrt_unary_operator_test.go v5

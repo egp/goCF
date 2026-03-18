@@ -1,4 +1,4 @@
-// cf/sqrt_unary_operator.go v8
+// cf/sqrt_unary_operator.go v10
 package cf
 
 import "fmt"
@@ -7,15 +7,17 @@ type sqrtUnaryOperatorSnapshot struct {
 	HasInputApprox bool
 	InputApprox    *GCFApprox
 	CurrentY       *Rational
+	Residual       *sqrtUnaryResidualSnapshot
 }
 
 type sqrtUnaryOperator struct {
-	src         GCFSource
-	initialY    Rational
-	currentY    Rational
-	policy      sqrtUnaryRefinementPolicy
-	prefixState *gcfPrefixState
-	inputApprox *GCFApprox
+	src             GCFSource
+	initialY        Rational
+	currentY        Rational
+	policy          sqrtUnaryRefinementPolicy
+	prefixState     *gcfPrefixState
+	inputApprox     *GCFApprox
+	currentResidual *sqrtUnaryResidualSnapshot
 }
 
 func newSqrtUnaryOperator(src GCFSource, initialY Rational, policy sqrtUnaryRefinementPolicy) (*sqrtUnaryOperator, error) {
@@ -47,10 +49,17 @@ func (s *sqrtUnaryOperator) snapshot() sqrtUnaryOperatorSnapshot {
 		a = &cp
 	}
 
+	var r *sqrtUnaryResidualSnapshot
+	if s.currentResidual != nil {
+		cp := *s.currentResidual
+		r = &cp
+	}
+
 	return sqrtUnaryOperatorSnapshot{
 		HasInputApprox: s.inputApprox != nil,
 		InputApprox:    a,
 		CurrentY:       &y,
+		Residual:       r,
 	}
 }
 
@@ -78,7 +87,14 @@ func (s *sqrtUnaryOperator) ingestOneAndRefine() error {
 	}
 
 	s.currentY = state.yValue()
+
+	resid, err := state.residualSnapshot()
+	if err != nil {
+		return err
+	}
+	s.currentResidual = &resid
+
 	return nil
 }
 
-// cf/sqrt_unary_operator.go v8
+// cf/sqrt_unary_operator.go v10
