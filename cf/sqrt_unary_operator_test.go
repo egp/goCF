@@ -1,4 +1,4 @@
-// cf/sqrt_unary_operator_test.go v2
+// cf/sqrt_unary_operator_test.go v3
 package cf
 
 import (
@@ -128,5 +128,54 @@ func TestSqrtUnaryOperator_UsesPrefixStateForInputApproximation(t *testing.T) {
 	}
 	if got.InputApprox.Convergent.Cmp(want.Convergent) != 0 {
 		t.Fatalf("snapshot convergent: got %v want %v", got.InputApprox.Convergent, want.Convergent)
+	}
+}
+
+func TestSqrtUnaryOperator_SnapshotReportsPositiveStateAfterEachRefinement(t *testing.T) {
+	op, err := newSqrtUnaryOperator(NewECFGSource(), mustRat(1, 1))
+	if err != nil {
+		t.Fatalf("newSqrtUnaryOperator failed: %v", err)
+	}
+
+	for i := 0; i < 3; i++ {
+		if err := op.ingestOneAndRefine(); err != nil {
+			t.Fatalf("ingestOneAndRefine #%d failed: %v", i+1, err)
+		}
+
+		snap := op.snapshot()
+		if !snap.HasInputApprox {
+			t.Fatalf("after step %d HasInputApprox: got false want true", i+1)
+		}
+		if snap.InputApprox == nil {
+			t.Fatalf("after step %d InputApprox: got nil want non-nil", i+1)
+		}
+		if snap.CurrentY == nil {
+			t.Fatalf("after step %d CurrentY: got nil want non-nil", i+1)
+		}
+		if snap.InputApprox.Convergent.Cmp(intRat(0)) <= 0 {
+			t.Fatalf("after step %d input convergent: got %v want positive", i+1, snap.InputApprox.Convergent)
+		}
+		if snap.CurrentY.Cmp(intRat(0)) <= 0 {
+			t.Fatalf("after step %d CurrentY: got %v want positive", i+1, *snap.CurrentY)
+		}
+	}
+}
+
+func TestSqrtUnaryOperator_SnapshotCarriesInputRangeWhenAvailable(t *testing.T) {
+	op, err := newSqrtUnaryOperator(NewECFGSource(), mustRat(1, 1))
+	if err != nil {
+		t.Fatalf("newSqrtUnaryOperator failed: %v", err)
+	}
+
+	if err := op.ingestOneAndRefine(); err != nil {
+		t.Fatalf("ingestOneAndRefine failed: %v", err)
+	}
+
+	snap := op.snapshot()
+	if snap.InputApprox == nil {
+		t.Fatalf("InputApprox: got nil want non-nil")
+	}
+	if snap.InputApprox.Range == nil {
+		t.Fatalf("InputApprox.Range: got nil want non-nil")
 	}
 }

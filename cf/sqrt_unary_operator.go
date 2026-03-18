@@ -1,4 +1,4 @@
-// cf/sqrt_unary_operator.go v4
+// cf/sqrt_unary_operator.go v6
 package cf
 
 import "fmt"
@@ -74,4 +74,4 @@ func (s *sqrtUnaryOperator) ingestOneAndRefine() error {
 	return nil
 }
 
-// cf/sqrt_unary_operator.go v4
+// cf/sqrt_unary_operator.go v6
