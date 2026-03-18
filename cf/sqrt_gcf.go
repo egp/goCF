@@ -1,4 +1,4 @@
-// sqrt_gcf.go v10
+// sqrt_gcf.go v12
 package cf
 
 import (
@@ -9,14 +9,18 @@ import (
 const (
 	sqrtGCFExactBootstrapTermBudget = 256
 	sqrtGCFNewtonSteps              = 4
+	sqrtGCFPerNextIngestBudget      = 32
 )
 
 type sqrtBootstrapCFStream struct {
-	src       GCFSource
-	prepared  bool
-	preparing bool
-	out       ContinuedFraction
-	err       error
+	src            GCFSource
+	prepared       bool
+	preparing      bool
+	out            ContinuedFraction
+	err            error
+	bufferedTerms  [][2]int64
+	inputExhausted bool
+	ingestedTerms  int
 }
 
 func SqrtGCF(src GCFSource) (ContinuedFraction, error) {
@@ -27,6 +31,12 @@ func SqrtGCF(src GCFSource) (ContinuedFraction, error) {
 }
 
 func (s *sqrtBootstrapCFStream) Next() (int64, bool) {
+	if s.err != nil {
+		return 0, false
+	}
+	if s.out != nil {
+		return s.out.Next()
+	}
 	if !s.prepared {
 		if err := s.prepare(); err != nil {
 			s.err = err
@@ -62,18 +72,19 @@ func (s *sqrtBootstrapCFStream) prepare() error {
 		return nil
 	}
 
-	x, exact, err := sqrtGCFExactFiniteValue(s.src, sqrtGCFExactBootstrapTermBudget)
-	if err != nil {
+	if err := s.ingestMore(sqrtGCFPerNextIngestBudget); err != nil {
 		s.prepared = true
 		return err
 	}
-	if !exact {
+	if !s.inputExhausted {
+		// Live unresolved state: not an error.
+		return nil
+	}
+
+	x, err := GCFSourceConvergent(NewSliceGCF(s.bufferedTerms...), len(s.bufferedTerms))
+	if err != nil {
 		s.prepared = true
-		s.out = nil
-		return fmt.Errorf(
-			"SqrtGCF: exact finite value not available within bootstrap term budget %d",
-			sqrtGCFExactBootstrapTermBudget,
-		)
+		return err
 	}
 
 	root, ok, err := sqrtExactNonnegativeRational(x)
@@ -109,6 +120,41 @@ func (s *sqrtBootstrapCFStream) prepare() error {
 	return nil
 }
 
+func (s *sqrtBootstrapCFStream) ingestMore(limit int) error {
+	if limit < 0 {
+		return fmt.Errorf("sqrtBootstrapCFStream.ingestMore: negative limit %d", limit)
+	}
+	if s.inputExhausted {
+		return nil
+	}
+	if len(s.bufferedTerms) >= sqrtGCFExactBootstrapTermBudget {
+		return fmt.Errorf(
+			"SqrtGCF: exact finite value not available within bootstrap term budget %d",
+			sqrtGCFExactBootstrapTermBudget,
+		)
+	}
+
+	for i := 0; i < limit; i++ {
+		if len(s.bufferedTerms) >= sqrtGCFExactBootstrapTermBudget {
+			return fmt.Errorf(
+				"SqrtGCF: exact finite value not available within bootstrap term budget %d",
+				sqrtGCFExactBootstrapTermBudget,
+			)
+		}
+		p, q, ok := s.src.NextPQ()
+		if !ok {
+			s.inputExhausted = true
+			if len(s.bufferedTerms) == 0 {
+				return fmt.Errorf("SqrtGCF: empty source")
+			}
+			return nil
+		}
+		s.bufferedTerms = append(s.bufferedTerms, [2]int64{p, q})
+		s.ingestedTerms++
+	}
+	return nil
+}
+
 func sqrtExactRootCFViaSourceMetadata(src GCFSource) (ContinuedFraction, bool, error) {
 	qr, ok := src.(QuadraticRadicalSource)
 	if !ok {
@@ -133,27 +179,6 @@ func sqrtExactRootCFViaSourceMetadata(src GCFSource) (ContinuedFraction, bool, e
 		return nil, false, err
 	}
 	return NewRationalCF(r), true, nil
-}
-
-func sqrtGCFExactFiniteValue(src GCFSource, termBudget int) (Rational, bool, error) {
-	terms := make([][2]int64, 0, 8)
-
-	for i := 0; i < termBudget; i++ {
-		p, q, ok := src.NextPQ()
-		if !ok {
-			if len(terms) == 0 {
-				return Rational{}, false, fmt.Errorf("SqrtGCF: empty source")
-			}
-			x, err := GCFSourceConvergent(NewSliceGCF(terms...), len(terms))
-			if err != nil {
-				return Rational{}, false, err
-			}
-			return x, true, nil
-		}
-		terms = append(terms, [2]int64{p, q})
-	}
-
-	return Rational{}, false, nil
 }
 
 func sqrtExactNonnegativeRational(x Rational) (Rational, bool, error) {
@@ -260,4 +285,4 @@ func (s *sqrtBootstrapState) CF() (ContinuedFraction, error) {
 	return NewRationalCF(s.y), nil
 }
 
-// sqrt_gcf.go v10
+// sqrt_gcf.go v12
