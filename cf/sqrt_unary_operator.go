@@ -1,4 +1,4 @@
-// cf/sqrt_unary_operator.go v6
+// cf/sqrt_unary_operator.go v8
 package cf
 
 import "fmt"
@@ -13,22 +13,27 @@ type sqrtUnaryOperator struct {
 	src         GCFSource
 	initialY    Rational
 	currentY    Rational
+	policy      sqrtUnaryRefinementPolicy
 	prefixState *gcfPrefixState
 	inputApprox *GCFApprox
 }
 
-func newSqrtUnaryOperator(src GCFSource, initialY Rational) (*sqrtUnaryOperator, error) {
+func newSqrtUnaryOperator(src GCFSource, initialY Rational, policy sqrtUnaryRefinementPolicy) (*sqrtUnaryOperator, error) {
 	if src == nil {
 		return nil, fmt.Errorf("newSqrtUnaryOperator: nil src")
 	}
 	if initialY.Cmp(intRat(0)) <= 0 {
 		return nil, fmt.Errorf("newSqrtUnaryOperator: nonpositive iterate %v", initialY)
 	}
+	if err := policy.validate(); err != nil {
+		return nil, err
+	}
 
 	return &sqrtUnaryOperator{
 		src:         src,
 		initialY:    initialY,
 		currentY:    initialY,
+		policy:      policy,
 		prefixState: newGcfPrefixState(),
 	}, nil
 }
@@ -66,12 +71,14 @@ func (s *sqrtUnaryOperator) ingestOneAndRefine() error {
 	if err != nil {
 		return err
 	}
-	if err := state.step(); err != nil {
-		return err
+	for i := 0; i < s.policy.StepsPerInput; i++ {
+		if err := state.step(); err != nil {
+			return err
+		}
 	}
 
 	s.currentY = state.yValue()
 	return nil
 }
 
-// cf/sqrt_unary_operator.go v6
+// cf/sqrt_unary_operator.go v8

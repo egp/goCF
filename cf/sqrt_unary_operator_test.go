@@ -1,4 +1,4 @@
-// cf/sqrt_unary_operator_test.go v3
+// cf/sqrt_unary_operator_test.go v4
 package cf
 
 import (
@@ -7,7 +7,7 @@ import (
 )
 
 func TestNewSqrtUnaryOperator_RejectsNilSource(t *testing.T) {
-	_, err := newSqrtUnaryOperator(nil, mustRat(1, 1))
+	_, err := newSqrtUnaryOperator(nil, mustRat(1, 1), defaultSqrtUnaryRefinementPolicy())
 	if err == nil {
 		t.Fatalf("expected error")
 	}
@@ -17,7 +17,7 @@ func TestNewSqrtUnaryOperator_RejectsNilSource(t *testing.T) {
 }
 
 func TestNewSqrtUnaryOperator_RejectsNonpositiveInitialIterate(t *testing.T) {
-	_, err := newSqrtUnaryOperator(NewECFGSource(), mustRat(0, 1))
+	_, err := newSqrtUnaryOperator(NewECFGSource(), mustRat(0, 1), defaultSqrtUnaryRefinementPolicy())
 	if err == nil {
 		t.Fatalf("expected error")
 	}
@@ -26,8 +26,22 @@ func TestNewSqrtUnaryOperator_RejectsNonpositiveInitialIterate(t *testing.T) {
 	}
 }
 
+func TestNewSqrtUnaryOperator_RejectsInvalidPolicy(t *testing.T) {
+	_, err := newSqrtUnaryOperator(
+		NewECFGSource(),
+		mustRat(1, 1),
+		sqrtUnaryRefinementPolicy{StepsPerInput: 0},
+	)
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	if !strings.Contains(err.Error(), "StepsPerInput must be > 0") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestNewSqrtUnaryOperator_InitialSnapshotIsEmpty(t *testing.T) {
-	op, err := newSqrtUnaryOperator(NewECFGSource(), mustRat(1, 1))
+	op, err := newSqrtUnaryOperator(NewECFGSource(), mustRat(1, 1), defaultSqrtUnaryRefinementPolicy())
 	if err != nil {
 		t.Fatalf("newSqrtUnaryOperator failed: %v", err)
 	}
@@ -47,8 +61,8 @@ func TestNewSqrtUnaryOperator_InitialSnapshotIsEmpty(t *testing.T) {
 	}
 }
 
-func TestSqrtUnaryOperator_IngestOneAndRefine_UsesOneTermConvergent(t *testing.T) {
-	op, err := newSqrtUnaryOperator(NewECFGSource(), mustRat(1, 1))
+func TestSqrtUnaryOperator_DefaultPolicy_UsesOneStepPerInput(t *testing.T) {
+	op, err := newSqrtUnaryOperator(NewECFGSource(), mustRat(1, 1), defaultSqrtUnaryRefinementPolicy())
 	if err != nil {
 		t.Fatalf("newSqrtUnaryOperator failed: %v", err)
 	}
@@ -75,36 +89,38 @@ func TestSqrtUnaryOperator_IngestOneAndRefine_UsesOneTermConvergent(t *testing.T
 	}
 }
 
-func TestSqrtUnaryOperator_TwoIngestsTrackChangingInputApproximation(t *testing.T) {
-	op, err := newSqrtUnaryOperator(NewECFGSource(), mustRat(1, 1))
+func TestSqrtUnaryOperator_TwoStepPolicy_RefinesTwicePerInput(t *testing.T) {
+	op, err := newSqrtUnaryOperator(
+		NewECFGSource(),
+		mustRat(1, 1),
+		sqrtUnaryRefinementPolicy{StepsPerInput: 2},
+	)
 	if err != nil {
 		t.Fatalf("newSqrtUnaryOperator failed: %v", err)
 	}
 
 	if err := op.ingestOneAndRefine(); err != nil {
-		t.Fatalf("first ingestOneAndRefine failed: %v", err)
-	}
-	if err := op.ingestOneAndRefine(); err != nil {
-		t.Fatalf("second ingestOneAndRefine failed: %v", err)
+		t.Fatalf("ingestOneAndRefine failed: %v", err)
 	}
 
 	snap := op.snapshot()
 	if snap.InputApprox == nil {
 		t.Fatalf("InputApprox: got nil want non-nil")
 	}
-	if snap.InputApprox.Convergent.Cmp(mustRat(3, 1)) != 0 {
-		t.Fatalf("input convergent: got %v want %v", snap.InputApprox.Convergent, mustRat(3, 1))
+	if snap.InputApprox.Convergent.Cmp(mustRat(2, 1)) != 0 {
+		t.Fatalf("input convergent: got %v want %v", snap.InputApprox.Convergent, mustRat(2, 1))
 	}
+
 	if snap.CurrentY == nil {
 		t.Fatalf("CurrentY: got nil want non-nil")
 	}
-	if snap.CurrentY.Cmp(mustRat(7, 4)) != 0 {
-		t.Fatalf("CurrentY: got %v want %v", *snap.CurrentY, mustRat(7, 4))
+	if snap.CurrentY.Cmp(mustRat(17, 12)) != 0 {
+		t.Fatalf("CurrentY: got %v want %v", *snap.CurrentY, mustRat(17, 12))
 	}
 }
 
 func TestSqrtUnaryOperator_UsesPrefixStateForInputApproximation(t *testing.T) {
-	op, err := newSqrtUnaryOperator(NewECFGSource(), mustRat(1, 1))
+	op, err := newSqrtUnaryOperator(NewECFGSource(), mustRat(1, 1), defaultSqrtUnaryRefinementPolicy())
 	if err != nil {
 		t.Fatalf("newSqrtUnaryOperator failed: %v", err)
 	}
@@ -132,7 +148,7 @@ func TestSqrtUnaryOperator_UsesPrefixStateForInputApproximation(t *testing.T) {
 }
 
 func TestSqrtUnaryOperator_SnapshotReportsPositiveStateAfterEachRefinement(t *testing.T) {
-	op, err := newSqrtUnaryOperator(NewECFGSource(), mustRat(1, 1))
+	op, err := newSqrtUnaryOperator(NewECFGSource(), mustRat(1, 1), defaultSqrtUnaryRefinementPolicy())
 	if err != nil {
 		t.Fatalf("newSqrtUnaryOperator failed: %v", err)
 	}
@@ -162,7 +178,7 @@ func TestSqrtUnaryOperator_SnapshotReportsPositiveStateAfterEachRefinement(t *te
 }
 
 func TestSqrtUnaryOperator_SnapshotCarriesInputRangeWhenAvailable(t *testing.T) {
-	op, err := newSqrtUnaryOperator(NewECFGSource(), mustRat(1, 1))
+	op, err := newSqrtUnaryOperator(NewECFGSource(), mustRat(1, 1), defaultSqrtUnaryRefinementPolicy())
 	if err != nil {
 		t.Fatalf("newSqrtUnaryOperator failed: %v", err)
 	}
@@ -179,3 +195,5 @@ func TestSqrtUnaryOperator_SnapshotCarriesInputRangeWhenAvailable(t *testing.T) 
 		t.Fatalf("InputApprox.Range: got nil want non-nil")
 	}
 }
+
+// cf/sqrt_unary_operator_test.go v4
