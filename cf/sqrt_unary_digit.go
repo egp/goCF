@@ -1,4 +1,4 @@
-// cf/sqrt_unary_digit.go v3
+// cf/sqrt_unary_digit.go v4
 package cf
 
 import (
@@ -11,14 +11,14 @@ func sqrtUnaryNextDigitIfForced(r Range) (*big.Int, bool, error) {
 		return nil, false, fmt.Errorf("sqrtUnaryNextDigitIfForced: require inside range, got %v", r)
 	}
 
-	flo, fhi, err := r.FloorBounds()
+	flo, fhi, err := r.floorBigBounds()
 	if err != nil {
 		return nil, false, err
 	}
-	if flo != fhi {
+	if flo.Cmp(fhi) != 0 {
 		return nil, false, nil
 	}
-	return big.NewInt(flo), true, nil
+	return new(big.Int).Set(flo), true, nil
 }
 
 func (s *sqrtUnaryOperator) nextDigitIfForced() (*big.Int, bool, error) {
@@ -37,4 +37,4 @@ func (s *sqrtUnaryOperator) nextDigitIfForced() (*big.Int, bool, error) {
 	return sqrtUnaryNextDigitIfForced(enclosure)
 }
 
-// cf/sqrt_unary_digit.go v3
+// cf/sqrt_unary_digit.go v4
