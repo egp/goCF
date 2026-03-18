@@ -1,4 +1,4 @@
-// sqrt_gcf.go v1
+// sqrt_gcf.go v2
 package cf
 
 import (
@@ -6,16 +6,20 @@ import (
 	"math/big"
 )
 
-const sqrtGCFExactBootstrapMaxTerms = 256
+const (
+	sqrtGCFExactBootstrapMaxTerms = 256
+	sqrtGCFNewtonSteps            = 4
+)
 
 // SqrtGCF is the new canonical sqrt unary entry point.
 //
-// Bootstrap v1 behavior:
+// Current behavior:
 //   - accepts any GCFSource
-//   - currently supports exact finite GCF inputs whose value is a nonnegative
-//     perfect-square integer
-//   - returns a regular CF for the exact square root in those cases
-//   - returns "not implemented" for all other inputs for now
+//   - for exact finite nonnegative perfect-square integer input, returns the
+//     exact square root as a regular CF
+//   - for exact finite nonnegative non-square input, returns a Newton rational
+//     approximation as a regular CF
+//   - for non-terminating input, reports not implemented for now
 func SqrtGCF(src GCFSource) (ContinuedFraction, error) {
 	if src == nil {
 		return nil, fmt.Errorf("SqrtGCF: nil src")
@@ -33,11 +37,15 @@ func SqrtGCF(src GCFSource) (ContinuedFraction, error) {
 	if err != nil {
 		return nil, err
 	}
-	if !ok {
-		return nil, fmt.Errorf("SqrtGCF: not implemented for non-square input %v", x)
+	if ok {
+		return NewRationalCF(root), nil
 	}
 
-	return NewRationalCF(root), nil
+	approx, err := sqrtNewtonApprox(x, sqrtGCFNewtonSteps)
+	if err != nil {
+		return nil, err
+	}
+	return NewRationalCF(approx), nil
 }
 
 func sqrtGCFExactFiniteValue(src GCFSource, maxTerms int) (Rational, bool, error) {
@@ -82,6 +90,7 @@ func sqrtExactNonnegativeIntegerRational(x Rational) (Rational, bool, error) {
 	}
 	return r, true, nil
 }
+
 func sqrtExactBigInt(n *big.Int) (*big.Int, bool) {
 	if n.Sign() < 0 {
 		return nil, false
@@ -98,4 +107,42 @@ func sqrtExactBigInt(n *big.Int) (*big.Int, bool) {
 	return root, true
 }
 
-// sqrt_gcf.go v1
+func sqrtNewtonStep(x Rational, y Rational) (Rational, error) {
+	if y.Cmp(intRat(0)) == 0 {
+		return Rational{}, fmt.Errorf("sqrtNewtonStep: zero iterate")
+	}
+
+	xy, err := x.Div(y)
+	if err != nil {
+		return Rational{}, err
+	}
+	sum, err := y.Add(xy)
+	if err != nil {
+		return Rational{}, err
+	}
+	return sum.Div(mustRat(2, 1))
+}
+
+func sqrtNewtonApprox(x Rational, steps int) (Rational, error) {
+	if x.Cmp(intRat(0)) < 0 {
+		return Rational{}, fmt.Errorf("sqrtNewtonApprox: negative input %v", x)
+	}
+	if steps < 0 {
+		return Rational{}, fmt.Errorf("sqrtNewtonApprox: negative steps %d", steps)
+	}
+	if x.Cmp(intRat(0)) == 0 {
+		return intRat(0), nil
+	}
+
+	y := intRat(1)
+	for i := 0; i < steps; i++ {
+		next, err := sqrtNewtonStep(x, y)
+		if err != nil {
+			return Rational{}, err
+		}
+		y = next
+	}
+	return y, nil
+}
+
+// sqrt_gcf.go v2
