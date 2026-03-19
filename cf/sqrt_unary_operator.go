@@ -1,4 +1,4 @@
-// cf/sqrt_unary_operator.go v14
+// cf/sqrt_unary_operator.go v15
 package cf
 
 import (
@@ -13,6 +13,7 @@ type sqrtUnaryOperatorSnapshot struct {
 	Residual       *sqrtUnaryResidualSnapshot
 	SqrtEnclosure  *Range
 	ForcedDigit    *big.Int
+	EmittedDigits  []*big.Int
 }
 
 type sqrtUnaryOperator struct {
@@ -25,6 +26,7 @@ type sqrtUnaryOperator struct {
 	currentResidual    *sqrtUnaryResidualSnapshot
 	currentEnclosure   *Range
 	currentForcedDigit *big.Int
+	emittedDigits      []*big.Int
 }
 
 func newSqrtUnaryOperator(src GCFSource, initialY Rational, policy sqrtUnaryRefinementPolicy) (*sqrtUnaryOperator, error) {
@@ -73,6 +75,11 @@ func (s *sqrtUnaryOperator) snapshot() sqrtUnaryOperatorSnapshot {
 		d = new(big.Int).Set(s.currentForcedDigit)
 	}
 
+	emitted := make([]*big.Int, 0, len(s.emittedDigits))
+	for _, x := range s.emittedDigits {
+		emitted = append(emitted, new(big.Int).Set(x))
+	}
+
 	return sqrtUnaryOperatorSnapshot{
 		HasInputApprox: s.inputApprox != nil,
 		InputApprox:    a,
@@ -80,6 +87,7 @@ func (s *sqrtUnaryOperator) snapshot() sqrtUnaryOperatorSnapshot {
 		Residual:       r,
 		SqrtEnclosure:  e,
 		ForcedDigit:    d,
+		EmittedDigits:  emitted,
 	}
 }
 
@@ -162,4 +170,30 @@ func (s *sqrtUnaryOperator) forceFirstDigitWithin(maxIngests int) (*big.Int, boo
 	return nil, false, nil
 }
 
-// cf/sqrt_unary_operator.go v14
+func (s *sqrtUnaryOperator) emitFirstDigitIfForced() (*big.Int, bool, bool, error) {
+	if s.currentEnclosure == nil {
+		return nil, false, false, nil
+	}
+
+	d, rem, done, err := sqrtUnaryEmitForcedDigitTransition(*s.currentEnclosure)
+	if err != nil {
+		return nil, false, false, nil
+	}
+
+	s.emittedDigits = append(s.emittedDigits, new(big.Int).Set(d))
+
+	if done {
+		s.currentEnclosure = nil
+		s.currentForcedDigit = nil
+		s.currentResidual = nil
+		return new(big.Int).Set(d), true, true, nil
+	}
+
+	s.currentEnclosure = rem
+	s.currentForcedDigit = nil
+	s.currentResidual = nil
+
+	return new(big.Int).Set(d), true, false, nil
+}
+
+// cf/sqrt_unary_operator.go v15
