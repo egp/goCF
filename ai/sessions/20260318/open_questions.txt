@@ -1,0 +1,5 @@
+- What is the smallest correct transform-first state representation for Gosper sqrt using the existing ULFT/DiagBLFT machinery?
+- For the transform-first core, what exact left/right state should be compared to decide whether the next RCF term is forced?
+- How should Newton averaging be embedded as the small per-term fixed-point solver without becoming the primary operator state?
+- Which existing try3 helpers are worth reusing inside the transform core, and which should be frozen and ignored?
+- When the transform-first core is in place, what is the cleanest migration path from current “digit” naming to correct “term” naming without disturbing green support code?

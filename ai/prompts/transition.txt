@@ -2,7 +2,10 @@ We are at a context-switch point. I am going to start a new chat to reduce laten
 
 Please generate a transition bundle for the next chat, based only on the current conversation state.
 
-Produce these artifacts:
+Ask for current MasterPlan.md, change incorrect info, add important missing info, but don't change
+anything else. 
+
+Produce these artifacts for the next chat to use:
 
 1. Updated MasterPlan.md
    Purpose:
@@ -13,7 +16,6 @@ Produce these artifacts:
    - critical path to completion
    - deferred work / future ideas
    - known risks or unresolved design questions
-   - ask for current copy, change incorrect info, add important missing info, but don't change anything else.
 
 2. checkpoint.txt
    Requirements:

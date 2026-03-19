@@ -1,0 +1,31 @@
+Project: goCF — mathematically correct arithmetic on infinite GCF streams, following Gosper, emitting primarily RCF.
+
+Current milestone:
+Stop extending sqrt try3 as the main operator; start a parallel Gosper-centered transform-first sqrt core.
+
+Current truth:
+- tests are green
+- try3 built useful support code, but its operator core is still Newton/enclosure-centered
+- emitted outputs for the new sqrt path are RCF terms as *big.Int
+- big-int floor bounds were added for new sqrt certification
+- first forced-term transition and demand-driven first-term forcing helper exist in try3
+- “digit” terminology in try3 is wrong and should later be renamed to “term”
+
+Working support pieces:
+- exact Newton step over Rational
+- mutable unary sqrt state
+- GCF prefix state
+- operator refinement policy
+- residual snapshots
+- point and ranged sqrt enclosures
+- forced-term certification helper
+- first operator-level emit transition
+
+Broken / unacceptable direction:
+- try3 operator core is not Gosper-centered enough
+- further improving the current Newton/enclosure core is off the narrow path
+
+Immediate next step:
+- get current cf/range.go
+- then create transform-first red tests for Gosper’s rational sqrt example sqrt(17/10) = [1;(3,3,2)]
+- keep Newton only as the tiny per-term fixed-point solver inside the transform method

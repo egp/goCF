@@ -196,4 +196,34 @@ func (s *sqrtUnaryOperator) emitFirstDigitIfForced() (*big.Int, bool, bool, erro
 	return new(big.Int).Set(d), true, false, nil
 }
 
+func (s *sqrtUnaryOperator) emitForcedDigitsUpTo(maxDigits int) ([]*big.Int, bool, error) {
+	if maxDigits < 0 {
+		return nil, false, fmt.Errorf(
+			"sqrtUnaryOperator.emitForcedDigitsUpTo: negative maxDigits %d",
+			maxDigits,
+		)
+	}
+
+	out := make([]*big.Int, 0, maxDigits)
+	done := false
+
+	for i := 0; i < maxDigits; i++ {
+		d, ok, emitDone, err := s.emitFirstDigitIfForced()
+		if err != nil {
+			return nil, false, err
+		}
+		if !ok {
+			return out, false, nil
+		}
+
+		out = append(out, new(big.Int).Set(d))
+		if emitDone {
+			done = true
+			return out, done, nil
+		}
+	}
+
+	return out, done, nil
+}
+
 // cf/sqrt_unary_operator.go v15

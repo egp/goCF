@@ -1,0 +1,18 @@
+We are continuing goCF, a mathematically correct library for arithmetic on infinite GCF streams following Gosper, emitting primarily RCF.
+
+State capsule:
+- current sqrt try3 support code is green
+- try3 is useful scaffolding but its operator core is still Newton/enclosure-centered
+- do not extend try3 as the main sqrt operator
+- new path is a parallel transform-first Gosper sqrt core
+- emitted outputs must be RCF terms as *big.Int
+- terminology cleanup from “digit” to “term” is deferred cleanup, not current first task
+
+Do not assume any context beyond what I paste next.
+Work only from the files, errors, and test results I provide.
+Stay on the narrow path to Gosper:
+- transform-first fixed-point state
+- Newton only as the small per-term solver
+- term forcing from transform state
+- emit/input feedback
+Avoid speculative refactors and do not improve the current try3 core except where needed to keep support code usable.

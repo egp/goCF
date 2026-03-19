@@ -1,0 +1,21 @@
+First task: start a new parallel transform-first sqrt core and do not extend the current try3 operator core.
+
+Use Gosper’s square-root method as the standard:
+- transform-first fixed-point state
+- Newton only as the tiny per-term solver
+- RCF terms as *big.Int
+
+Immediate prerequisite:
+- ask for / read current cf/range.go before proposing transform-core code
+
+First implementation target:
+- red tests for Gosper’s rational example sqrt(17/10) = [1;(3,3,2)]
+
+Acceptance criteria:
+- new tests target a transform-first sqrt core, not the existing try3 Newton/enclosure core
+- no new changes move the design further from Gosper
+- emitted objects are terms, not decimal digits
+- current green support code remains available as helper/scaffolding
+
+Highest-priority design question:
+What is the minimal transform-state representation for Gosper-style sqrt that fits the existing ULFT/DiagBLFT machinery?

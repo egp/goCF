@@ -1,4 +1,4 @@
-// cf/sqrt_unary_digit.go v4
+// cf/sqrt_unary_digit.go v5
 package cf
 
 import (
@@ -22,6 +22,10 @@ func sqrtUnaryNextDigitIfForced(r Range) (*big.Int, bool, error) {
 }
 
 func (s *sqrtUnaryOperator) nextDigitIfForced() (*big.Int, bool, error) {
+	if s.currentEnclosure != nil {
+		return sqrtUnaryNextDigitIfForced(*s.currentEnclosure)
+	}
+
 	snap := s.snapshot()
 	if snap.InputApprox == nil || snap.InputApprox.Range == nil {
 		return nil, false, nil
@@ -37,4 +41,4 @@ func (s *sqrtUnaryOperator) nextDigitIfForced() (*big.Int, bool, error) {
 	return sqrtUnaryNextDigitIfForced(enclosure)
 }
 
-// cf/sqrt_unary_digit.go v4
+// cf/sqrt_unary_digit.go v5

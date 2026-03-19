@@ -1,7 +1,7 @@
 # goCF Master Plan
 
 ## Mission
-Build a mathematically correct, testable continued-fraction arithmetic library with strong GCF support, robust unary/operator plumbing, and eventually real streaming operators that emit certified digits rather than only collapsing bounded approximations to rationals.
+Build a mathematically correct, testable continued-fraction arithmetic library with strong GCF support, robust unary/operator plumbing, and eventually real streaming operators that emit certified RCF terms rather than only collapsing bounded approximations to rationals.
 
 ## Current status
 The project has moved past broad sqrt refactor work and past most MVP target-path cleanup into rebuilding sqrt on a simpler foundation.
@@ -40,15 +40,20 @@ What is working:
 - radicand approximation helpers route through a unified snapshot assembly path
 - full MVP target currently returns a positive inside range
 - tests are currently green
-- new sqrt work is underway around a single canonical public entry point:
-  `SqrtGCF(src GCFSource) (ContinuedFraction, error)`
-- `SqrtGCF` is lazy at construction time
-- exact finite perfect-square inputs round-trip correctly through the new `SqrtGCF`
-- exact finite rational perfect-square inputs such as `1/4` and `9/16` round-trip correctly through the new `SqrtGCF`
-- exact finite non-square inputs currently return a bounded Newton rational approximation as a regular CF
-- `QuadraticRadicalSource` metadata is preserved through `AdaptCFToGCF`
-- the new sqrt path has a first true-lazy metadata fast path for perfect-square radicands like `sqrt(4)`
-- the new sqrt stream keeps buffered input progress across calls and uses bounded per-call ingestion
+- a third sqrt rebuild produced green exact-arithmetic support/scaffolding:
+  - exact Newton step over `Rational`
+  - mutable unary sqrt state
+  - GCF prefix state
+  - operator refinement policy
+  - residual snapshots
+  - point-input and ranged-input sqrt enclosures
+  - big-int floor bounds for certification
+  - forced-term certification helper
+  - first forced-term transition
+  - demand-driven first-term forcing helper
+  - first operator-level emit transition
+- emitted outputs for the new sqrt work are RCF terms as `*big.Int`, not decimal digits
+- the current sqrt try3 scaffolding is useful support code, but it is not yet Gosper-centered enough to be the final operator core
 
 What is not complete:
 - production still retains legacy finite-bridge compatibility helpers in the radicand / numerator area
@@ -57,9 +62,11 @@ What is not complete:
 - GCF-side certified-progressive sqrt is still not the main production engine for the MVP target path
 - final public naming / wrapper retirement / docs are deferred
 - the target formula is still represented with MVP-specific scaffolding rather than as a thin validation client of the real operator architecture
-- legacy sqrt code still exists in parallel with the new `SqrtGCF` path
-- the new sqrt stream still needs one key semantic fix: unresolved long-input state must remain live and retryable rather than being treated as a terminal error
-- certified nontrivial lazy sqrt emission for inputs like `sqrt(2)` is not implemented yet
+- legacy sqrt code still exists in parallel with newer sqrt work
+- the current sqrt try3 operator core is still Newton/enclosure-centered rather than Gosper transform-centered
+- terminology cleanup is still needed in the newer sqrt work: “digit” should become “term”
+- a true Gosper-centered transform-first sqrt core has not yet been implemented
+- certified nontrivial lazy sqrt term emission for inputs like `sqrt(2)` is not implemented yet
 
 ## Completed work
 
@@ -162,59 +169,64 @@ The current MVP target path has been narrowed and clarified:
 - sharper numerator budgets do not widen the target range
 - production naming in this area has been pushed toward radicand / radicand-root terminology, with the full target formula kept in tests rather than production
 
-### New sqrt reboot
-Started over on sqrt with a new minimal path rather than extending the legacy sqrt jungle:
-- introduced a single new public entry point:
-  `SqrtGCF(src GCFSource) (ContinuedFraction, error)`
-- added a small Newton bootstrap core:
-  - `sqrtNewtonStep`
-  - `sqrtNewtonApprox`
-  - bootstrap state wrapper
-- added tests for:
-  - exact finite squares
-  - exact finite rational squares
-  - negative input rejection
-  - non-square bootstrap approximation
-  - lazy construction
-  - lazy metadata shortcut for perfect-square radicands
-  - bounded per-call ingestion
-  - recorded terminal error behavior
-- added first true-lazy shortcut:
-  - if the source advertises square-radicand metadata and the radicand is a perfect square, `SqrtGCF` returns the exact root CF without reading source terms
+### sqrt try3 support scaffold
+Started over on sqrt with a new minimal path rather than extending the legacy sqrt jungle, then evolved it into a green support scaffold:
+- exact Newton step over `Rational`
+- mutable unary sqrt state
+- GCF prefix state
+- unary sqrt operator scaffold with explicit refinement policy
+- residual snapshots
+- point-input sqrt enclosure from iterate/reciprocal
+- conservative ranged-input sqrt enclosure
+- big-int floor bounds for certification
+- forced first-term certification helper
+- forced first-term transition
+- demand-driven first-term forcing helper
+- first operator-level emit transition
+- operator snapshots carrying current approximation/enclosure/certification state
+
+This work is currently treated as support/scaffolding, not as the final Gosper-centered sqrt core.
 
 ## Current milestone
-Make the new `SqrtGCF` path a mathematically coherent live lazy unary operator, then retire legacy sqrt and remaining MVP-specific scaffolding.
+Stop extending the current sqrt try3 core as the main operator, start a parallel Gosper-centered transform-first sqrt core, and then retire legacy sqrt and remaining MVP-specific scaffolding.
 
 ## Critical path to completion
 
-1. Finish the new sqrt stream semantics so unresolved long-input state remains live and retryable rather than becoming an immediate terminal error
-2. Replace bootstrap-style whole-value thinking with a real unary operator state for the new `SqrtGCF` path
-3. Certify the first nontrivial lazy sqrt output for a case such as `sqrt(2)`
-4. Make the new sqrt path primary and delete or isolate legacy sqrt APIs/files/tests
-5. Retire remaining finite-bridge and legacy compatibility helpers from production in the radicand / numerator path
-6. Collapse duplicated radicand / numerator helper layers onto one explicit snapshot-assembly path
-7. Reduce MVP-specific scaffolding until the target formula is only a validation client of the real operator architecture
-8. Advance from bounded non-point target range toward a tighter/certified point result where mathematically justified
-9. Resume broader operator completion and eventual streaming/certified-progressive operator unification
-10. Continue toward general arithmetic on infinite GCF streams with operators consuming stream-shaped inputs and emitting RCF
+1. Freeze the current sqrt try3 core as helper/support code rather than the final operator core
+2. Start a parallel transform-first sqrt core based directly on Gosper’s square-root method
+3. Use Newton only as the small per-term fixed-point solver inside the transform method, not as the primary operator state
+4. First target: reproduce Gosper’s rational example `sqrt(17/10) = [1;(3,3,2)]` with the transform-first core
+5. After the transform-first rational case works, connect that core to continued-fraction radicands and GCF ingestion
+6. Make the transform-first sqrt path primary and delete or isolate legacy sqrt APIs/files/tests
+7. Retire remaining finite-bridge and legacy compatibility helpers from production in the radicand / numerator path
+8. Collapse duplicated radicand / numerator helper layers onto one explicit snapshot-assembly path
+9. Reduce MVP-specific scaffolding until the target formula is only a validation client of the real operator architecture
+10. Advance from bounded non-point target range toward a tighter/certified point result where mathematically justified
+11. Resume broader operator completion and eventual streaming/certified-progressive operator unification
+12. Continue toward general arithmetic on infinite GCF streams with operators consuming stream-shaped inputs and emitting RCF
 
 ## Immediate next technical focus
-Take the next big bite on the critical path in the new `SqrtGCF` path:
-- distinguish live unresolved state from terminal error
-- preserve bounded per-call ingestion
-- preserve progress across repeated `Next()` calls
-- make bootstrap-budget exhaustion the first terminal error for long unresolved inputs
-- keep exact finite and metadata-fast-path tests green
+Take the next big bite on the critical path in sqrt:
+- do not extend the current Newton/enclosure-centered try3 core
+- obtain the current `range.go` and relevant transform files
+- start a parallel transform-first fixed-point sqrt core
+- write red tests for Gosper’s rational example `sqrt(17/10) = [1;(3,3,2)]`
+- keep Newton only as the tiny per-term solver inside the transform method
+- keep try3 green and available as support/scaffolding while the new core is built
 
 ## Known risks / unresolved design questions
+- What is the smallest correct transform-first state representation for Gosper sqrt using the existing ULFT / DiagBLFT machinery?
+- For the transform-first core, what exact left/right state should be compared to decide whether the next RCF term is forced?
+- How should Newton averaging be embedded as the small per-term fixed-point solver without becoming the primary operator state?
+- Which existing try3 helpers are worth reusing inside the transform core, and which should be frozen and ignored?
 - How aggressively should legacy finite-bridge helpers be removed versus kept temporarily as thin wrappers during the cleanup phase?
 - What is the cleanest final boundary between durable production operator APIs and milestone-specific target-formula helpers?
 - How far should MVP go toward a point result versus accepting a mathematically justified bounded range?
 - When operator stabilizes, should public names keep compatibility wrappers or collapse onto canonical names?
-- How much of the existing range machinery should be reused directly for certified lazy sqrt emission versus introducing a cleaner unary-specific layer?
 - Should any public budget/tuning API exist for sqrt, or should all such controls remain internal?
 
 ## Deferred work / future ideas
+- terminology cleanup in the newer sqrt work: rename “digit” to correct RCF “term”
 - final naming/API cleanup after exception replacement
 - retirement of remaining compatibility wrappers
 - broader documentation rewrite
