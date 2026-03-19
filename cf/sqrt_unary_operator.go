@@ -138,4 +138,28 @@ func (s *sqrtUnaryOperator) ingestOneAndRefine() error {
 	return nil
 }
 
+func (s *sqrtUnaryOperator) forceFirstDigitWithin(maxIngests int) (*big.Int, bool, error) {
+	if maxIngests < 0 {
+		return nil, false, fmt.Errorf(
+			"sqrtUnaryOperator.forceFirstDigitWithin: negative maxIngests %d",
+			maxIngests,
+		)
+	}
+
+	if s.currentForcedDigit != nil {
+		return new(big.Int).Set(s.currentForcedDigit), true, nil
+	}
+
+	for i := 0; i < maxIngests; i++ {
+		if err := s.ingestOneAndRefine(); err != nil {
+			return nil, false, err
+		}
+		if s.currentForcedDigit != nil {
+			return new(big.Int).Set(s.currentForcedDigit), true, nil
+		}
+	}
+
+	return nil, false, nil
+}
+
 // cf/sqrt_unary_operator.go v14
