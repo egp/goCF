@@ -20,12 +20,19 @@ The target library is intended to support:
 
 - exact arithmetic on continued fractions
 - demand-driven evaluation
-- finite and infinite continued fractions
-- regular continued fractions and generalized continued fractions
+- regular continued fractions (RCF) and generalized continued fractions (GCF)
 - composable unary and binary arithmetic operators
 - certified partial output when full evaluation is not yet available
 
 The initial architecture should be aligned with Gosper-style homographic and bihomographic transformation machinery, while remaining testable and implementation-language-agnostic at the requirements level.
+
+A major project milestone is the ability to compute the target formula:
+
+\[
+\frac{\sqrt{\frac{3}{\pi^2} + e}}{\tanh(\sqrt{5}) - \sin(69^\circ)}
+\]
+
+This milestone strongly influences the minimum required operator set and the shape of the first public API.
 
 ---
 
@@ -35,26 +42,31 @@ The initial architecture should be aligned with Gosper-style homographic and bih
 
 The first versions of the library shall address:
 
-- representation of continued fractions
-- representation of generalized continued fractions
+- representation of regular continued fractions (RCF)
+- representation of generalized continued fractions (GCF)
+- exact `BigInt` and `Rational` support
 - construction from integers and rationals
-- construction from explicit finite term lists
-- construction from procedural term sources
+- construction from explicit finite RCF term lists
+- construction from procedural infinite GCF sources
 - exact comparison where possible
 - unary and binary arithmetic over continued fractions
-- demand-driven term emission
+- demand-driven RCF term emission
 - convergent and interval/range inspection
 - diagnostics and observability for blocked or stalled operator states
+- specialized named generators for important constants, including at least `pi` and `e`
+- minimum unary operators needed for the target formula, including `sqrt`, `sin`, and `tanh`
 
 ### 3.2 Out of Scope for Initial Release
 
 The first release is not required to include:
 
 - graphical tools
-- symbolic algebra beyond what is necessary for continued fraction arithmetic
-- transcendental-function frameworks beyond the minimal substrate needed to support future extension
 - distributed computation
-- persistence/serialization standards beyond simple library-level support if needed
+- hardened security features
+- decimal or other radix digit emission as a completed feature
+- unary operators beyond those required for the target formula and immediate architectural needs
+
+Robustness is important, but security concerns are explicitly deferred in the early phases.
 
 ---
 
@@ -67,8 +79,11 @@ The library shall prioritize the following goals:
 3. **Demand-driven incremental evaluation**
 4. **Strong testability and observability**
 5. **Composable operator architecture**
-6. **Support for finite and infinite inputs**
-7. **Extensibility toward more advanced operators later**
+6. **Support for infinite GCF-first development**
+7. **A minimal public API sufficient to compute the target formula**
+8. **Extensibility toward more advanced operators later**
+
+Performance is not a primary goal.
 
 ---
 
@@ -78,55 +93,76 @@ The library is not required to optimize primarily for:
 
 - fixed-width machine arithmetic
 - approximate floating-point throughput
-- shortest possible implementation
-- hiding internal state from tests when observability improves correctness validation
+- minimal abstraction count
+- hiding internal state from tests when observability improves debugging or correctness validation
+- finite-CF-first design assumptions in early development
 
 ---
 
 ## 6. Terminology and Definitions
 
-This section shall define the terms used throughout the specification.
+This section defines the terms used throughout the specification.
 
-### 6.1 Continued Fraction
-A numeric representation expressed as a sequence of terms with nested reciprocals.
+### 6.1 BigInt
+An arbitrarily large integer.
 
-### 6.2 Regular Continued Fraction
-A continued fraction using the standard regular form. Exact normalization rules are TBD.
+### 6.2 Rational
+An exact rational value represented as `BigInt/BigInt`.
 
-### 6.3 Generalized Continued Fraction
-A continued fraction whose successive partial numerators and denominators may be represented as term pairs, typically written as `(p, q)` or equivalent internal structure.
+### 6.3 Regular Continued Fraction (RCF)
+A continued fraction in regular form whose emitted terms are `BigInt` values.
 
-### 6.4 Finite Continued Fraction
-A continued fraction with a finite number of terms and therefore an exact rational value.
+### 6.4 Generalized Continued Fraction (GCF)
+A continued fraction whose ingested source terms are `(p, q)` pairs, where both `p` and `q` are `BigInt` values.
 
-### 6.5 Infinite Continued Fraction
-A continued fraction with an unbounded term stream.
+### 6.5 Relationship Among Core Types
+The following containment and conversion relationships apply:
 
-### 6.6 Convergent
+- any integer can be represented as a `BigInt`
+- any `BigInt` can be represented as a `Rational`
+- any `Rational` can be represented as a finite `RCF`
+- any `RCF` is a `GCF`
+
+### 6.6 Infinite GCF Source
+A source of `(p, q)` terms that is assumed infinite until exhausted.
+
+### 6.7 Finite GCF
+A GCF whose input source has been exhausted. A finite GCF is not a distinct external term format; it is a GCF whose source reached end-of-input.
+
+### 6.8 Convergent
 A finite rational approximation induced by a finite prefix of a continued fraction.
 
-### 6.7 Certified Output
-An emitted term, digit, interval, or comparison result that is mathematically justified by the information consumed so far.
+### 6.9 Certified Output
+An emitted term, interval, comparison result, or other observable result that is mathematically justified by the information consumed so far.
 
-### 6.8 Source
-A producer of continued-fraction terms.
+### 6.10 Range
+An interval-like object describing uncertainty about the final value of a GCF.
 
-### 6.9 Sink / Consumer
-A receiver of result terms, digits, convergents, or bounds.
+### 6.11 Inside Range
+A range where `lo <= hi`, meaning the final value is inside the interval.
 
-### 6.10 Homographic Transform
+### 6.12 Outside Range
+A range where `lo > hi`, meaning the final value is outside the interval.
+
+### 6.13 Exact Point
+A range where `lo == hi`, meaning the value is known exactly.
+
+### 6.14 Homographic Transform / Unary LFT
 A unary transform of the form:
 
 \[
 z(x)=\frac{ax+b}{cx+d}
 \]
 
-### 6.11 Bihomographic Transform
+### 6.15 Bihomographic Transform / Binary LFT
 A binary transform of the form:
 
 \[
 z(x,y)=\frac{axy+bx+cy+d}{exy+fx+gy+h}
 \]
+
+### 6.16 Diagonal LFT
+A special case of a Binary LFT where the two operand variables are equal.
 
 ---
 
@@ -135,17 +171,33 @@ z(x,y)=\frac{axy+bx+cy+d}{exy+fx+gy+h}
 The library shall support the following categories of values.
 
 ### 7.1 Required
-- integers
-- rationals
-- finite regular continued fractions
-- infinite regular continued fractions
-- finite generalized continued fractions
-- infinite generalized continued fractions
+- `BigInt`
+- `Rational`
+- finite `RCF`
+- infinite `RCF`
+- infinite `GCF` sources
+- in-memory `GCF` values with associated `Range`
 
-### 7.2 Optional / Deferred
-- bounded imprecise sources
-- symbolic sources for transcendental expansions
-- specialized named generators for important constants
+### 7.2 External Representation Policy
+External representation is either:
+
+- `GCF` for ingestion
+- `RCF` for emission
+
+Only infinite GCF sources may be ingested as a series of `(p, q)` terms.
+
+Only RCF terms, represented as `BigInt`, shall be emitted by the arithmetic core.
+
+### 7.3 Input Assumption Policy
+All continued-fraction inputs shall be treated as infinite until exhausted.
+
+Early development shall assume infinite GCF input by default rather than designing first around finite continued fractions.
+
+### 7.4 Optional / Deferred
+- decimal digit emission
+- arbitrary radix digit emission
+- a unary operator that ingests a GCF and emits a `Rational` after consuming a specified number of input terms
+- additional specialized named generators beyond the initial constant set
 
 ---
 
@@ -154,11 +206,12 @@ The library shall support the following categories of values.
 ### 8.1 External Representation
 The library shall define public representations for:
 
-- finite continued fractions
-- generalized term sequences
-- procedural/incremental sources
+- `BigInt`
+- `Rational`
+- `RCF`
+- procedural `GCF` sources
 - result streams or iterators
-- convergents and bounds
+- `Range`
 
 ### 8.2 Internal Representation
 The implementation may use any internal representation, provided that:
@@ -170,55 +223,97 @@ The implementation may use any internal representation, provided that:
 ### 8.3 Canonicalization
 The specification shall define which forms are canonical and where equivalent non-canonical forms are permitted.
 
-TBD:
-- rational canonical form
-- zero representation
-- sign normalization
-- trailing-term normalization rules
+At minimum:
+
+- emitted RCF terms shall follow the chosen regular continued-fraction conventions
+- positive and negative infinity shall be treated separately
+- internal transform coefficients shall be normalized by dividing by the `GCD` where appropriate and safe
+- normalization shall preserve semantics exactly
+
+### 8.4 In-Memory GCF Range Requirement
+Every in-memory GCF object, excluding streaming source-only objects, shall provide a `GCF.range()` function that returns a `Range` object.
+
+The returned `Range` shall represent the uncertainty interval containing, or excluding, the actual final value of the GCF.
 
 ---
 
-## 9. Construction Requirements
+## 9. Range Requirements
+
+### 9.1 Range Semantics
+A `Range` shall contain two exact endpoints, `lo` and `hi`.
+
+### 9.2 Inside Semantics
+If `lo <= hi`, the value is inside the interval.
+
+### 9.3 Outside Semantics
+If `lo > hi`, the value is outside the interval.
+
+### 9.4 Exactness
+If `lo == hi`, the final value is known exactly.
+
+### 9.5 Comparison Ordering
+`Range` shall define a comparison relation suitable for choosing among competing uncertainty descriptions.
+
+The intended ordering is:
+
+1. inside narrow
+2. inside wide
+3. outside wide
+4. outside narrow
+
+where earlier items are considered better / narrower / more informative than later items.
+
+The exact formalization of “narrow” and “wide” shall be defined in the design and API documents, but the ordering semantics above are required.
+
+---
+
+## 10. Construction Requirements
 
 The library shall provide ways to construct continued-fraction objects from the following inputs.
 
-### 9.1 Integers
-The library shall construct exact finite continued fractions from integers.
+### 10.1 Integers
+The library shall construct exact values from integers represented as `BigInt`.
 
-### 9.2 Rationals
-The library shall construct exact finite continued fractions from rational values.
+### 10.2 Rationals
+The library shall construct exact finite `RCF` values from `Rational` inputs.
 
-### 9.3 Explicit Term Lists
-The library shall construct exact continued fractions from explicit user-supplied terms.
+### 10.3 Explicit RCF Term Lists
+The library shall construct exact continued fractions from explicit user-supplied RCF terms.
 
-### 9.4 Procedural Sources
-The library shall accept demand-driven sources that generate terms lazily.
+### 10.4 Procedural GCF Sources
+The library shall accept demand-driven sources that generate `(p, q)` terms lazily.
 
-### 9.5 Generalized Sources
-The library shall support generalized source terms such as `(p, q)` pairs or an equivalent abstraction.
+### 10.5 Named Constant Sources
+The library shall support specialized named generators for important constants, including at least:
 
-### 9.6 Validation
+- `pi`
+- `e`
+
+### 10.6 Validation
 The library shall detect malformed inputs and report errors or invalid-state results according to the error model defined later in this specification.
 
 ---
 
-## 10. Core Operation Requirements
+## 11. Core Operation Requirements
 
-### 10.1 Unary Operations
+### 11.1 Unary Operations
 The library shall support, at minimum:
 
 - identity
 - negation
 - reciprocal
+- square root
+- sine
+- hyperbolic tangent
 
 Deferred unary operations may include:
 
 - absolute value
-- square root
-- other algebraic operators
-- transcendental operators
+- additional algebraic operators
+- a bounded-ingestion unary operator that emits a `Rational` after consuming a specified number of input terms
+- broader transcendental operators
 
-### 10.2 Binary Operations
+### 11.2 Binary Operations
 The library shall support, at minimum:
 
 - addition
@@ -227,108 +322,131 @@ The library shall support, at minimum:
 - division
 - comparison
 
-### 10.3 Exactness
+### 11.3 Exactness
 For exact inputs and mathematically defined operations, the library shall not silently degrade to inexact floating-point arithmetic.
 
-### 10.4 Demand-Driven Behavior
+### 11.4 Demand-Driven Behavior
 Operators shall consume source terms incrementally and only as needed to justify emitted output or decision progress.
+
+### 11.5 Emission Policy
+The arithmetic core shall emit only RCF terms as `BigInt` values.
 
 ---
 
-## 11. Transform Engine Requirements
+## 12. Transform Engine Requirements
 
 The arithmetic core shall be expressible in terms of transform machinery compatible with Gosper-style methods.
 
-### 11.1 Unary Transform Support
+### 12.1 Required Major Objects
+Early design phases shall include a high-level design describing the major objects and their responsibilities, including at least:
+
+- `GCFStream`
+- `Rational`
+- `Range`
+- `UnaryLFT`
+- `BinaryLFT`
+- `DiagonalLFT`
+
+### 12.2 Unary Transform Support
 The library shall support homographic transforms for unary arithmetic pipelines.
 
-### 11.2 Binary Transform Support
+### 12.3 Binary Transform Support
 The library shall support bihomographic transforms for binary arithmetic pipelines.
 
-### 11.3 Coefficient State
+### 12.4 Diagonal LFT Support
+The design shall support a `DiagonalLFT` as a degenerate `BinaryLFT` where `X` and `Y` are equal.
+
+### 12.5 Coefficient State
 The implementation shall maintain an explicit transform state with inspectable coefficients or equivalent inspectable internal state for testing and diagnostics.
 
-### 11.4 Input Steps
-The engine shall support ingesting terms from one or more operand sources.
+### 12.6 Normalization
+Transform coefficients shall be eligible for normalization using `GCD` reduction where such reduction preserves semantics and aids stability, inspection, or debugging.
 
-### 11.5 Output Steps
-The engine shall support emitting result terms when justified.
+### 12.7 Initial Development Starting Point
+Early development shall begin from identity transforms, including at least:
 
-### 11.6 Reduction / Simplification
-The implementation may simplify transform coefficients, but simplification must preserve semantics.
+- Unary LFT identity: `(1,0)/(0,1)`
+- Binary LFT identity-style initial form: `(1,0,0,0)/(0,0,0,1)`
 
-### 11.7 Degenerate States
+### 12.8 Degenerate States
 The implementation shall define behavior for singular, degenerate, or otherwise undefined transform states.
 
 ---
 
-## 12. Output Requirements
+## 13. Output Requirements
 
 The library shall support one or more of the following output forms.
 
-### 12.1 Continued-Fraction Terms
-The library shall be able to emit result terms incrementally.
+### 13.1 Continued-Fraction Terms
+The library shall be able to emit result RCF terms incrementally.
 
-### 12.2 Finite Materialization
+### 13.2 Finite Materialization
 The library shall be able to fully materialize finite results.
 
-### 12.3 Convergents
+### 13.3 Convergents
 The library shall be able to produce convergents of a result stream.
 
-### 12.4 Bounds / Intervals
-The library shall be able to report current certified bounds or equivalent range information.
+### 13.4 Bounds / Ranges
+The library shall be able to report current certified `Range` information.
 
-### 12.5 Digits / Radix Output
-This is optional for the first release but should remain architecturally feasible.
+### 13.5 Future Digit / Radix Output
+Emission of decimal digits or digits in other radices is a long-term goal and shall remain architecturally feasible.
 
 ---
 
-## 13. Correctness Requirements
+## 14. Correctness Requirements
 
-### 13.1 Term Correctness
-Every emitted result term shall be mathematically justified by the already-consumed operand information and the valid unread-tail assumptions defined by the model.
+### 14.1 Term Correctness
+Every emitted RCF term shall be mathematically justified by the already-consumed operand information and the valid unread-tail assumptions defined by the model.
 
-### 13.2 Finite Input Correctness
-For finite rational inputs, the library shall terminate with the exact rational result when the operation is defined.
+### 14.2 Finite Input Correctness
+For inputs that become finite through source exhaustion, the library shall produce the exact result when the operation is defined.
 
-### 13.3 Equivalence
+### 14.3 Equivalence
 Equivalent representations of the same value shall behave equivalently under supported operations, modulo canonicalization policy.
 
-### 13.4 Comparison Correctness
+### 14.4 Comparison Correctness
 Comparison results shall not be reported unless they are mathematically justified.
 
-### 13.5 No Silent Corruption
+### 14.5 No Silent Corruption
 The library shall not emit known-incorrect terms or silently substitute approximate arithmetic in exact modes.
+
+### 14.6 Infinity Handling
+Positive infinity and negative infinity shall be modeled distinctly and shall not be conflated.
 
 ---
 
-## 14. Progress and Termination Requirements
+## 15. Progress and Termination Requirements
 
-### 14.1 Finite Inputs
-For operations on finite inputs where the result is finite and defined, evaluation shall terminate.
+### 15.1 Infinite-First Assumption
+Early development shall assume infinite GCF inputs unless and until a source is exhausted.
 
-### 14.2 Infinite Inputs
+### 15.2 Finite by Exhaustion
+A source that becomes exhausted shall thereafter be treated as finite, and downstream logic shall handle the transition correctly.
+
+### 15.3 Infinite Inputs
 For infinite inputs, the library shall support ongoing incremental progress when mathematically possible.
 
-### 14.3 Blocked States
+### 15.4 Blocked States
 The library shall define what it means for an operator to be blocked waiting for more input.
 
-### 14.4 Stalled States
+### 15.5 Stalled States
 The library shall define what it means for evaluation to stall or fail to make progress.
 
-### 14.5 Observability
+### 15.6 Observability
 The caller and tests shall be able to distinguish among:
+
 - emitted output
 - waiting for more input
 - mathematically undefined state
 - implementation-detected stuck or non-progress state
 
-### 14.6 Bounded Work Modes
+### 15.7 Bounded Work Modes
 Optional bounded-step or bounded-resource execution modes may be provided for diagnostics and testing.
 
 ---
 
-## 15. Error and Exceptional Behavior
+## 16. Error and Exceptional Behavior
 
 The specification shall define the error model for:
 
@@ -341,133 +459,160 @@ The specification shall define the error model for:
 - source-protocol violations
 - internal invariant failures
 
-TBD:
-- which failures are ordinary errors
-- which failures are panics/assertions/internal-fault conditions
-- which failures return partial certified output plus an error
+Pre-condition and post-condition checks for invariants are explicitly permitted and encouraged when they improve debugging and correctness assurance.
+
+The exact split among ordinary errors, test-time assertions, and internal-fault conditions shall be defined by the API and design documents.
 
 ---
 
-## 16. Diagnostics and Introspection
+## 17. Diagnostics and Introspection
 
 The library shall provide observability sufficient for testing and debugging.
 
-### 16.1 Required Diagnostic Capabilities
+### 17.1 Required Diagnostic Capabilities
 - inspect current operator state
 - inspect current transform coefficients or equivalent
 - inspect source-consumption counts
 - inspect emitted-result prefix
-- inspect current convergents and/or bounds
+- inspect current convergents and/or ranges
 - inspect why output is not currently possible
 
-### 16.2 Trace Support
+### 17.2 Trace Support
 Optional tracing should allow step-by-step examination of:
+
 - input decisions
 - output decisions
 - transform rewrites
 - simplifications
-- interval/range updates
+- range updates
 
-### 16.3 Invariant Checking
-Debug/test modes may enforce stronger internal invariant checks.
+### 17.3 Invariant Checking
+Debug and test modes may enforce stronger internal invariant checks.
+
+### 17.4 Non-Progress Testing Support
+Test cases involving implementation-detected stuck or non-progress states shall include an expiration timer or equivalent bounded termination mechanism.
 
 ---
 
-## 17. API Requirements
+## 18. API Requirements
 
-### 17.1 Public API Style
+### 18.1 Public API Goal
+An early phase of development shall define the public API, and that API shall be as small as possible while still being sufficient to compute the target formula.
+
+### 18.2 Public API Style
 The library shall expose a clean public API with clear separation between:
+
 - user-facing value construction
 - streaming evaluation
 - diagnostics/testing hooks
 - lower-level transform machinery
 
-### 17.2 Streaming API
-A caller shall be able to request the next term, next convergent, or next certified output unit without forcing complete materialization.
+### 18.3 Streaming API
+A caller shall be able to request the next emitted RCF term, next convergent, or next certified range without forcing complete materialization.
 
-### 17.3 Batch API
+### 18.4 Batch API
 Convenience APIs may be provided for:
+
 - full finite conversion
 - full rational conversion when guaranteed finite
 - exact comparison
-- collection of a prefix of terms
+- collection of a prefix of emitted RCF terms
 
-### 17.4 Determinism
+### 18.5 Determinism
 Given the same inputs and the same evaluation strategy, the library shall behave deterministically.
 
-### 17.5 Concurrency
-Thread-safety requirements are TBD.
-
-Possible choices:
-- not thread-safe unless externally synchronized
-- immutable values with thread-safe readers
-- isolated stream instances only
+### 18.6 Concurrency
+Thread-safety requirements are deferred.
 
 ---
 
-## 18. Performance Requirements
+## 19. Performance Requirements
 
-### 18.1 Priority
-Performance is secondary to correctness.
+### 19.1 Priority
+Performance is secondary to correctness, testability, and debuggability.
 
-### 18.2 Arbitrary Precision
+### 19.2 Arbitrary Precision
 The library shall support arbitrary-precision integer arithmetic where needed to preserve exactness.
 
-### 18.3 Laziness
+### 19.3 Laziness
 The implementation shall avoid unnecessary full collapse to rationals when incremental progress is sufficient.
 
-### 18.4 Resource Growth
+### 19.4 Resource Growth
 The implementation shall expose or document possible growth in:
+
 - coefficient size
 - memory usage
 - work per emitted term
 
-### 18.5 Safeguards
+### 19.5 Safeguards
 Optional safeguards may include:
+
 - maximum steps
 - maximum coefficient size
 - maximum source pulls
 - maximum emitted terms
+- timeout support in tests
 
 ---
 
-## 19. Testability Requirements
+## 20. Testability Requirements
 
-The design shall support test-first development and precise verification.
+The design shall support iterative TDD and precise verification.
 
-### 19.1 Unit Tests
+### 20.1 TDD Workflow
+Development shall normally proceed in two phases:
+
+1. create failing tests, allowing production stubs that return an incorrect value of the correct type
+2. modify production code until those tests pass
+
+The expected workflow is red, then green, then commit, then repeat.
+
+### 20.2 Public vs Private Testing
+The public interface shall be tested with black-box tests.
+
+Private interfaces and internal machinery shall be tested with white-box tests.
+
+### 20.3 Package-Level Test Access
+In the initial Go implementation, tests will live in the same package and therefore may access private functions and data as needed for white-box verification.
+
+### 20.4 Unit Tests
 The library shall support unit testing of:
+
 - term ingestion
 - term emission
 - transform updates
 - canonicalization
+- range behavior
 - error handling
 
-### 19.2 Property Tests
+### 20.5 Property Tests
 Where practical, operations shall be testable against rational arithmetic or equivalent reference models.
 
-### 19.3 Golden Tests
-The library should include golden tests based on worked examples and known identities.
+### 20.6 Golden Tests
+The test suite shall include at least:
 
-### 19.4 Differential Tests
-Equivalent constructions of the same value should be testable against one another.
+- test cases from Gosper’s articles
+- additional tests derived from newer insights about GCF behavior
+- regression tests for discovered edge cases
 
-### 19.5 Stall / Progress Regression Tests
+### 20.7 Stall / Progress Regression Tests
 The library shall support regression tests for blocked, stalled, or historically problematic evaluation paths.
 
-### 19.6 Inspection Hooks
-The API shall not hide essential state needed for correctness-oriented testing.
+### 20.8 Inspection Hooks
+The API and implementation shall not hide essential state needed for correctness-oriented testing.
 
 ---
 
-## 20. Documentation Requirements
+## 21. Documentation Requirements
 
 The project documentation shall include:
 
 - mathematical overview
+- requirements specification
+- high-level design
 - user guide
 - API reference
-- examples for finite and infinite CFs
+- examples for RCF and GCF usage
 - examples of exact arithmetic
 - examples of streaming term production
 - explanation of guarantees and limitations
@@ -475,11 +620,12 @@ The project documentation shall include:
 
 ---
 
-## 21. Compatibility and Portability
+## 22. Compatibility and Portability
 
 This specification is intended to be language-agnostic at the mathematical level.
 
 Language-specific implementations may differ in:
+
 - naming
 - packaging
 - iterator/stream conventions
@@ -488,95 +634,120 @@ Language-specific implementations may differ in:
 
 However, implementations shall preserve the required mathematical behavior described here.
 
----
-
-## 22. Security and Robustness Considerations
-
-Although this is primarily a numerical library, the implementation shall consider:
-
-- denial-of-service risks from adversarial infinite or pathological inputs
-- excessive coefficient growth
-- malformed source behavior
-- infinite non-progress loops
-- resource exhaustion due to unbounded evaluation
-
-The library should provide operational controls for safe use in hostile or untrusted environments.
+The initial implementation is expected to target Go.
 
 ---
 
-## 23. Versioning and Evolution
+## 23. Robustness and Security Considerations
 
-The specification should support staged delivery.
+Robustness is important and includes:
 
-### 23.1 Phase 1
-- finite continued fractions
-- rationals
-- construction APIs
+- bounded non-progress testing
+- invariant checks
+- handling malformed source behavior
+- handling pathological coefficient growth
+- handling exhausted sources correctly
+
+Security concerns are deferred in the early phases and are not a first-pass requirement.
+
+---
+
+## 24. Versioning and Evolution
+
+The specification shall support staged delivery.
+
+### 24.1 Phase 1
+- requirements specification
+- high-level design
+- major object model
+- minimal public API design
+- `BigInt`, `Rational`, `Range`
+- `GCFStream`, `UnaryLFT`, `BinaryLFT`, `DiagonalLFT`
+- identity-transform startup path
+
+### 24.2 Phase 2
+- red/green TDD harness
+- exact construction APIs
+- infinite-GCF ingestion
+- RCF emission
 - convergents
-- comparison
 - diagnostics foundation
 
-### 23.2 Phase 2
-- exact unary and binary arithmetic core
-- streaming result terms
-- transform engine
-- finite termination guarantees
+### 24.3 Phase 3
+- exact binary arithmetic core
+- exact unary arithmetic substrate
+- finite-by-exhaustion correctness
+- stronger progress diagnostics
 
-### 23.3 Phase 3
-- stronger bounds/certification support
-- improved progress diagnostics
-- digit/radix emission if desired
+### 24.4 Phase 4
+- specialized constant generators including `pi` and `e`
+- target-formula unary operators: `sqrt`, `sin`, `tanh`
+- minimal public API sufficient to compute the target formula
 
-### 23.4 Phase 4
-- additional unary operators
-- algebraic extensions
-- named source generators
-- broader generalized-CF support
+### 24.5 Phase 5
+- improved certification and range behavior
+- bounded rational-collapse unary operator
+- decimal/radix emission
+- broader unary and transcendental support
 
 ---
 
-## 24. Open Design Questions
+## 25. Open Design Questions
 
 The following issues remain to be decided.
 
-### 24.1 Canonicalization Policy
-How aggressively should finite and regular CFs be normalized?
+### 25.1 Canonicalization Policy
+How aggressively should finite and emitted RCFs be normalized?
 
-### 24.2 Public Exposure of Generalized Terms
+### 25.2 Public Exposure of GCF Terms
 Should `(p, q)` pairs be exposed directly in the public API or wrapped in higher-level abstractions?
 
-### 24.3 Progress Strategy
+### 25.3 Progress Strategy
 What policy should govern source selection and output attempts in ambiguous operator states?
 
-### 24.4 Certified Bounds
-What exact API should expose interval/range certification?
+### 25.4 Range Ordering Formalization
+How exactly should “inside narrow”, “inside wide”, “outside wide”, and “outside narrow” be measured and compared?
 
-### 24.5 Stuck-State Semantics
-How should the library report cases where naive evaluation appears to fail to make progress?
+### 25.5 Stuck-State Semantics
+How should the library report cases where evaluation appears to fail to make progress?
 
-### 24.6 Debug Visibility
-How much transform state should be exposed publicly versus only in test/debug builds?
+### 25.6 Debug Visibility
+How much transform state should be exposed publicly versus only in test/debug paths?
 
-### 24.7 Decimal / Radix Output
-Should radix-digit streaming be a first-class requirement or a later adapter layer?
+### 25.7 Bounded Rational Collapse
+What should be the exact semantics of the future unary operator that consumes a specified number of input terms and emits a `Rational`?
 
 ---
 
-## 25. Acceptance Criteria for First Implementable Milestone
+## 26. Acceptance Criteria for First Implementable Milestone
 
 The first serious milestone shall be considered complete when all of the following are true:
 
-1. The library can construct exact finite continued fractions from integers and rationals.
-2. The library can represent procedural sources for infinite or lazy inputs.
-3. The library can compare exact finite values correctly.
-4. The library can perform exact `+`, `-`, `*`, and `/` on a core subset of supported inputs.
-5. The library can emit result terms incrementally.
-6. The library exposes enough diagnostic state to test and explain blocked or stalled behavior.
-7. The implementation is backed by automated tests demonstrating mathematical correctness on representative examples.
+1. The requirements specification and high-level design exist and are coherent.
+2. The public API exists in minimal form and is sufficient in principle to express the target formula.
+3. The library can construct exact values from `BigInt`, `Rational`, and explicit RCF terms.
+4. The library can ingest infinite GCF sources of `(p, q)` terms.
+5. The library can emit RCF terms incrementally as `BigInt`.
+6. The library exposes `Range` and `GCF.range()` semantics for in-memory GCF values.
+7. The implementation exposes enough diagnostic state to test and explain blocked or stalled behavior.
+8. The implementation supports red/green TDD with white-box access to private machinery.
+9. The implementation is backed by automated tests including Gosper-derived examples and newer GCF regression cases.
 
 ---
 
-## 26. Placeholder Appendices
+## 27. Acceptance Criteria for Major Project Milestone
+
+A major milestone shall be considered complete when the library can compute the target formula:
+
+\[
+\frac{\sqrt{\frac{3}{\pi^2} + e}}{\tanh(\sqrt{5}) - \sin(69^\circ)}
+\]
+
+with exact continued-fraction machinery, using named constant generators and the required unary and binary operators, without silently degrading to floating-point arithmetic.
+
+---
+
+## 28. Placeholder Appendices
 
 ### Appendix A: Mathematical Conventions
 TBD
